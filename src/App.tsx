@@ -1,0 +1,139 @@
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Routes, Route } from "react-router-dom";
+import { CartProvider } from "@/context/CartContext";
+import { DeliveryRegisterPage } from "./pages/DeliveryRegisterPage";
+import Index from "./pages/Index";
+import Products from "./pages/Products";
+import ProductDetail from "./pages/ProductDetail";
+import Cart from "./pages/Cart";
+import Wishlist from "./pages/Wishlist";
+import Checkout from "./pages/Checkout";
+import Orders from "./pages/Orders";
+import Auth from "./pages/Auth";
+import Profile from "./pages/Profile";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import AdminDashboard from "./pages/AdminDashboard";
+import { AdminOrderListPage } from "./pages/admin/AdminOrderListPage";
+import AdminProductCreatePage from "./pages/admin/AdminProductCreatePage";
+import {AdminProductEditPage} from "./pages/admin/AdminProductEditPage";
+import AdminCustomerListPage from "./pages/admin/AdminCustomerListPage";
+import AdminCustomerDetailPage from "./pages/admin/AdminCustomerDetailPage";
+import AdminCategoriesPage from "./pages/admin/AdminCategories";
+import { AdminDeliveryApplications } from "./pages/admin/AdminDeliveryApplications";
+import DeliveryProtectedRoute from "./components/DeliveryProtectedRoute";
+import DeliveryDashboard from "./pages/DeliveryDashboard";
+import NotFound from "./pages/NotFound";
+
+const queryClient = new QueryClient();
+
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <CartProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/delivery/register" element={<DeliveryRegisterPage />} />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <AdminProtectedRoute>
+                  <AdminDashboard />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/orders"
+              element={
+                <AdminProtectedRoute>
+                  <AdminOrderListPage />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/customers"
+              element={
+                <AdminProtectedRoute>
+                  <AdminCustomerListPage />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/customers/:id"
+              element={
+                <AdminProtectedRoute>
+                  <AdminCustomerDetailPage />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/categories"
+              element={
+                <AdminProtectedRoute>
+                  <AdminCategoriesPage />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/products/new"
+              element={
+                <AdminProtectedRoute>
+                  <AdminProductCreatePage />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/products/:id/edit"
+              element={
+                <AdminProtectedRoute>
+                  <AdminProductEditPage />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/delivery-applications"
+              element={
+                <AdminProtectedRoute>
+                  <AdminDeliveryApplications />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/delivery"
+              element={
+                <DeliveryProtectedRoute>
+                  <DeliveryDashboard />
+                </DeliveryProtectedRoute>
+              }
+            />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </CartProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
+
+export default App;
