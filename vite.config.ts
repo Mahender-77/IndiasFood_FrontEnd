@@ -15,4 +15,10 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    exclude: ['firebase-admin']
+  },
+  define: {
+    'process.env': {}
+  }
 }));

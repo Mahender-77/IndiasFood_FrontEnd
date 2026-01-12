@@ -140,6 +140,7 @@ export const AdminProductEditPage = () => {
         // Conditionally include weight, shelfLife, and videoUrl
         ...(formData.weight && { weight: formData.weight }),
         ...(formData.shelfLife && { shelfLife: formData.shelfLife }),
+        // Conditionally include videoUrl if it's not empty
         ...(formData.videoUrl && { videoUrl: formData.videoUrl }),
       });
 

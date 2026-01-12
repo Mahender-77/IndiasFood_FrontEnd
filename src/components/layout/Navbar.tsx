@@ -22,10 +22,21 @@ export function Navbar() {
     { href: '/contact', label: 'Contact' },
   ];
 
+  const [searchTerm, setSearchTerm] = useState(''); // New state for search term
+
   const handleLogout = () => {
     logout();
     navigate('/auth');
     setIsMenuOpen(false);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
+      setIsSearchOpen(false); // Close mobile search after searching
+      setSearchTerm(''); // Clear search term after navigation
+    }
   };
 
   return (
@@ -108,16 +119,18 @@ export function Navbar() {
           </nav>
 
           {/* Search Bar - Desktop */}
-          <div className="hidden lg:flex flex-1 max-w-sm">
+          <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-sm">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search for sweets..."
                 className="pl-10 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-          </div>
+          </form>
 
           {/* Right Actions */}
           <div className="flex items-center gap-1 sm:gap-2">
@@ -228,7 +241,7 @@ export function Navbar() {
 
         {/* Mobile Search */}
         {isSearchOpen && (
-          <div className="container-custom lg:hidden pb-3 animate-slide-up">
+          <form onSubmit={handleSearch} className="container-custom lg:hidden pb-3 animate-slide-up">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -236,9 +249,11 @@ export function Navbar() {
                 placeholder="Search for sweets..."
                 className="pl-10 bg-muted/50 border-0"
                 autoFocus
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-          </div>
+          </form>
         )}
 
         {/* Mobile Navigation */}

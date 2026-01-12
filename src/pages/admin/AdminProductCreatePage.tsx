@@ -90,7 +90,8 @@ const AdminProductCreatePage = () => {
         ...formData,
         price: Number(formData.price),
         countInStock: Number(formData.countInStock),
-        videoUrl: formData.videoUrl, // Include videoUrl
+        // Conditionally include videoUrl if it's not empty
+        ...(formData.videoUrl && { videoUrl: formData.videoUrl }),
       };
 
       // Conditionally add weight and shelfLife if they are not empty strings

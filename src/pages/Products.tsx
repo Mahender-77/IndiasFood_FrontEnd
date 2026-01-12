@@ -27,16 +27,17 @@ const Products = () => {
   const [categories, setCategories] = useState<Category[]>([]); // State for dynamic categories
 
   const keywordParam = searchParams.get('keyword') || '';
+  const urlSearchTerm = searchParams.get('search') || ''; // Get search term from Navbar
   const categoryParam = searchParams.get('category') || '';
   const pageNumberParam = Number(searchParams.get('pageNumber')) || 1;
 
-  const [search, setSearch] = useState(keywordParam);
+  const [search, setSearch] = useState(urlSearchTerm || keywordParam); // Prioritize Navbar search
   const [selectedCategory, setSelectedCategory] = useState(categoryParam || 'all');
   const [sortBy, setSortBy] = useState('featured');
 
   const handleSortChange = (value: string) => {
     setSortBy(value);
-    setSearchParams({ keyword: search, category: selectedCategory, pageNumber: '1', sortBy: value });
+    setSearchParams({ search: search, category: selectedCategory, pageNumber: '1', sortBy: value });
   };
 
   // Fetch categories on component mount
@@ -58,7 +59,7 @@ const Products = () => {
       setLoading(true);
       setError(null);
       try {
-        const { data } = await api.get(`/products?keyword=${search}&category=${selectedCategory === 'all' ? '' : selectedCategory}&pageNumber=${pageNumberParam}&sortBy=${sortBy}`);
+        const { data } = await api.get(`/products?search=${search}&category=${selectedCategory === 'all' ? '' : selectedCategory}&pageNumber=${pageNumberParam}&sortBy=${sortBy}`);
         setProducts(data.products);
         setPage(data.page);
         setPages(data.pages);
@@ -69,20 +70,20 @@ const Products = () => {
       }
     };
     fetchProducts();
-  }, [search, selectedCategory, pageNumberParam, sortBy]);
+  }, [search, selectedCategory, pageNumberParam, sortBy, urlSearchTerm]); // Added urlSearchTerm to dependencies
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
-    setSearchParams({ keyword: e.target.value, category: selectedCategory, pageNumber: '1', sortBy: sortBy });
+    setSearchParams({ search: e.target.value, category: selectedCategory, pageNumber: '1', sortBy: sortBy });
   };
 
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value); // Set selectedCategory to the actual value from the Select component
-    setSearchParams({ keyword: search, category: value, pageNumber: '1', sortBy: sortBy });
+    setSearchParams({ search: search, category: value, pageNumber: '1', sortBy: sortBy });
   };
 
   const handlePageChange = (newPage: number) => {
-    navigate(`/products?keyword=${search}&category=${selectedCategory}&pageNumber=${newPage}&sortBy=${sortBy}`);
+    navigate(`/products?search=${search}&category=${selectedCategory}&pageNumber=${newPage}&sortBy=${sortBy}`);
   };
 
   // Remove hardcoded subcategories, now using 'categories' state
