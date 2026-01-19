@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
+import { SEO } from '@/components/seo/SEO';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -96,6 +97,11 @@ const Auth = () => {
 
   return (
     <Layout>
+      <SEO
+        title={isLogin ? "Login - India's Food" : "Sign Up - India's Food"}
+        description={isLogin ? "Login to your account to order authentic Indian sweets. Access your orders, wishlist and delivery tracking." : "Create an account to order fresh Indian sweets online. Get access to exclusive deals and fast delivery."}
+        keywords="login, sign up, authentication, Indian sweets account, user registration, login India sweets, create account sweets delivery"
+      />
       <section className="section-padding bg-cream min-h-[calc(100vh-200px)] flex items-center">
         <div className="container-custom">
           <div className="max-w-md mx-auto">

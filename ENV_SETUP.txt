@@ -1,0 +1,17 @@
+FRONTEND ENVIRONMENT VARIABLES SETUP
+======================================
+
+Create a file named '.env' in this frontend directory with the following content:
+
+# API Configuration
+VITE_API_BASE_URL=http://localhost:5000/api
+
+# Cloudinary Configuration (Optional - for direct frontend uploads)
+VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
+
+INSTRUCTIONS:
+1. The VITE_API_BASE_URL should point to your backend server (default: http://localhost:5000/api)
+2. Cloudinary frontend config is optional since uploads are handled by the backend
+3. Save this file as '.env' in the frontend directory
+4. Restart your frontend server: cd frontend && npm run dev

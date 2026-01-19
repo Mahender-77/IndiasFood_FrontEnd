@@ -1,34 +1,85 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import api from '@/lib/api'; // Use the configured axios instance
-import { CartItem, Product, User } from '@/types';
+import api from '@/lib/api';
+import { CartItem, Product } from '@/types';
 import { useAuth } from './AuthContext';
 
 interface CartState {
   items: CartItem[];
   wishlist: string[];
-  loading: boolean; // Add loading state
-  error: string | null; // Add error state
+  loading: boolean;
+  error: string | null;
 }
 
 type CartAction =
   | { type: 'SET_CART'; payload: CartItem[] }
   | { type: 'SET_WISHLIST'; payload: string[] }
   | { type: 'CLEAR_ALL' }
-  | { type: 'SET_LOADING'; payload: boolean } // Action to set loading state
-  | { type: 'SET_ERROR'; payload: string | null }; // Action to set error state
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'UPDATE_ITEM_OPTIMISTIC'; payload: { productId: string; variantIndex: number; qty: number } }
+  | { type: 'REMOVE_ITEM_OPTIMISTIC'; payload: { productId: string; variantIndex: number } }
+  | { type: 'UPDATE_VARIANT_OPTIMISTIC'; payload: { productId: string; oldVariantIndex: number; newVariantIndex: number; qty: number } };
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case 'SET_CART':
-      return { ...state, items: action.payload };
+      return {
+        ...state,
+        items: Array.isArray(action.payload) ? action.payload : []
+      };
+    
+    case 'UPDATE_ITEM_OPTIMISTIC': {
+      const { productId, variantIndex, qty } = action.payload;
+      const existingIndex = state.items.findIndex(item => {
+        const product = item.product as Product;
+        return product?._id === productId && item.selectedVariantIndex === variantIndex;
+      });
+
+      if (existingIndex > -1) {
+        const newItems = [...state.items];
+        newItems[existingIndex] = { ...newItems[existingIndex], qty };
+        return { ...state, items: newItems };
+      }
+      return state;
+    }
+
+    case 'REMOVE_ITEM_OPTIMISTIC': {
+      const { productId, variantIndex } = action.payload;
+      return {
+        ...state,
+        items: state.items.filter(item => {
+          const product = item.product as Product;
+          return !(product?._id === productId && item.selectedVariantIndex === variantIndex);
+        })
+      };
+    }
+
+    case 'UPDATE_VARIANT_OPTIMISTIC': {
+      const { productId, oldVariantIndex, newVariantIndex, qty } = action.payload;
+      return {
+        ...state,
+        items: state.items.map(item => {
+          const product = item.product as Product;
+          if (product?._id === productId && item.selectedVariantIndex === oldVariantIndex) {
+            return { ...item, selectedVariantIndex: newVariantIndex, qty };
+          }
+          return item;
+        })
+      };
+    }
+
     case 'SET_WISHLIST':
       return { ...state, wishlist: action.payload };
+    
     case 'CLEAR_ALL':
       return { ...state, items: [], wishlist: [] };
+    
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
+    
     case 'SET_ERROR':
       return { ...state, error: action.payload };
+    
     default:
       return state;
   }
@@ -36,48 +87,68 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
 interface CartContextType {
   state: CartState;
-  addToCart: (productId: string, quantity?: number) => Promise<void>;
-  removeFromCart: (productId: string) => Promise<void>;
-  updateQuantity: (productId: string, quantity: number) => Promise<void>;
+  addToCart: (productId: string, quantity?: number, selectedVariantIndex?: number) => Promise<void>;
+  removeFromCart: (productId: string, selectedVariantIndex?: number) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number, selectedVariantIndex?: number) => Promise<void>;
+  updateCartItemQuantity: (productId: string, quantity: number, selectedVariantIndex?: number) => Promise<void>;
+  updateCartItemVariant: (productId: string, currentVariantIndex: number, newVariantIndex: number) => Promise<void>;
   clearCart: () => Promise<void>;
   toggleWishlist: (productId: string) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
+  getCartItemQuantity: (productId: string, selectedVariantIndex?: number) => number;
   cartTotal: number;
   cartCount: number;
   fetchCartAndWishlist: () => Promise<void>;
-  cartLoading: boolean; // Expose loading state
-  cartError: string | null; // Expose error state
+  cartLoading: boolean;
+  cartError: string | null;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, {
-    items: JSON.parse(localStorage.getItem('cartItems') || '[]'),
-    wishlist: JSON.parse(localStorage.getItem('wishlistItems') || '[]'),
+    items: [],
+    wishlist: [],
     loading: false,
     error: null,
   });
   const { user, token, loading: authLoading } = useAuth();
 
-  // Effect to load cart and wishlist from backend on user login
   const fetchCartAndWishlist = useCallback(async () => {
     if (!user || !token) {
-      localStorage.removeItem('cartItems');
-      localStorage.removeItem('wishlistItems');
-      dispatch({ type: 'CLEAR_ALL' });
+      const localCart = localStorage.getItem('cartItems');
+      const localWishlist = localStorage.getItem('wishlistItems');
+      
+      if (localCart) {
+        try {
+          dispatch({ type: 'SET_CART', payload: JSON.parse(localCart) });
+        } catch (e) {
+          console.error('Failed to parse cart from localStorage:', e);
+          localStorage.removeItem('cartItems');
+        }
+      }
+      
+      if (localWishlist) {
+        try {
+          dispatch({ type: 'SET_WISHLIST', payload: JSON.parse(localWishlist) });
+        } catch (e) {
+          console.error('Failed to parse wishlist from localStorage:', e);
+          localStorage.removeItem('wishlistItems');
+        }
+      }
+      
       dispatch({ type: 'SET_LOADING', payload: false });
-      dispatch({ type: 'SET_ERROR', payload: null });
       return;
     }
 
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
+    
     try {
       const { data: cartData } = await api.get('/user/cart');
-      dispatch({ type: 'SET_CART', payload: cartData });
-
       const { data: wishlistData } = await api.get('/user/wishlist');
+
+      dispatch({ type: 'SET_CART', payload: cartData });
       dispatch({ type: 'SET_WISHLIST', payload: wishlistData.map((item: Product) => item._id) });
     } catch (error: any) {
       console.error('Failed to fetch cart or wishlist', error);
@@ -85,7 +156,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [user, token]); // Removed authLoading from dependencies as it's handled by user/token
+  }, [user, token]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -93,117 +164,203 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, authLoading, fetchCartAndWishlist]);
 
-  // Effect to save cart items to local storage whenever they change
   useEffect(() => {
-    localStorage.setItem('cartItems', JSON.stringify(state.items));
-  }, [state.items]);
+    if (!user && state.items.length >= 0) {
+      localStorage.setItem('cartItems', JSON.stringify(state.items));
+    }
+  }, [state.items, user]);
 
-  // Effect to save wishlist items to local storage whenever they change
   useEffect(() => {
-    localStorage.setItem('wishlistItems', JSON.stringify(state.wishlist));
-  }, [state.wishlist]);
+    if (!user && state.wishlist.length >= 0) {
+      localStorage.setItem('wishlistItems', JSON.stringify(state.wishlist));
+    }
+  }, [state.wishlist, user]);
 
-  const addToCart = async (productId: string, quantity: number = 1) => {
+  const addToCart = async (productId: string, quantity: number = 1, selectedVariantIndex: number = 0) => {
     if (!user || !token) {
-      // Fallback for guest users or if not logged in: manage in local storage only
-      const existingCartItems: CartItem[] = JSON.parse(localStorage.getItem('cartItems') || '[]');
-      const existingItemIndex = existingCartItems.findIndex(item => (item.product as string) === productId);
+      const existingCartItems: CartItem[] = [...state.items];
+      const existingItemIndex = existingCartItems.findIndex(item => {
+        const product = item.product as Product;
+        return product && product._id === productId && item.selectedVariantIndex === selectedVariantIndex;
+      });
 
       if (existingItemIndex > -1) {
         existingCartItems[existingItemIndex].qty += quantity;
       } else {
         try {
           const { data: productData } = await api.get(`/products/${productId}`);
-          existingCartItems.push({ product: productData, qty: quantity });
+          existingCartItems.push({
+            product: productData,
+            qty: quantity,
+            selectedVariantIndex
+          });
         } catch (error) {
-          console.error('Failed to fetch product details for guest cart', error);
+          console.error('Failed to fetch product for guest cart', error);
           return;
         }
       }
+      
       dispatch({ type: 'SET_CART', payload: existingCartItems });
       return;
     }
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
+
+    // Optimistic update
+    const existingItem = state.items.find(item => {
+      const product = item.product as Product;
+      return product?._id === productId && item.selectedVariantIndex === selectedVariantIndex;
+    });
+
+    if (existingItem) {
+      dispatch({
+        type: 'UPDATE_ITEM_OPTIMISTIC',
+        payload: { productId, variantIndex: selectedVariantIndex, qty: existingItem.qty + quantity }
+      });
+    }
+    
     try {
-      const { data } = await api.post('/user/cart', { productId, qty: quantity });
+      const { data } = await api.post('/user/cart', {
+        productId,
+        qty: quantity,
+        selectedVariantIndex
+      });
       dispatch({ type: 'SET_CART', payload: data });
     } catch (error: any) {
       console.error('Failed to add to cart', error);
       dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || 'Failed to add to cart' });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
+      await fetchCartAndWishlist(); // Revert on error
     }
   };
 
-  const removeFromCart = async (productId: string) => {
+  const removeFromCart = async (productId: string, selectedVariantIndex: number = 0) => {
     if (!user || !token) {
-      const existingCartItems: CartItem[] = JSON.parse(localStorage.getItem('cartItems') || '[]');
-      const updatedCartItems = existingCartItems.filter(item => (item.product as Product)._id !== productId);
+      const updatedCartItems = state.items.filter(item => {
+        const product = item.product as Product;
+        return !(product && product._id === productId && item.selectedVariantIndex === selectedVariantIndex);
+      });
       dispatch({ type: 'SET_CART', payload: updatedCartItems });
       return;
     }
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
+
+    // Optimistic update
+    dispatch({ type: 'REMOVE_ITEM_OPTIMISTIC', payload: { productId, variantIndex: selectedVariantIndex } });
+    
     try {
-      const { data } = await api.post('/user/cart', { productId, qty: 0 });
+      const { data } = await api.post('/user/cart', { 
+        productId, 
+        qty: 0,
+        selectedVariantIndex 
+      });
       dispatch({ type: 'SET_CART', payload: data });
     } catch (error: any) {
       console.error('Failed to remove from cart', error);
       dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || 'Failed to remove from cart' });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
+      await fetchCartAndWishlist(); // Revert on error
     }
   };
 
-  const updateQuantity = async (productId: string, quantity: number) => {
-    if (!user || !token) {
-      if (quantity <= 0) {
-        removeFromCart(productId);
-        return;
-      }
-      const existingCartItems: CartItem[] = JSON.parse(localStorage.getItem('cartItems') || '[]');
-      const existingItemIndex = existingCartItems.findIndex(item => (item.product as Product)._id === productId);
-
-      if (existingItemIndex > -1) {
-        existingCartItems[existingItemIndex].qty = quantity;
-        dispatch({ type: 'SET_CART', payload: existingCartItems });
-      }
-      return;
-    }
+  const updateQuantity = async (productId: string, quantity: number, selectedVariantIndex: number = 0) => {
     if (quantity <= 0) {
-      await removeFromCart(productId);
+      await removeFromCart(productId, selectedVariantIndex);
       return;
     }
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
+
+    if (!user || !token) {
+      const updatedCartItems = state.items.map(item => {
+        const product = item.product as Product;
+        if (product && product._id === productId && item.selectedVariantIndex === selectedVariantIndex) {
+          return { ...item, qty: quantity };
+        }
+        return item;
+      });
+      dispatch({ type: 'SET_CART', payload: updatedCartItems });
+      return;
+    }
+
+    // Optimistic update
+    dispatch({
+      type: 'UPDATE_ITEM_OPTIMISTIC',
+      payload: { productId, variantIndex: selectedVariantIndex, qty: quantity }
+    });
+    
     try {
-      const { data } = await api.post('/user/cart', { productId, qty: quantity });
+      const { data } = await api.post('/user/cart', { 
+        productId, 
+        qty: quantity,
+        selectedVariantIndex
+      });
       dispatch({ type: 'SET_CART', payload: data });
     } catch (error: any) {
       console.error('Failed to update quantity', error);
       dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || 'Failed to update quantity' });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
+      await fetchCartAndWishlist(); // Revert on error
+    }
+  };
+
+  const updateCartItemVariant = async (productId: string, currentVariantIndex: number, newVariantIndex: number) => {
+    const currentItem = state.items.find(item => {
+      const product = item.product as Product;
+      return product?._id === productId && item.selectedVariantIndex === currentVariantIndex;
+    });
+
+    if (!currentItem) return;
+
+    if (!user || !token) {
+      const updatedCartItems = state.items.map(item => {
+        const product = item.product as Product;
+        if (product && product._id === productId && item.selectedVariantIndex === currentVariantIndex) {
+          return { ...item, selectedVariantIndex: newVariantIndex };
+        }
+        return item;
+      });
+      dispatch({ type: 'SET_CART', payload: updatedCartItems });
+      return;
+    }
+
+    // Optimistic update
+    dispatch({
+      type: 'UPDATE_VARIANT_OPTIMISTIC',
+      payload: { productId, oldVariantIndex: currentVariantIndex, newVariantIndex, qty: currentItem.qty }
+    });
+
+    try {
+      // Remove old variant
+      await api.post('/user/cart', {
+        productId,
+        qty: 0,
+        selectedVariantIndex: currentVariantIndex
+      });
+
+      // Add new variant
+      const { data } = await api.post('/user/cart', {
+        productId,
+        qty: currentItem.qty,
+        selectedVariantIndex: newVariantIndex
+      });
+      
+      dispatch({ type: 'SET_CART', payload: data });
+    } catch (error: any) {
+      console.error('Failed to update variant', error);
+      dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || 'Failed to update variant' });
+      await fetchCartAndWishlist(); // Revert on error
     }
   };
 
   const clearCart = async () => {
     if (!user || !token) {
       localStorage.removeItem('cartItems');
-      dispatch({ type: 'CLEAR_ALL' });
+      dispatch({ type: 'SET_CART', payload: [] });
       return;
     }
+
     dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
     try {
-      // A dedicated clear cart endpoint would be more efficient here.
-      // For now, we simulate by removing all items.
       for (const item of state.items) {
-        await removeFromCart((item.product as Product)._id);
+        const product = item.product as Product;
+        if (product) {
+          await removeFromCart(product._id, item.selectedVariantIndex);
+        }
       }
-      dispatch({ type: 'CLEAR_ALL' });
-      await fetchCartAndWishlist(); // Re-fetch to ensure sync with an empty backend cart
+      dispatch({ type: 'SET_CART', payload: [] });
     } catch (error: any) {
       console.error('Failed to clear cart', error);
       dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || 'Failed to clear cart' });
@@ -214,17 +371,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const toggleWishlist = async (productId: string) => {
     if (!user || !token) {
-      let existingWishlistItems: string[] = JSON.parse(localStorage.getItem('wishlistItems') || '[]');
-      if (existingWishlistItems.includes(productId)) {
-        existingWishlistItems = existingWishlistItems.filter(id => id !== productId);
+      let wishlist = [...state.wishlist];
+      if (wishlist.includes(productId)) {
+        wishlist = wishlist.filter(id => id !== productId);
       } else {
-        existingWishlistItems.push(productId);
+        wishlist.push(productId);
       }
-      dispatch({ type: 'SET_WISHLIST', payload: existingWishlistItems });
+      dispatch({ type: 'SET_WISHLIST', payload: wishlist });
       return;
     }
+
     dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
     try {
       const { data } = await api.post('/user/wishlist', { productId });
       dispatch({ type: 'SET_WISHLIST', payload: data });
@@ -236,16 +393,39 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isInWishlist = (productId: string) => {
-    return state.wishlist.includes(productId);
+  const isInWishlist = (productId: string) => state.wishlist.includes(productId);
+
+  const getCartItemQuantity = (productId: string, selectedVariantIndex: number = 0) => {
+    const item = state.items.find(item => {
+      const product = item.product as Product;
+      return product && product._id === productId && item.selectedVariantIndex === selectedVariantIndex;
+    });
+    return item ? item.qty : 0;
   };
 
   const cartTotal = state.items.reduce((total, item) => {
-    const productPrice = (item.product as Product)?.price;
-    return total + (productPrice !== undefined ? productPrice : 0) * item.qty;
+    const product = item.product as Product;
+    if (!product) return total;
+
+    let price = 0;
+    if (product.variants && product.variants.length > 0 && item.selectedVariantIndex !== undefined) {
+      const variant = product.variants[item.selectedVariantIndex];
+      if (variant) {
+        price = variant.offerPrice && variant.offerPrice < variant.originalPrice
+          ? variant.offerPrice
+          : variant.originalPrice;
+      }
+    } else {
+      price = product.offerPrice && product.offerPrice < (product.originalPrice || 0)
+        ? product.offerPrice
+        : (product.originalPrice || 0);
+    }
+
+    return total + (price * item.qty);
   }, 0);
 
   const cartCount = state.items.reduce((count, item) => count + item.qty, 0);
+  const updateCartItemQuantity = updateQuantity;
 
   return (
     <CartContext.Provider
@@ -254,12 +434,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         addToCart,
         removeFromCart,
         updateQuantity,
+        updateCartItemQuantity,
+        updateCartItemVariant,
         clearCart,
         toggleWishlist,
         isInWishlist,
+        getCartItemQuantity,
         cartTotal,
         cartCount,
         fetchCartAndWishlist,
+        cartLoading: state.loading,
+        cartError: state.error,
       }}
     >
       {children}
@@ -273,6 +458,4 @@ export function useCart() {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
-} 
-
-
+}

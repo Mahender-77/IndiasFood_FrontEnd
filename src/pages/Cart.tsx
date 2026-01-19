@@ -1,19 +1,167 @@
 import { Link } from 'react-router-dom';
-import { Trash2, Minus, Plus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Trash2, Minus, Plus, ShoppingBag, ArrowRight, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useCart } from '@/context/CartContext';
 import { Product } from '@/types';
+import { SEO } from '@/components/seo/SEO';
+import { toast } from 'sonner';
+import { useMemo } from 'react';
 
 const Cart = () => {
-  const { state, updateQuantity, removeFromCart, cartTotal, cartLoading, cartError } = useCart();
-  const deliveryFee = cartTotal >= 500 ? 0 : 50;
-  const total = cartTotal + deliveryFee;
+  const { state, updateQuantity, removeFromCart, updateCartItemVariant, cartLoading } = useCart();
+
+  const getVariantStock = (product: Product, variantIndex?: number) => {
+    if (!product.inventory || product.inventory.length === 0) return 0;
+
+    if (product.variants && product.variants.length > 0 && variantIndex !== undefined) {
+      return product.inventory.reduce((total, location) => {
+        const stockItem = location.stock.find(s => s.variantIndex === variantIndex);
+        return total + (stockItem?.quantity || 0);
+      }, 0);
+    }
+
+    return product.inventory.reduce((total, location) => {
+      return total + location.stock.reduce((locationTotal, stockItem) => {
+        return locationTotal + (stockItem.quantity || 0);
+      }, 0);
+    }, 0);
+  };
+
+  const getPricingInfo = (product: Product, variantIndex?: number) => {
+    if (product.variants && product.variants.length > 0 && variantIndex !== undefined) {
+      const variant = product.variants[variantIndex];
+      if (variant) {
+        return {
+          originalPrice: variant.originalPrice,
+          offerPrice: variant.offerPrice,
+          effectivePrice: variant.offerPrice && variant.offerPrice < variant.originalPrice 
+            ? variant.offerPrice 
+            : variant.originalPrice,
+          hasOffer: variant.offerPrice && variant.offerPrice < variant.originalPrice,
+          variantLabel: variant.value
+        };
+      }
+    }
+
+    const originalPrice = product.originalPrice || 0;
+    const offerPrice = product.offerPrice;
+    return {
+      originalPrice,
+      offerPrice,
+      effectivePrice: offerPrice && offerPrice < originalPrice ? offerPrice : originalPrice,
+      hasOffer: offerPrice && offerPrice < originalPrice,
+      variantLabel: null
+    };
+  };
+
+  const handleQuantityIncrease = async (product: Product, currentQty: number, variantIndex?: number) => {
+    const availableStock = getVariantStock(product, variantIndex);
+    
+    if (currentQty >= availableStock) {
+      toast.warning('Maximum stock reached', {
+        description: `Only ${availableStock} items available in stock`,
+        duration: 2000,
+      });
+      return;
+    }
+    
+    await updateQuantity(product._id, currentQty + 1, variantIndex);
+  };
+
+  const handleQuantityDecrease = async (productId: string, currentQty: number, variantIndex?: number) => {
+    if (currentQty <= 1) return;
+    await updateQuantity(productId, currentQty - 1, variantIndex);
+  };
+
+  const handleRemoveItem = async (productId: string, variantIndex?: number) => {
+    await removeFromCart(productId, variantIndex ?? 0);
+    toast.info('Item removed from cart', { duration: 2000 });
+  };
+
+  const handleVariantChange = async (productId: string, currentVariantIndex: number, currentQty: number, newVariantIndex: number, product: Product) => {
+    const newVariantStock = getVariantStock(product, newVariantIndex);
+    
+    if (newVariantStock === 0) {
+      toast.error('Selected variant is out of stock', {
+        description: 'Please choose another variant',
+        duration: 2000,
+      });
+      return;
+    }
+
+    try {
+      const adjustedQty = currentQty > newVariantStock ? newVariantStock : currentQty;
+      
+      await updateCartItemVariant(productId, currentVariantIndex, newVariantIndex);
+      
+      if (currentQty > newVariantStock) {
+        toast.warning('Quantity adjusted', {
+          description: `Only ${newVariantStock} items available for this variant`,
+          duration: 2000,
+        });
+      } else {
+        toast.success('Variant updated', {
+          description: 'Price updated for new variant',
+          duration: 1500,
+        });
+      }
+    } catch (error) {
+      toast.error('Failed to update variant', {
+        description: 'Please try again',
+        duration: 2000,
+      });
+    }
+  };
+
+  // Calculate cart total and savings using useMemo (only for in-stock items)
+  const { cartTotal, totalSavings, availableItemsCount } = useMemo(() => {
+    let total = 0;
+    let savings = 0;
+    let availableCount = 0;
+
+    state.items.forEach((item) => {
+      const product = item.product as Product;
+      if (!product) return;
+
+      const hasVariants = product.variants && product.variants.length > 0;
+      const variantIndex = item.selectedVariantIndex !== undefined ? item.selectedVariantIndex : 0;
+      const availableStock = getVariantStock(product, hasVariants ? variantIndex : undefined);
+
+      // Only include items that have stock available
+      if (availableStock > 0) {
+        const pricing = getPricingInfo(product, hasVariants ? variantIndex : undefined);
+
+        const itemTotal = pricing.effectivePrice * item.qty;
+        total += itemTotal;
+
+        if (pricing.hasOffer) {
+          savings += (pricing.originalPrice - pricing.effectivePrice) * item.qty;
+        }
+
+        availableCount += 1;
+      }
+    });
+
+    return { cartTotal: total, totalSavings: savings, availableItemsCount: availableCount };
+  }, [state.items]);
 
   if (state.items.length === 0) {
     return (
       <Layout>
-        <section className="section-padding bg-background ">
+        <SEO
+          title="Shopping Cart - India's Food"
+          description="Your shopping cart is empty."
+          keywords="shopping cart, empty cart"
+        />
+        <section className="section-padding bg-background">
           <div className="container-custom">
             <div className="max-w-md mx-auto text-center py-16">
               <div className="w-24 h-24 mx-auto rounded-full bg-muted flex items-center justify-center mb-6">
@@ -40,148 +188,342 @@ const Cart = () => {
 
   return (
     <Layout>
-      <section className="section-padding bg-background pt-10 ">
-        <div className="container-custom">
-          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-8">
-            Your Cart
+      <SEO
+        title="Shopping Cart - India's Food"
+        description={`Your cart has ${availableItemsCount} items. Total: ₹${cartTotal}.`}
+        keywords="shopping cart, checkout"
+      />
+      <section className="section-padding bg-background pt-6 sm:pt-8 lg:pt-10">
+        <div className="container-custom px-4 sm:px-6 lg:px-8">
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4 sm:mb-6 lg:mb-8">
+            Your Cart ({availableItemsCount} {availableItemsCount === 1 ? 'item' : 'items'})
           </h1>
 
-          <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
-            {/* Cart Items */}
-            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-              {cartLoading && <p className="text-center py-4">Updating cart...</p>}
-              {cartError && <p className="text-red-500 text-center py-4">Error: {cartError}</p>}
-
+          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+            <div className="lg:col-span-2 space-y-4">
               {state.items.map((item) => {
-                const product = item.product as Product; // Cast once
-                if (!product) return null; // Null check
+                const product = item.product as Product;
+                if (!product) return null;
+
+                const hasVariants = product.variants && product.variants.length > 0;
+                const variantIndex = item.selectedVariantIndex !== undefined ? item.selectedVariantIndex : 0;
+                const pricing = getPricingInfo(product, hasVariants ? variantIndex : undefined);
+                const availableStock = getVariantStock(product, hasVariants ? variantIndex : undefined);
+                const itemTotal = pricing.effectivePrice * item.qty;
+                const savings = pricing.hasOffer ? (pricing.originalPrice - pricing.effectivePrice) * item.qty : 0;
+                const itemKey = `${product._id}-${variantIndex}`;
 
                 return (
                   <div
-                    key={product._id}
-                    className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4 bg-card rounded-xl shadow-card"
+                    key={itemKey}
+                    className="flex flex-col sm:flex-row gap-4 p-4 sm:p-5 bg-card rounded-xl shadow-card border"
                   >
-                    {/* Image */}
                     <Link
                       to={`/product/${product._id}`}
-                      className="w-full h-auto aspect-square sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-lg overflow-hidden shrink-0 mx-auto sm:mx-0"
+                      className="w-full sm:w-24 md:w-28 h-auto aspect-square rounded-lg overflow-hidden shrink-0"
                     >
                       <img
-                        src={product.images && product.images.length > 0 ? product.images[0] : '/images/placeholder.png'} // Use first image from array or a placeholder
+                        src={product.images && product.images.length > 0 ? product.images[0] : '/images/placeholder.png'}
                         alt={product.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                       />
                     </Link>
 
-                    {/* Details */}
-                    <div className="flex-1 min-w-0 text-center sm:text-left">
+                    <div className="flex-1 min-w-0">
                       <Link to={`/product/${product._id}`}>
-                        <h3 className="font-display font-semibold text-base sm:text-lg text-foreground truncate hover:text-primary transition-colors">
+                        <h3 className="font-display font-semibold text-base sm:text-lg text-foreground hover:text-primary transition-colors mb-2">
                           {product.name}
                         </h3>
                       </Link>
-                      {/* Conditionally display weight */}
-                      { product.weight && (
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          {product.weight}
-                        </p>
+
+                      {hasVariants && product.variants && product.variants.length > 1 && (
+                        <div className="mb-3">
+                          <Select
+                            value={variantIndex.toString()}
+                            onValueChange={(value) => handleVariantChange(product._id, variantIndex, item.qty, parseInt(value, 10), product)}
+                            disabled={cartLoading}
+                          >
+                            <SelectTrigger className="w-full sm:w-[200px] h-9 text-sm bg-white border border-gray-200 hover:border-gray-300 transition-colors rounded-lg">
+                              <div className="flex items-center justify-between w-full gap-2">
+                                <span className="text-gray-700 font-medium text-xs">
+                                  {product.variants[variantIndex]?.value || 'Select'}
+                                </span>
+                                <span className="text-gray-900 font-semibold text-xs">
+                                  ₹{pricing.effectivePrice}
+                                </span>
+                              </div>
+                            </SelectTrigger>
+                            <SelectContent className="rounded-lg">
+                              {product.variants.map((variant, index) => {
+                                const varStock = getVariantStock(product, index);
+                                
+                                return (
+                                  <SelectItem 
+                                    key={index} 
+                                    value={index.toString()}
+                                    disabled={varStock === 0}
+                                    className="cursor-pointer"
+                                  >
+                                    <div className="flex items-center justify-between w-full gap-3">
+                                      <span className="font-medium text-gray-900 text-sm">{variant.value}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-900 font-semibold text-sm">
+                                          ₹{variant.offerPrice || variant.originalPrice}
+                                        </span>
+                                        {varStock === 0 && (
+                                          <span className="text-red-500 text-xs font-medium">(Out)</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       )}
-                      <p className="font-semibold text-primary mt-1 text-base sm:text-lg">
-                        ₹{product.price}
-                      </p>
+
+                      {hasVariants && product.variants && product.variants.length === 1 && (
+                        <div className="mb-3 text-xs bg-gray-50 px-2.5 py-1.5 rounded-md inline-block border border-gray-100">
+                          <span className="font-medium text-gray-700">{product.variants[0].value}</span>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        {product.isGITagged && (
+                          <span className="inline-block px-2 py-1 bg-saffron-light text-primary text-xs rounded-full">
+                            GI Tagged
+                          </span>
+                        )}
+                        {product.isNewArrival && (
+                          <span className="inline-block px-2 py-1 bg-pistachio text-white text-xs rounded-full">
+                            New Arrival
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 mb-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-primary text-lg">
+                            ₹{pricing.effectivePrice}
+                          </span>
+                          {pricing.hasOffer && (
+                            <>
+                              <span className="text-sm text-muted-foreground line-through">
+                                ₹{pricing.originalPrice}
+                              </span>
+                              <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-semibold">
+                                SAVE ₹{pricing.originalPrice - pricing.effectivePrice}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.qty} × ₹{pricing.effectivePrice} = <span className="font-semibold text-foreground">₹{itemTotal}</span>
+                        </div>
+                      </div>
+
+                      <div className="mb-3">
+                        {availableStock > 0 ? (
+                          availableStock <= 5 ? (
+                            <span className="text-xs text-orange-600 font-semibold">
+                              Only {availableStock} left in stock!
+                            </span>
+                          ) : (
+                            <span className="text-xs text-green-600 font-medium">
+                              In stock ({availableStock} available)
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-xs text-red-600 font-semibold">Out of stock</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 sm:hidden">
+                        <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:bg-background"
+                            onClick={() => handleQuantityDecrease(product._id, item.qty, hasVariants ? variantIndex : undefined)}
+                            disabled={cartLoading || item.qty <= 1}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <span className="w-8 text-center font-semibold text-sm">
+                            {item.qty}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:bg-background"
+                            onClick={() => handleQuantityIncrease(product, item.qty, hasVariants ? variantIndex : undefined)}
+                            disabled={cartLoading || item.qty >= availableStock}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <button
+                          onClick={() => handleRemoveItem(product._id, hasVariants ? variantIndex : undefined)}
+                          className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-destructive/10"
+                          disabled={cartLoading}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+
+                        <div className="ml-auto">
+                          <div className="font-semibold text-primary text-base">
+                            ₹{itemTotal}
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Quantity & Remove */}
-                    <div className="flex items-center sm:flex-col justify-between sm:justify-start gap-2 mt-2 sm:mt-0">
+                    <div className="hidden sm:flex flex-col items-end justify-between gap-3">
                       <button
-                        onClick={() => removeFromCart(product._id)}
-                        className="p-1 sm:p-2 text-muted-foreground hover:text-destructive transition-colors"
+                        onClick={() => handleRemoveItem(product._id, hasVariants ? variantIndex : undefined)}
+                        className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-destructive/10"
                         disabled={cartLoading}
                       >
-                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
 
-                      <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
-                          className="h-7 w-7 sm:h-8 sm:w-8"
-                          onClick={() =>
-                            updateQuantity(product._id, item.qty - 1)
-                          }
+                          className="h-8 w-8 hover:bg-background"
+                          onClick={() => handleQuantityDecrease(product._id, item.qty, hasVariants ? variantIndex : undefined)}
                           disabled={cartLoading || item.qty <= 1}
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-7 sm:w-8 text-center font-medium">
+                        <span className="w-8 text-center font-semibold text-sm">
                           {item.qty}
                         </span>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
-                          className="h-7 w-7 sm:h-8 sm:w-8"
-                          onClick={() =>
-                            updateQuantity(product._id, item.qty + 1)
-                          }
-                          disabled={cartLoading || product.countInStock === 0 || item.qty >= product.countInStock}
+                          className="h-8 w-8 hover:bg-background"
+                          onClick={() => handleQuantityIncrease(product, item.qty, hasVariants ? variantIndex : undefined)}
+                          disabled={cartLoading || item.qty >= availableStock}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
+
+                      <div className="text-right">
+                        <div className="font-semibold text-primary text-base">
+                          ₹{itemTotal}
+                        </div>
+                        {savings > 0 && (
+                          <div className="text-xs text-green-600 font-medium mt-0.5">
+                            Saved ₹{savings}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
-              })}            </div>
+              })}
+            </div>
 
-            {/* Order Summary */}
             <div className="lg:col-span-1">
-              <div className="bg-card rounded-xl shadow-card p-4 sm:p-6 sticky top-24">
-                <h2 className="font-display text-lg sm:text-xl font-semibold text-foreground mb-4">
+              <div className="bg-card rounded-xl shadow-card p-5 sm:p-6 sticky top-24">
+                <h2 className="font-display text-xl font-semibold text-foreground mb-4">
                   Order Summary
                 </h2>
 
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">₹{cartTotal}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Delivery</span>
-                    <span className="font-medium">
-                      {deliveryFee === 0 ? (
-                        <span className="text-pistachio">FREE</span>
-                      ) : (
-                        `₹${deliveryFee}`
-                      )}
-                    </span>
-                  </div>
-                  {deliveryFee > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Add ₹{500 - cartTotal} more for free delivery
-                    </p>
-                  )}
-                  <div className="border-t border-border pt-3">
-                    <div className="flex justify-between">
-                      <span className="font-semibold">Total</span>
-                      <span className="font-display text-lg sm:text-xl font-bold text-primary">
-                        ₹{total}
+                <div className="space-y-3 mb-4 pb-4 border-b border-border">
+                  {state.items
+                    .filter((item) => {
+                      const product = item.product as Product;
+                      if (!product) return false;
+
+                      const hasVariants = product.variants && product.variants.length > 0;
+                      const variantIndex = item.selectedVariantIndex !== undefined ? item.selectedVariantIndex : 0;
+                      const availableStock = getVariantStock(product, hasVariants ? variantIndex : undefined);
+
+                      return availableStock > 0;
+                    })
+                    .map((item) => {
+                      const product = item.product as Product;
+                      if (!product) return null;
+
+                      const hasVariants = product.variants && product.variants.length > 0;
+                      const variantIndex = item.selectedVariantIndex !== undefined ? item.selectedVariantIndex : 0;
+                      const pricing = getPricingInfo(product, hasVariants ? variantIndex : undefined);
+                      const itemTotal = pricing.effectivePrice * item.qty;
+
+                      let displayName = product.name;
+                      if (hasVariants && pricing.variantLabel) {
+                        displayName = `${product.name} (${pricing.variantLabel})`;
+                      }
+
+                      const itemKey = `${product._id}-${variantIndex}`;
+
+                      return (
+                        <div key={itemKey} className="flex justify-between items-start gap-2 text-sm">
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate text-foreground font-medium">
+                              {displayName}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {item.qty} × ₹{pricing.effectivePrice}
+                            </p>
+                          </div>
+                          <span className="font-semibold text-foreground whitespace-nowrap">
+                            ₹{itemTotal}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-semibold text-base">Subtotal</span>
+                  <span className="font-display text-2xl font-bold text-primary">
+                    ₹{cartTotal}
+                  </span>
+                </div>
+
+                {totalSavings > 0 && (
+                  <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-100">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-green-700 font-medium">Total Savings</span>
+                      <span className="text-green-700 font-bold text-base">
+                        ₹{totalSavings}
                       </span>
                     </div>
                   </div>
+                )}
+
+                <div className="space-y-3 mt-6">
+                  <Link to="/checkout" className="block">
+                    <Button size="lg" variant="hero" className="w-full gap-2">
+                      Proceed to Checkout
+                      <ArrowRight className="h-5 w-5" />
+                    </Button>
+                  </Link>
+
+                  <Link to="/products" className="block">
+                    <Button variant="outline" className="w-full">
+                      Continue Shopping
+                    </Button>
+                  </Link>
                 </div>
 
-                <Link to="/checkout" className="block mt-4 sm:mt-6">
-                  <Button size="lg" variant="hero" className="w-full gap-2">
-                    Proceed to Checkout
-                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </Button>
-                </Link>
-
-                <Link to="/products" className="block mt-2 sm:mt-3">
-                  <Button variant="ghost" className="w-full">
-                    Continue Shopping
-                  </Button>
-                </Link>
+                <div className="mt-6 pt-4 border-t border-border space-y-2">
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <span>📦</span>
+                    <span>Quality products delivered fresh</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <span>✓</span>
+                    <span>Secure checkout guaranteed</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

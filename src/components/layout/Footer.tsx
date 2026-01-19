@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 export function Footer() {
   return (
     <footer className="bg-background/95 text-primary">
-      <div className="container-custom section-padding">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
+      <div className="container-custom section-padding px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 md:gap-12">
           {/* Brand */}
           <div className="space-y-3 sm:space-y-4">
           <Link to="/" className="shrink-0">
@@ -68,10 +68,10 @@ export function Footer() {
             <ul className="space-y-3 sm:space-y-4">
               <li className="flex items-start gap-2 sm:gap-3">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0 mt-0.5" />
-                <span className="text-muted-foreground text-xs sm:text-sm">
-                  location name<br />
-                  Bangalore, Karnataka XXXX 
-                </span>
+                <div className="text-muted-foreground text-xs sm:text-sm leading-tight">
+                  <div>location name</div>
+                  <div>Bangalore, Karnataka XXXX</div>
+                </div>
               </li>
               <li className="flex items-center gap-2 sm:gap-3">
                 <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
@@ -81,7 +81,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2 sm:gap-3">
                 <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
-                <a href="mailto:hello@indiasfood.com" className="text-muted-foreground hover:text-primary text-xs sm:text-sm transition-colors">
+                <a href="mailto:hello@indiasfood.com" className="text-muted-foreground hover:text-primary text-xs sm:text-sm transition-colors break-all">
                   XXX@XXXX.com
                 </a>
               </li>

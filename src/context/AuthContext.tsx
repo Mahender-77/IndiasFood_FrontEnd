@@ -9,7 +9,7 @@ interface User {
   _id: string;
   username: string;
   email: string;
-  role: 'user' | 'admin' | 'delivery'; // Add role field
+  role: 'user' | 'admin' | 'delivery' | 'delivery-pending'; // Add role field
   addresses: Address[];
   deliveryProfile?: DeliveryProfile; // Add deliveryProfile
 }

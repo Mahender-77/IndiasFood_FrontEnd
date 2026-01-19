@@ -1,15 +1,15 @@
-import { Leaf, Award, Truck, HeartHandshake } from 'lucide-react';
+import { Leaf, Award, Truck, HeartHandshake,ChefHat,Landmark  } from 'lucide-react';
 
 const features = [
   {
-    icon: Leaf,
-    title: 'Pure Ingredients',
-    description: 'Made with 100% pure ghee, premium dry fruits, and no artificial preservatives.',
+    icon: ChefHat,
+    title: 'Authentic Manufacturer',
+    description: 'Traditional artisans and original inventors who\'ve perfected their craft for generations.',
   },
   {
-    icon: Award,
-    title: 'Traditional Recipes',
-    description: 'Time-honored recipes passed down through generations of master sweet makers.',
+    icon: Landmark,
+    title: 'India\'s Food Experience Center',
+    description: 'Curating, preserving, and celebrating India\'s authentic regional culinary heritage.',
   },
   {
     icon: Truck,
@@ -18,8 +18,8 @@ const features = [
   },
   {
     icon: HeartHandshake,
-    title: 'Made with Love',
-    description: 'Each sweet is crafted with care and attention to bring joy to your celebrations.',
+    title: 'You-The Customer ',
+    description: 'Experience genuine flavors delivered fresh from their original source to your door.',
   },
 ];
 

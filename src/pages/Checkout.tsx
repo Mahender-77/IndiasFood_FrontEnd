@@ -1,25 +1,44 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, CreditCard, Truck, Check } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation, Check } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
-import api from '@/lib/api';
 import { Product } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import api from '@/lib/api';
+
+interface StoreLocation {
+  name: string;
+  latitude: number;
+  longitude: number;
+  isActive: boolean;
+}
+
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { state, cartTotal, clearCart, fetchCartAndWishlist } = useCart();
-  const { user } = useAuth();
+  const { state, cartTotal, clearCart } = useCart();
   const { toast } = useToast();
-  const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [addressMethod, setAddressMethod] = useState<'current' | 'manual'>('manual');
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [isAddressConfirmed, setIsAddressConfirmed] = useState(false);
+
+  const [storeLocations, setStoreLocations] = useState<StoreLocation[]>([]);
+  const [loadingStores, setLoadingStores] = useState(false);
+
+  const [deliveryResult, setDeliveryResult] = useState<any>(null);
+  const [deliverySettings, setDeliverySettings] = useState({
+    pricePerKm: 0,
+    baseCharge: 0,
+    freeDeliveryThreshold: 0
+  });
+  
+
+  
 
   const [address, setAddress] = useState({
     fullName: '',
@@ -27,352 +46,607 @@ const Checkout = () => {
     address: '',
     city: '',
     postalCode: '',
-    country: '',
+    locationName: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
 
-  const deliveryFee = cartTotal >= 500 ? 0 : 50;
-  const total = cartTotal + deliveryFee;
-
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    if (!user) { // Only check for user, token is handled by interceptor
+  const placeOrder = async () => {
+    if (!deliveryResult) {
       toast({
         title: 'Error',
-        description: 'Please log in to place an order.',
-        variant: 'destructive',
+        description: 'Please confirm address first',
+        variant: 'destructive'
       });
-      setIsLoading(false);
       return;
     }
-
-    if (state.items.length === 0) {
-      toast({
-        title: 'Error',
-        description: 'Your cart is empty.',
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return;
-    }
-
+  
     try {
-      const orderItems = state.items.map(item => ({
-        name: (item.product as Product).name,
-        qty: item.qty,
-        image: (item.product as Product).images && (item.product as Product).images.length > 0 ? (item.product as Product).images[0] : '/images/placeholder.png',
-        price: (item.product as Product).price,
-        product: (item.product as Product)._id,
-      }));
-
-      const { data } = await api.post(
-        '/user/checkout',
-        {
-          orderItems,
-          shippingAddress: {
-            address: address.address,
-            city: address.city,
-            postalCode: address.postalCode,
-            country: address.country,
-          },
-          paymentMethod,
-          taxPrice: 0, // Assuming tax is 0 for simplicity, update if needed
-          shippingPrice: deliveryFee,
-          totalPrice: total,
-        }
-      );
-
+      const payload = {
+        orderItems: state.items.map(item => {
+          const product = item.product as Product;
+  
+          let price =
+            product.variants?.[item.selectedVariantIndex ?? 0]?.offerPrice ??
+            product.offerPrice ??
+            product.originalPrice;
+  
+          return {
+            product: product._id,
+            name: product.name,
+            image: product.images?.[0],
+            qty: item.qty,
+            price,
+            selectedVariantIndex: item.selectedVariantIndex ?? 0
+          };
+        }),
+  
+        shippingAddress: {
+          fullName: address.fullName,
+          phone: address.phone,
+          address: address.address,
+          city: address.city,
+          postalCode: address.postalCode,
+          country: "India",          // REQUIRED ✔
+          latitude: address.latitude,
+          longitude: address.longitude
+        },
+  
+        paymentMethod: "Cash On Delivery", // REQUIRED ✔
+  
+        taxPrice: 0,
+  
+        shippingPrice: deliveryResult.charge,
+  
+        distance: deliveryResult.totalKm,
+  
+        nearestStore: deliveryResult.stores[0], // store name ✔
+  
+        totalPrice: cartTotal + deliveryResult.charge
+      };
+  
+      await api.post('/user/checkout', payload);
+  
       toast({
-        title: 'Order Placed Successfully!',
-        description: `Your order #${data._id} has been placed. You will receive a confirmation shortly.`,
+        title: 'Order placed successfully',
+        description: 'Redirecting to your orders...'
       });
-
-      await clearCart(); // Clear cart in frontend context and backend
-      await fetchCartAndWishlist(); // Re-fetch cart and wishlist after clearing
+  
+      // Clear cart (context method)
+      clearCart();
+  
       navigate('/orders');
+  
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Something went wrong while placing your order.',
-        variant: 'destructive',
+        title: 'Order failed',
+        description: error.response?.data?.message || 'Something went wrong',
+        variant: 'destructive'
       });
-    } finally {
-      setIsLoading(false);
     }
   };
+  
+
+  const fetchDeliverySettings = async () => {
+    try {
+      const res = await api.get('/user/delivery-settings');
+  
+      setDeliverySettings({
+        pricePerKm: res.data.pricePerKm,
+        baseCharge: res.data.baseCharge,
+        freeDeliveryThreshold: res.data.freeDeliveryThreshold
+      });
+  
+      setStoreLocations(res.data.storeLocations);
+  
+    
+  
+    } catch (error) {
+      console.error("Failed to fetch delivery settings");
+    }
+  };
+  
+  useEffect(() => {
+    fetchDeliverySettings();
+  }, []);
+  
+  /* ---------------- HELPERS ---------------- */
+
+  const reverseGeocode = async (lat: number, lng: number) => {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+    );
+    const data = await res.json();
+
+    const addr = data.address || {};
+
+    return {
+      address: addr.road || addr.neighbourhood || '',
+      city: addr.city || addr.town || addr.village || '',
+      postalCode: addr.postcode || '',
+      locationName: data.display_name,
+      latitude: lat,
+      longitude: lng
+    };
+  };
+
+  const geocodeAddress = async () => {
+    const query = `${address.address}, ${address.city}, ${address.postalCode}`;
+
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`
+    );
+
+    const data = await res.json();
+
+    if (!data.length) {
+      toast({
+        title: 'Address not found, Please enter the correct address',
+        variant: 'destructive'
+      });
+      return null;
+    }
+
+    return {
+      latitude: parseFloat(data[0].lat),
+      longitude: parseFloat(data[0].lon)
+    };
+  };
+
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) => {
+    const R = 6371; // KM
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+  
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) *
+      Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  };
+  
+  const consoleCartStoreMapping = (
+    userLat: number,
+    userLng: number,
+    locationName: string
+  ) => {
+
+  
+    state.items.forEach(item => {
+      const product = item.product as Product;
+  
+      product.inventory.forEach(inv => {
+        const store = storeLocations.find(
+          s => s.name.toLowerCase() === inv.location.toLowerCase()
+        );
+  
+        if (!store) {
+          return;
+        }
+  
+        const distance = calculateDistance(
+          userLat,
+          userLng,
+          store.latitude,
+          store.longitude
+        );
+      });
+    });
+  };
+  
+  
+  /* ---------------- ACTIONS ---------------- */
+
+  const getCurrentLocation = () => {
+    setGettingLocation(true);
+  
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const addr = await reverseGeocode(latitude, longitude);
+  
+        const finalAddress = { ...address, ...addr };
+        setAddress(finalAddress);
+        setIsAddressConfirmed(true);
+  
+        toast({
+          title: 'Location detected',
+          description: `${addr.city} - ${addr.postalCode}`
+        });
+  
+        // 🔹 Distance logs
+        consoleCartStoreMapping(
+          latitude,
+          longitude,
+          addr.locationName
+        );
+  
+        // 🔥 DELIVERY CHARGE LOGIC
+        const result = calculateDeliveryCharge(
+          latitude,
+          longitude
+        );
+  
+        if (result) {
+        
+          setDeliveryResult(result);
+        }
+  
+        setGettingLocation(false);
+      },
+      () => {
+        toast({
+          title: 'Location error',
+          description: 'Please allow location access',
+          variant: 'destructive'
+        });
+        setGettingLocation(false);
+      }
+    );
+  };
+  
+  
+  
+  const confirmAddress = async () => {
+    let finalAddress = address;
+  
+    if (addressMethod === 'manual') {
+      const geo = await geocodeAddress();
+      if (!geo) return;
+  
+      finalAddress = { ...address, ...geo };
+    }
+  
+    setAddress(finalAddress);
+    setIsAddressConfirmed(true);
+  
+    // 🔥 DELIVERY CHARGE
+    const result = calculateDeliveryCharge(
+      finalAddress.latitude!,
+      finalAddress.longitude!
+    );
+  
+    if (result) {
+     
+      setDeliveryResult(result);
+    }
+  
+    toast({
+      title: 'Address confirmed',
+      description: `Delivery fee: ₹${result?.charge}`
+    });
+  };
+  
+  
+  
+  const calculateDeliveryCharge = (
+    userLat: number,
+    userLng: number
+  ) => {
+  
+    const sortedStores = storeLocations
+      .filter(s => s.isActive)
+      .map(store => {
+        const d = calculateDistance(
+          userLat,
+          userLng,
+          store.latitude,
+          store.longitude
+        );
+        return { ...store, distance: d };
+      })
+      .sort((a, b) => a.distance - b.distance);
+  
+    const nearestStore = sortedStores[0];
+    const secondStore = sortedStores[1];
+  
+    const productsInNearest: string[] = [];
+    const missingProducts: string[] = [];
+  
+    state.items.forEach(item => {
+      const product = item.product as Product;
+  
+      const found = product.inventory.some(
+        inv =>
+          inv.location.toLowerCase() ===
+          nearestStore.name.toLowerCase()
+      );
+  
+      if (found) {
+        productsInNearest.push(product.name);
+      } else {
+        missingProducts.push(product.name);
+      }
+    });
+  
+    /* ---------- SINGLE STORE ---------- */
+    if (missingProducts.length === 0) {
+  
+      const km = nearestStore.distance;
+  
+      const charge =
+        deliverySettings.baseCharge +
+        km * deliverySettings.pricePerKm;
+  
+      return {
+        stores: [nearestStore.name],
+        totalKm: km,
+        charge
+      };
+    }
+  
+    /* ---------- MULTI STORE ---------- */
+    const ok = window.confirm(
+      "Some items are from another store. Extra charges apply. Continue?"
+    );
+  
+    if (!ok) return null;
+
+  
+    const leg2 = calculateDistance(
+      nearestStore.latitude,
+      nearestStore.longitude,
+      secondStore.latitude,
+      secondStore.longitude
+    );
+
+    const totalKm =
+      nearestStore.distance + leg2;
+  
+    const charge =
+      deliverySettings.baseCharge +
+      totalKm * deliverySettings.pricePerKm;
+  
+
+    return {
+      stores: [nearestStore.name, secondStore.name],
+      totalKm,
+      charge
+    };
+  };
+  
+  
+  
+
+  /* ---------------- UI ---------------- */
 
   if (state.items.length === 0) {
     return (
       <Layout>
-        <section className="section-padding bg-background">
-          <div className="container-custom">
-            <div className="max-w-md mx-auto text-center py-16">
-              <h1 className="font-display text-2xl font-bold text-foreground mb-4">
-                Your cart is empty
-              </h1>
-              <Link to="/products">
-                <Button size="lg" variant="hero">
-                  Browse Sweets
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
+        <div className="text-center py-20">
+          <h1 className="text-xl font-bold">Your cart is empty</h1>
+        </div>
       </Layout>
     );
   }
 
   return (
     <Layout>
-      {/* Header */}
-      <div className="bg-cream py-4">
+
+      {/* HEADER */}
+      <div className="bg-white py-4 border-b">
         <div className="container-custom">
-          <Link
-            to="/cart"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Cart
+          <Link to="/cart" className="flex items-center gap-2 text-sm">
+            <ArrowLeft className="h-4 w-4" /> Back to Cart
           </Link>
         </div>
       </div>
 
-      <section className="section-padding bg-background pt-10">
-        <div className="container-custom">
-          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-8">
-            Checkout
-          </h1>
+      <section className="section-padding bg-gray-50">
+        <div className="container-custom max-w-5xl mx-auto">
 
-          <form onSubmit={handlePlaceOrder}>
-            <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
-              {/* Left Column - Forms */}
-              <div className="lg:col-span-2 space-y-6 sm:space-y-8">
-                {/* Delivery Address */}
-                <div className="bg-card rounded-xl shadow-card p-4 sm:p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-saffron-light flex items-center justify-center">
-                      <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                    </div>
-                    <h2 className="font-display text-lg sm:text-xl font-semibold">
-                      Delivery Address
-                    </h2>
-                  </div>
+          <h1 className="text-2xl font-bold mb-6">Checkout</h1>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName">Full Name</Label>
-                      <Input
-                        id="fullName"
-                        placeholder="Enter your name"
-                        value={address.fullName}
-                        onChange={(e) =>
-                          setAddress({ ...address, fullName: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="+91 98765 43210"
-                        value={address.phone}
-                        onChange={(e) =>
-                          setAddress({ ...address, phone: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="address">Address Line 1</Label>
-                      <Input
-                        id="address"
-                        placeholder="House/Flat No., Building Name, Street, Landmark"
-                        value={address.address}
-                        onChange={(e) =>
-                          setAddress({ ...address, address: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        placeholder="City"
-                        value={address.city}
-                        onChange={(e) =>
-                          setAddress({ ...address, city: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="postalCode">Postal Code</Label>
-                      <Input
-                        id="postalCode"
-                        placeholder="560001"
-                        value={address.postalCode}
-                        onChange={(e) =>
-                          setAddress({ ...address, postalCode: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="country">Country</Label>
-                      <Input
-                        id="country"
-                        placeholder="Country"
-                        value={address.country}
-                        onChange={(e) =>
-                          setAddress({ ...address, country: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
+          <div className="grid lg:grid-cols-3 gap-6">
 
-                {/* Payment Method */}
-                <div className="bg-card rounded-xl shadow-card p-4 sm:p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-saffron-light flex items-center justify-center">
-                      <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                    </div>
-                    <h2 className="font-display text-lg sm:text-xl font-semibold">
-                      Payment Method
-                    </h2>
-                  </div>
+            {/* LEFT */}
+            <div className="lg:col-span-2 space-y-6">
 
-                  <RadioGroup
-                    value={paymentMethod}
-                    onValueChange={setPaymentMethod}
-                    className="space-y-3"
+              <div className="bg-white rounded-xl p-5 shadow-sm">
+
+                <h2 className="font-semibold text-lg mb-4">Delivery Address</h2>
+
+                {/* TABS */}
+                <div className="flex gap-2 mb-5">
+                  <Button
+                    type="button"
+                    variant={addressMethod === 'current' ? 'default' : 'outline'}
+                    onClick={() => setAddressMethod('current')}
+                    className="flex-1"
                   >
-                    <label
-                      className={cn(
-                        'flex items-center gap-3 p-3 sm:gap-4 sm:p-4 rounded-xl border-2 cursor-pointer transition-colors',
-                        paymentMethod === 'cod'
-                          ? 'border-primary bg-saffron-light'
-                          : 'border-border hover:border-primary/50'
-                      )}
-                    >
-                      <RadioGroupItem value="cod" id="cod" />
-                      <div className="flex-1">
-                        <p className="font-medium text-sm sm:text-base">Cash on Delivery</p>
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          Pay when you receive your order
-                        </p>
-                      </div>
-                      <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                    </label>
-
-                    <label
-                      className={cn(
-                        'flex items-center gap-3 p-3 sm:gap-4 sm:p-4 rounded-xl border-2 cursor-pointer transition-colors',
-                        paymentMethod === 'online'
-                          ? 'border-primary bg-saffron-light'
-                          : 'border-border hover:border-primary/50'
-                      )}
-                    >
-                      <RadioGroupItem value="online" id="online" />
-                      <div className="flex-1">
-                        <p className="font-medium text-sm sm:text-base">Pay Online</p>
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          Credit/Debit Card, UPI, Net Banking
-                        </p>
-                      </div>
-                      <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                    </label>
-                  </RadioGroup>
-                </div>
-              </div>
-
-              {/* Right Column - Order Summary */}
-              <div className="lg:col-span-1">
-                <div className="bg-card rounded-xl shadow-card p-4 sm:p-6 sticky top-24">
-                  <h2 className="font-display text-lg sm:text-xl font-semibold text-foreground mb-4">
-                    Order Summary
-                  </h2>
-
-                  {/* Items */}
-                  <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
-                    {state.items.map((item) => {
-                      const product = item.product as Product;
-                      if (!product) return null; // Null check for product
-
-                      return (
-                        <div
-                          key={product._id}
-                          className="flex items-start gap-3 py-2 border-b last:border-b-0 border-border/50"
-                        >
-                          <img
-                            src={product.images && product.images.length > 0 ? product.images[0] : '/images/placeholder.png'}
-                            alt={product.name}
-                            className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover flex-shrink-0"
-                          />
-                          <div className="flex-1 min-w-0 flex flex-col justify-between h-12 sm:h-14">
-                            <p className="text-xs sm:text-sm font-medium text-foreground leading-tight line-clamp-2">
-                              {product.name}
-                            </p>
-                            <p className="text-xxs sm:text-xs text-muted-foreground">
-                              Qty: {item.qty}
-                            </p>
-                          </div>
-                          <p className="text-xs sm:text-sm font-semibold text-foreground flex-shrink-0">
-                            ₹{product.price * item.qty}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="border-t border-border pt-4 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-medium">₹{cartTotal}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Delivery</span>
-                      <span className="font-medium">
-                        {deliveryFee === 0 ? (
-                          <span className="text-pistachio">FREE</span>
-                        ) : (
-                          `₹${deliveryFee}`
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-border">
-                      <span className="font-semibold">Total</span>
-                      <span className="font-display text-lg sm:text-xl font-bold text-primary">
-                        ₹{total}
-                      </span>
-                    </div>
-                  </div>
+                    <Navigation className="h-4 w-4 mr-2" />
+                    Current Location
+                  </Button>
 
                   <Button
-                    type="submit"
-                    size="md"
-                    variant="hero"
-                    className="w-full mt-4 sm:mt-6 gap-2"
-                    disabled={isLoading}
+                    type="button"
+                    variant={addressMethod === 'manual' ? 'default' : 'outline'}
+                    onClick={() => setAddressMethod('manual')}
+                    className="flex-1"
                   >
-                    {isLoading ? (
-                      'Processing...'
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4 sm:h-5 sm:w-5" />
-                        Place Order
-                      </>
-                    )}
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Enter Address
                   </Button>
                 </div>
+
+                {/* CURRENT LOCATION */}
+                {addressMethod === 'current' && (
+                  <Button
+                    type="button"
+                    onClick={getCurrentLocation}
+                    disabled={gettingLocation}
+                    className="w-full h-12"
+                  >
+                    {gettingLocation ? 'Fetching location...' : 'Use my current location'}
+                  </Button>
+                )}
+
+                {/* MANUAL FORM */}
+                {addressMethod === 'manual' && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Full Name</Label>
+                        <Input
+                          value={address.fullName}
+                          onChange={(e) => setAddress({...address, fullName: e.target.value})}
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Phone</Label>
+                        <Input
+                          value={address.phone}
+                          onChange={(e) => setAddress({...address, phone: e.target.value})}
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <Label>Address</Label>
+                        <Input
+                          value={address.address}
+                          onChange={(e) => setAddress({...address, address: e.target.value})}
+                        />
+                      </div>
+
+                      <div>
+                        <Label>City</Label>
+                        <Input
+                          value={address.city}
+                          onChange={(e) => setAddress({...address, city: e.target.value})}
+                        />
+                      </div>
+
+                      <div>
+                        <Label>PIN Code</Label>
+                        <Input
+                          value={address.postalCode}
+                          onChange={(e) => setAddress({...address, postalCode: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    {/* CONFIRM BUTTON */}
+                    <Button
+                      onClick={confirmAddress}
+                      className="w-full mt-6 h-12"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Confirm Address
+                    </Button>
+                  </>
+                )}
+
               </div>
             </div>
-          </form>
+
+            {/* RIGHT */}
+            <div>
+              <div className="bg-white rounded-xl p-5 shadow-sm sticky top-24">
+
+                <h2 className="font-semibold text-lg mb-4">Order Summary</h2>
+
+                <div className="space-y-4 mb-4">
+                  {state.items.map(item => {
+                    const product = item.product as Product;
+                    let price = product.offerPrice ?? product.originalPrice ?? 0;
+
+                    if (product.variants?.[item.selectedVariantIndex ?? 0]) {
+                      const v = product.variants[item.selectedVariantIndex!];
+                      price = v.offerPrice ?? v.originalPrice;
+                    }
+
+                    return (
+                      <div key={product._id} className="flex gap-3">
+                        <img
+                          src={product.images?.[0]}
+                          className="w-14 h-14 rounded-lg object-cover"
+                        />
+
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{product.name}</p>
+                          <p className="text-xs text-gray-500">Qty: {item.qty}</p>
+                        </div>
+
+                        <p className="font-semibold text-sm">
+                          ₹{(price * item.qty).toLocaleString()}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {deliveryResult && (
+  <div className="border-t pt-4 space-y-3 text-sm">
+
+    <div className="flex justify-between">
+      <span>Delivery Distance</span>
+      <span>{deliveryResult.totalKm.toFixed(2)} KM</span>
+    </div>
+
+    <div className="flex justify-between">
+      <span>Delivery Charges</span>
+      <span className="font-semibold text-green-600">
+        ₹{deliveryResult.charge.toFixed(2)}
+      </span>
+    </div>
+
+    <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-600">
+      {deliveryResult.stores.length > 1
+        ? "Some items are delivered from multiple nearby stores. Additional charges applied based on distance."
+        : "Your order will be delivered from the nearest store."}
+    </div>
+
+  </div>
+)}
+
+<div className="border-t pt-4 space-y-3">
+  <div className="flex justify-between text-sm">
+    <span>Subtotal</span>
+    <span className="font-semibold">₹{cartTotal}</span>
+  </div>
+
+  {deliveryResult && (
+    <>
+      <div className="flex justify-between text-sm">
+        <span>Delivery Charges</span>
+        <span className="font-semibold">
+          ₹{deliveryResult.charge.toFixed(2)}
+        </span>
+      </div>
+
+      <div className="flex justify-between text-base font-bold">
+        <span>Total Payable</span>
+        <span>
+          ₹{(cartTotal + deliveryResult.charge).toFixed(2)}
+        </span>
+      </div>
+    </>
+  )}
+</div>
+
+
+                {/* PLACE ORDER */}
+                <Button
+                  disabled={!isAddressConfirmed}
+                  className="w-full mt-6 h-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={placeOrder}
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Place Order
+                </Button>
+
+              </div>
+            </div>
+
+          </div>
         </div>
       </section>
     </Layout>

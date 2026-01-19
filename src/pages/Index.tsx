@@ -5,11 +5,66 @@ import { FeaturedProducts } from '@/components/home/FeaturedProducts';
 import { WhyChooseUs } from '@/components/home/WhyChooseUs';
 import { Testimonials } from '@/components/home/Testimonials';
 import { Newsletter } from '@/components/home/Newsletter';
+import { SEO } from '@/components/seo/SEO';
+import { WelcomeHero } from '@/components/home/WelcomeHero';
+import { InfiniteScrollText } from '@/components/ui/infinite-scroll-text';
+import { AutoCarousel } from '@/components/ui/auto-carousel';
+
+import image1 from '@/assets/image1.avif';
+import image2 from '@/assets/image2.webp';
+import image3 from '@/assets/image3.avif';
+
+// Sample images for the carousel - replace with your actual images
+const carouselImages = [
+  "/IndiasFood-.png",
+  image1,
+  image2,
+  image3,
+];
+
+// Sample texts for infinite scroll
+const scrollTexts = [
+  "🌟 Fresh Gulab Jamun Daily",
+  "🏺 Traditional Recipes",
+  "🚚 Same Day Delivery",
+  "⭐ 100% Pure Ingredients",
+  "👨‍🍳 Master Craftsmen",
+  "🎁 Perfect for Gifting",
+  "📞 24/7 Customer Support",
+  "💯 Quality Guaranteed"
+];
 
 const Index = () => {
   return (
     <Layout>
-      <Hero />
+      <SEO
+        title="Authentic Indian Sweets Delivered Fresh"
+        description="Order authentic Indian sweets online. Fresh Gulab Jamun, Kaju Katli, Motichoor Ladoo, Mysore Pak & more. Free delivery above ₹500. Premium quality, traditional recipes, same-day delivery."
+        keywords="Indian sweets, Gulab Jamun, Kaju Katli, Motichoor Ladoo, Mysore Pak, Indian mithai, online sweets delivery, fresh sweets, traditional sweets, Indian desserts"
+      />
+      {/* <Hero /> */}
+      <section className="w-full">
+        <AutoCarousel
+          images={carouselImages}
+          autoPlayDelay={4000}
+          showDots={true}
+          showArrows={true}
+          className="w-full"
+        />
+      </section>
+
+      {/* Welcome Hero Section */}
+      <WelcomeHero />
+
+      {/* Infinite Scroll Text */}
+      <InfiniteScrollText
+        texts={scrollTexts}
+        speed={25}
+        pauseOnHover={true}
+        mobileOptimized={true}
+        className="border-t border-b border-orange-300"
+      />
+
       <Categories />
       <FeaturedProducts />
       <WhyChooseUs />

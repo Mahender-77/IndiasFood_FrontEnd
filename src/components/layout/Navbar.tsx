@@ -1,28 +1,61 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Menu, X, LogOut } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, Menu, X, LogOut, ChevronDown, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import api from '@/lib/api';
+
+interface Category {
+  _id: string;
+  name: string;
+}
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isProductsOpen, setIsProductsOpen] = useState(false);
+  const [isMobileProductsOpen, setIsMobileProductsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { cartCount, state } = useCart();
-  const { user, logout, isAdmin, isDelivery } = useAuth(); // Destructure isAdmin and isDelivery
+  const { user, logout, isAdmin, isDelivery } = useAuth();
 
-  const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/products', label: 'Sweets' },
-    { href: '/about', label: 'About' },
-    { href: '/contact', label: 'Contact' },
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  // Fetch categories from backend
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data } = await api.get('/products/categories');
+        setCategories(data);
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Dynamic product categories from backend
+  const productCategories = categories.map(cat => ({
+    name: cat.name,
+    href: `/products?category=${encodeURIComponent(cat.name)}`
+  }));
+
+  const mainNavLinks = [
+    // { href: '/', label: 'Home' },
+    { href: '/products', label: 'Products', hasDropdown: true },
+    { href: '/gi-tag-products', label: 'GI Tag Products' },
+    { href: '/new-arrivals', label: 'New Arrivals' },
+    { href: '/orders', label: 'Orders' },
+    { href: '/about', label: 'About Us' },
+    { href: '/gifting', label: 'Gifting' },
+    { href: '/bulk-orders', label: 'Bulk Orders' },
+    { href: '/help', label: 'Help' },
   ];
-
-  const [searchTerm, setSearchTerm] = useState(''); // New state for search term
 
   const handleLogout = () => {
     logout();
@@ -34,161 +67,377 @@ export function Navbar() {
     e.preventDefault();
     if (searchTerm.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
-      setIsSearchOpen(false); // Close mobile search after searching
-      setSearchTerm(''); // Clear search term after navigation
+      setIsSearchOpen(false);
+      setSearchTerm('');
     }
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border">
-      <div className="container-custom">
-        <div className="flex h-14 md:h-16 lg:h-20 items-center justify-between gap-2 sm:gap-4">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <img src="/IndiasFood-.png" alt="India's Food Logo" className="h-10 md:h-12 lg:h-14 w-auto" />
-          </Link>
+    <header className="sticky top-0 z-50 bg-white shadow-md">
+      {/* Desktop Navigation - Two Layer Design */}
+      <div className="hidden lg:block">
+        {/* First Layer - Logo, Search Bar, Icons */}
+        <div className="border-b border-gray-200 ">
+          <div className="container mx-auto px-10">
+            <div className="flex h-22 items-center justify-around  ">
+              <div className="flex items-center justify-center gap-2" >
+                  {/* Logo */}
+              <Link to="/" className="flex items-center shrink-0">
+                <img
+                  src="/IndiasFood-.png"
+                  alt="India's Food - Authentic Indian Sweets"
+                  className="h-24 w-auto"
+                />
+              </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-2">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className={cn(
-                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname === link.href
-                    ? "bg-saffron-light text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                {link.label}
+              {/* Home Icon and Text */}
+              <Link to="/" className="flex items-center gap-3 ml-6 group">
+                <div className="flex items-center justify-center w-10 h-10 bg-orange-50 rounded-full group-hover:bg-orange-100 transition-colors">
+                  <Home className="h-5 w-5 text-orange-600" />
+                </div>
+                <span className="text-lg font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
+                  Home
+                </span>
               </Link>
-            ))}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className={cn(
-                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.startsWith('/admin')
-                    ? "bg-saffron-light text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                Admin
-              </Link>
-            )}
-            {isDelivery && (
-              <Link
-                to="/delivery"
-                className={cn(
-                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.startsWith('/delivery')
-                    ? "bg-saffron-light text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                Delivery Dashboard
-              </Link>
-            )}
-            {user && (
-              <Link
-                to="/orders"
-                className={cn(
-                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname === '/orders'
-                    ? "bg-saffron-light text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                Orders
-              </Link>
-            )}
-            {user && (
-              <Link
-                to="/profile"
-                className={cn(
-                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname === '/profile'
-                    ? "bg-saffron-light text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                Profile
-              </Link>
-            )}
-          </nav>
+              </div>
+            
 
-          {/* Search Bar - Desktop */}
-          <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-sm">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search for sweets..."
-                className="pl-10 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              {/* Large Search Bar */}
+              <div className="flex-1 max-w-3xl mx-8">
+                <form onSubmit={handleSearch} className="w-full">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      type="search"
+                      placeholder="Search for favourite food"
+                      className="w-full h-12 pl-12 pr-4 text-base bg-gray-50 border border-gray-300 rounded-lg focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:border-orange-500"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </form>
+              </div>
+
+              {/* Right Icons */}
+              <div className="flex items-center gap-6 shrink-0">
+                {/* Wishlist */}
+                <Link to="/wishlist" className="flex flex-col items-center gap-1 group">
+                  <div className="relative">
+                    <Heart className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
+                    {state.wishlist.length > 0 && (
+                      <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-semibold">
+                        {state.wishlist.length}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-600 group-hover:text-orange-600">Wishlist</span>
+                </Link>
+
+                {/* Cart */}
+                <Link to="/cart" className="flex flex-col items-center gap-1 group">
+                  <div className="relative">
+                    <ShoppingCart className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-semibold">
+                        {cartCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-600 group-hover:text-orange-600">Cart</span>
+                </Link>
+
+                {/* User Profile */}
+                {user ? (
+                  <div className="relative group z-50">
+                    <div className="flex flex-col items-center gap-1 cursor-pointer">
+                      <User className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
+                      <span className="text-xs text-gray-600 group-hover:text-orange-600">Profile</span>
+                    </div>
+                    <div className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
+                      <div className="py-1">
+                        <div className="px-4 py-2 text-sm text-gray-700 border-b">
+                          <div className="font-medium">{user.username}</div>
+                          {isAdmin && <div className="text-xs text-orange-600">Admin</div>}
+                          {isDelivery && <div className="text-xs text-blue-600">Delivery</div>}
+                        </div>
+                        <Link
+                          to="/profile"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          My Profile
+                        </Link>
+                        <Link
+                          to="/orders"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          My Orders
+                        </Link>
+                        {isAdmin && (
+                          <Link
+                            to="/admin"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Admin Dashboard
+                          </Link>
+                        )}
+                        {isDelivery && (
+                          <Link
+                            to="/delivery"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Delivery Dashboard
+                          </Link>
+                        )}
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Logout
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Link to="/auth" className="flex flex-col items-center gap-1 group">
+                    <User className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
+                    <span className="text-xs text-gray-600 group-hover:text-orange-600">Profile</span>
+                  </Link>
+                )}
+              </div>
             </div>
-          </form>
+          </div>
+        </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* Mobile Search Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden h-8 w-8"
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+        {/* Second Layer - Navigation Links with Orange Background */}
+        <div className="bg-orange-600">
+          <div className="container mx-auto px-6">
+            <nav className="flex items-center justify-center h-12">
+              <ul className="flex items-center gap-20">
+                {mainNavLinks.map((link) => (
+                  <li key={link.href} className="relative group">
+                    {link.hasDropdown ? (
+                      <>
+                        <button
+                          className="flex items-center text-white font-medium text-md hover:text-orange-100 transition-colors "
+                          onMouseEnter={() => setIsProductsOpen(true)}
+                          onMouseLeave={() => setIsProductsOpen(false)}
+                        >
+                          {link.label}
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                        {isProductsOpen && (
+                          <div
+                            className="absolute left-0 top-full mt-0 w-56 bg-white rounded-b-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+                            onMouseEnter={() => setIsProductsOpen(true)}
+                            onMouseLeave={() => setIsProductsOpen(false)}
+                          >
+                            <div className="py-2">
+                              {productCategories.map((category) => (
+                                <Link
+                                  key={category.href}
+                                  to={category.href}
+                                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600"
+                                >
+                                  {category.name}
+                                </Link>
+                              ))}
+                              <Link
+                                to="/products"
+                                className="block px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50 border-t"
+                              >
+                                View All Products
+                              </Link>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <Link
+                        to={link.href}
+                        className={cn(
+                          "text-white font-medium text-md hover:text-orange-100 transition-colors ",
+                          location.pathname === link.href && "text-orange-100"
+                        )}
+                      >
+                        {link.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
 
-            {/* Wishlist */}
-            <Link to="/wishlist">
-              <Button variant="ghost" size="icon" className="relative h-8 w-8">
-                <Heart className="h-4 w-4" />
-                {state.wishlist.length > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-secondary text-secondary-foreground text-xxs sm:text-xs flex items-center justify-center font-medium">
-                    {state.wishlist.length}
-                  </span>
-                )}
-              </Button>
+      {/* Mobile Navigation - Single Layer */}
+      <div className="lg:hidden">
+        <div className="container mx-auto px-2">
+          <div className="flex h-18 items-center justify-between gap-3">
+            {/* Logo */}
+            <Link to="/" className="shrink-0">
+              <img 
+                src="/IndiasFood-.png" 
+                alt="India's Food" 
+                className="h-14 w-auto" 
+              />
             </Link>
 
-            {/* Cart */}
-            <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative h-8 w-8">
-                <ShoppingCart className="h-4 w-4" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-primary text-primary-foreground text-xxs sm:text-xs flex items-center justify-center font-medium">
-                    {cartCount}
-                  </span>
-                )}
-              </Button>
-            </Link>
+            {/* Search Bar */}
+            <div className="flex-1 max-w-xs">
+              <form onSubmit={handleSearch}>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                  <Input
+                    type="search"
+                    placeholder="Search..."
+                    className="w-full h-8 pl-6 pr-3 text-[12px] bg-gray-50 border border-gray-300 rounded-lg"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </form>
+            </div>
 
-            {/* User Account / Profile / Logout */}
-            {user ? (
-              <div className="relative group ">
-                <Button variant="ghost" className="flex items-center gap-1 sm:gap-2 h-8 px-2">
-                  <User className="h-4 w-4" />
-                  <span className="hidden md:inline-block text-sm">{user.username} {isAdmin && '(Admin)'} {isDelivery && '(Delivery)'}</span>
+            {/* Right Icons */}
+            <div className="flex items-center shrink-0 ">
+              {/* Wishlist */}
+              <Link to="/wishlist">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-6 w-6 "
+                >
+                  <Heart className="h-6 w-4" />
+                  {state.wishlist.length > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-semibold">
+                      {state.wishlist.length}
+                    </span>
+                  )}
                 </Button>
-                <div className="absolute right-0 top-full w-36 sm:w-48 rounded-md shadow-lg bg-card ring-1 ring-black ring-opacity-5 focus:outline-none invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 border ">
-                  <div className="py-1">
+              </Link>
+
+              {/* Cart */}
+              <Link to="/cart">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-6 w-6"
+                >
+                  <ShoppingCart className="h-6 w-4" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-semibold">
+                      {cartCount}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+
+              {/* Profile */}
+              <Link to={user ? "/profile" : "/auth"}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                >
+                  <User className="h-6 w-4" />
+                </Button>
+              </Link>
+
+              {/* Menu Toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMenuOpen && (
+          <div className="border-t bg-white shadow-lg animate-slide-down">
+            <nav className="container mx-auto ">
+              <div className="flex flex-col ">
+                {/* Products with Dropdown */}
+                <div >
+                  <button
+                    onClick={() => setIsMobileProductsOpen(!isMobileProductsOpen)}
+                    className="flex items-center justify-between w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+                  >
+                    Products
+                    <ChevronDown className={cn(
+                      "h-4 w-4 transition-transform",
+                      isMobileProductsOpen && "rotate-180"
+                    )} />
+                  </button>
+                  {isMobileProductsOpen && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      {productCategories.map((category) => (
+                        <Link
+                          key={category.href}
+                          to={category.href}
+                          onClick={() => setIsMenuOpen(false)}
+                          className="block px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
+                        >
+                          {category.name}
+                        </Link>
+                      ))}
+                      <Link
+                        to="/products"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="block px-4 py-2 rounded-lg text-sm font-medium text-orange-600 hover:bg-orange-50"
+                      >
+                        View All Products
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
+                {/* Other Nav Links */}
+                {mainNavLinks.filter(link => !link.hasDropdown).map((link) => (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={cn(
+                      "px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                      location.pathname === link.href
+                        ? "bg-orange-50 text-orange-600"
+                        : "text-gray-700 hover:bg-gray-100"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+
+                {/* User-specific Links */}
+                {user && (
+                  <>
+                    <div className="border-t my-2"></div>
                     <Link
                       to="/profile"
-                      className="block px-3 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsMenuOpen(false)}
+                      className="px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
                     >
-                      Profile
+                      My Profile
+                    </Link>
+                    <Link
+                      to="/orders"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      My Orders
                     </Link>
                     {isAdmin && (
                       <Link
                         to="/admin"
-                        className="block px-3 py-2 text-sm text-foreground hover:bg-muted"
                         onClick={() => setIsMenuOpen(false)}
+                        className="px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
                       >
                         Admin Dashboard
                       </Link>
@@ -196,165 +445,24 @@ export function Navbar() {
                     {isDelivery && (
                       <Link
                         to="/delivery"
-                        className="block px-3 py-2 text-sm text-foreground hover:bg-muted"
                         onClick={() => setIsMenuOpen(false)}
+                        className="px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
                       >
                         Delivery Dashboard
                       </Link>
                     )}
-                    <Link
-                      to="/orders"
-                      className="block px-3 py-2 text-sm text-foreground hover:bg-muted"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Orders
-                    </Link>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-destructive hover:bg-muted"
+                      className="flex items-center gap-2 w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
                     >
                       <LogOut className="h-4 w-4" />
                       Logout
                     </button>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
-            ) : (
-              <Link to="/auth">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <User className="h-4 w-4" />
-                </Button>
-              </Link>
-            )}
-
-            {/* Mobile Menu Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden h-8 w-8"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </Button>
+            </nav>
           </div>
-        </div>
-
-        {/* Mobile Search */}
-        {isSearchOpen && (
-          <form onSubmit={handleSearch} className="container-custom lg:hidden pb-3 animate-slide-up">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search for sweets..."
-                className="pl-10 bg-muted/50 border-0"
-                autoFocus
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </form>
-        )}
-
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <nav className="container-custom md:hidden pb-3 animate-slide-up">
-            <div className="flex flex-col gap-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={cn(
-                    "w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    location.pathname === link.href
-                      ? "bg-saffron-light text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={cn(
-                    "w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    location.pathname.startsWith('/admin')
-                      ? "bg-saffron-light text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  Admin
-                </Link>
-              )}
-              {isDelivery && (
-                <Link
-                  to="/delivery"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={cn(
-                    "w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    location.pathname.startsWith('/delivery')
-                      ? "bg-saffron-light text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  Delivery
-                </Link>
-              )}
-              {user && (
-                <Link
-                  to="/orders"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={cn(
-                    "w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    location.pathname === '/orders'
-                      ? "bg-saffron-light text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  Orders
-                </Link>
-              )}
-              {user ? (
-                <>
-                  <Link
-                    to="/profile"
-                    onClick={() => setIsMenuOpen(false)}
-                    className={cn(
-                      "w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                      location.pathname === '/profile'
-                        ? "bg-saffron-light text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    )}
-                  >
-                    Profile
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors text-destructive hover:bg-muted"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <Link
-                  to="/auth"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={cn(
-                    "w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    location.pathname === '/auth'
-                      ? "bg-saffron-light text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  Sign In
-                </Link>
-              )}
-            </div>
-          </nav>
         )}
       </div>
     </header>

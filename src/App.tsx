@@ -18,15 +18,22 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import AdminDashboard from "./pages/AdminDashboard";
 import { AdminOrderListPage } from "./pages/admin/AdminOrderListPage";
-import AdminProductCreatePage from "./pages/admin/AdminProductCreatePage";
 import {AdminProductEditPage} from "./pages/admin/AdminProductEditPage";
 import AdminCustomerListPage from "./pages/admin/AdminCustomerListPage";
 import AdminCustomerDetailPage from "./pages/admin/AdminCustomerDetailPage";
 import AdminCategoriesPage from "./pages/admin/AdminCategories";
 import { AdminDeliveryApplications } from "./pages/admin/AdminDeliveryApplications";
+import AdminInventory from "./pages/admin/AdminInventory";
 import DeliveryProtectedRoute from "./components/DeliveryProtectedRoute";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
 import NotFound from "./pages/NotFound";
+// New Pages
+import GITagProducts from "./pages/GITagProducts";
+import NewArrivals from "./pages/NewArrivals";
+import About from "./pages/About";
+import Gifting from "./pages/Gifting";
+import BulkOrders from "./pages/BulkOrders";
+import Help from "./pages/Help";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +54,13 @@ const App = () => {
             <Route path="/orders" element={<Orders />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/delivery/register" element={<DeliveryRegisterPage />} />
+            {/* New Public Pages */}
+            <Route path="/gi-tag-products" element={<GITagProducts />} />
+            <Route path="/new-arrivals" element={<NewArrivals />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/gifting" element={<Gifting />} />
+            <Route path="/bulk-orders" element={<BulkOrders />} />
+            <Route path="/help" element={<Help />} />
             <Route
               path="/profile"
               element={
@@ -96,14 +110,6 @@ const App = () => {
               }
             />
             <Route
-              path="/admin/products/new"
-              element={
-                <AdminProtectedRoute>
-                  <AdminProductCreatePage />
-                </AdminProtectedRoute>
-              }
-            />
-            <Route
               path="/admin/products/:id/edit"
               element={
                 <AdminProtectedRoute>
@@ -116,6 +122,14 @@ const App = () => {
               element={
                 <AdminProtectedRoute>
                   <AdminDeliveryApplications />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/inventory"
+              element={
+                <AdminProtectedRoute>
+                  <AdminInventory />
                 </AdminProtectedRoute>
               }
             />

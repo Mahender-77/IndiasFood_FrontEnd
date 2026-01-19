@@ -1,22 +1,23 @@
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
 
 const Profile = () => {
-  const { user, loading: authLoading, error: authError } = useAuth();
+  const { user, loading: authLoading, error: authError, isAdmin } = useAuth();
 
   if (authLoading) {
     return (
       <Layout>
-        <section className="section-padding bg-cream min-h-[calc(100vh-200px)]">
-          <div className="container-custom">
-            <Skeleton className="h-10 w-64 mb-8" />
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-48 w-full" />
+        <section className="section-padding bg-cream min-h-[calc(100vh-200px)] flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
             </div>
+            <h2 className="font-display text-xl font-semibold mt-4 text-gray-700">Loading Profile</h2>
+            <p className="text-gray-500 mt-2">Please wait while we fetch your information...</p>
           </div>
         </section>
       </Layout>
@@ -62,8 +63,8 @@ const Profile = () => {
               <CardContent className="space-y-2">
                 <p><strong>Username:</strong> {user.username}</p>
                 <p><strong>Email:</strong> {user.email}</p>
-                <p><strong>Admin:</strong> {user.isAdmin ? 'Yes' : 'No'}</p>
-                {user.deliveryProfile && user.deliveryProfile.status && (
+                <p><strong>Admin:</strong> {isAdmin ? 'Yes' : 'No'}</p>
+                {user.role === 'delivery' && user.deliveryProfile && user.deliveryProfile.status && (
                   <div>
                     <p><strong>Delivery Status:</strong> {user.deliveryProfile.status === 'approved' ? (
                       <span className="text-green-600">✅ Approved - <Link to="/delivery" className="text-blue-600 hover:underline">Go to Delivery Dashboard</Link></span>

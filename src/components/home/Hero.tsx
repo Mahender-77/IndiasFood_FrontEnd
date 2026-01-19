@@ -9,8 +9,8 @@ export function Hero() {
       {/* Decorative Pattern */}
       <div className="absolute inset-0 pattern-dots opacity-50" />
       
-      <div className="container-custom relative">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[500px] lg:min-h-[600px] py-12 lg:py-0">
+      <div className="container-custom relative px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center min-h-[450px] sm:min-h-[500px] lg:min-h-[600px] py-8 sm:py-12 lg:py-0">
           {/* Content */}
           <div className="space-y-6 animate-slide-up">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-saffron-light rounded-full">
@@ -18,7 +18,7 @@ export function Hero() {
               <span className="text-sm font-medium text-primary">Free delivery on orders above ₹500</span>
             </div>
             
-            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground leading-tight">
               Authentic Indian{' '}
               <span className="text-primary">Sweets</span>{' '}
               Delivered Fresh
@@ -43,21 +43,21 @@ export function Hero() {
             </div>
 
             {/* Trust Badges */}
-            <div className="flex flex-wrap gap-4 sm:gap-6 pt-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 lg:gap-6 pt-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="p-2 rounded-full bg-saffron-light">
+                <div className="p-2 rounded-full bg-saffron-light flex-shrink-0">
                   <Truck className="h-4 w-4 text-primary" />
                 </div>
                 <span>Same Day Delivery</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="p-2 rounded-full bg-saffron-light">
+                <div className="p-2 rounded-full bg-saffron-light flex-shrink-0">
                   <Shield className="h-4 w-4 text-primary" />
                 </div>
                 <span>100% Fresh Guarantee</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="p-2 rounded-full bg-saffron-light">
+                <div className="p-2 rounded-full bg-saffron-light flex-shrink-0">
                   <Clock className="h-4 w-4 text-primary" />
                 </div>
                 <span>Made to Order</span>

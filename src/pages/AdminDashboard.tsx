@@ -1,10 +1,11 @@
 import { Layout } from '@/components/layout/Layout';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, PlusCircle, FileText, Users, Tags, TrendingUp, Truck } from 'lucide-react';
+import { Package, PlusCircle, FileText, Users, Tags, TrendingUp, Truck, Warehouse } from 'lucide-react';
 import ExportButton from '@/components/admin/ExportButton';
 import api from '@/lib/api';
 import { useState, useEffect } from 'react';
+import { SEO } from '@/components/seo/SEO';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -46,6 +47,11 @@ const AdminDashboard = () => {
 
   return (
     <Layout>
+      <SEO
+        title="Admin Dashboard - India's Food"
+        description="Admin dashboard for India's Food. Manage orders, customers, products, and delivery operations. Monitor revenue, track delivery personnel, and oversee business operations."
+        keywords="admin dashboard, India's Food admin, order management, customer management, product management, delivery tracking, business analytics"
+      />
       <section className="section-padding bg-cream min-h-[calc(100vh-150px)] sm:min-h-[calc(100vh-200px)]">
         <div className="container-custom">
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-6 sm:mb-8">
@@ -123,7 +129,7 @@ const AdminDashboard = () => {
               </Card>
             </Link>
 
-            <Link to="/admin/products/new">
+            {/* <Link to="/admin/products/new">
               <Card className="hover:shadow-lg transition-shadow duration-300">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-xs sm:text-sm font-medium">Products</CardTitle>
@@ -135,7 +141,7 @@ const AdminDashboard = () => {
                   </p>
                 </CardContent>
               </Card>
-            </Link>
+            </Link> */}
 
             <Link to="/admin/categories">
               <Card className="hover:shadow-lg transition-shadow duration-300">
@@ -160,6 +166,20 @@ const AdminDashboard = () => {
                 <CardContent>
                   <p className="text-xxs sm:text-xs text-muted-foreground">
                     Review and approve delivery partner applications
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to="/admin/inventory">
+              <Card className="hover:shadow-lg transition-shadow duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Inventory</CardTitle>
+                  <Warehouse className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xxs sm:text-xs text-muted-foreground">
+                    Manage products, stock levels, and pricing across locations
                   </p>
                 </CardContent>
               </Card>
