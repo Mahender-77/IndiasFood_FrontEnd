@@ -347,6 +347,15 @@ const Checkout = () => {
     const nearestStore = sortedStores[0];
     const secondStore = sortedStores[1];
   
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("📍 USER LOCATION");
+    console.log(`Lat: ${userLat}`);
+    console.log(`Lng: ${userLng}`);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  
+    console.log(`🏬 NEAREST STORE: ${nearestStore.name}`);
+    console.log(`Distance: ${nearestStore.distance.toFixed(2)} KM`);
+  
     const productsInNearest: string[] = [];
     const missingProducts: string[] = [];
   
@@ -366,6 +375,11 @@ const Checkout = () => {
       }
     });
   
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("📦 PRODUCT DISTRIBUTION");
+    console.log("From nearest store:", productsInNearest);
+    console.log("Missing products:", missingProducts);
+  
     /* ---------- SINGLE STORE ---------- */
     if (missingProducts.length === 0) {
   
@@ -374,6 +388,14 @@ const Checkout = () => {
       const charge =
         deliverySettings.baseCharge +
         km * deliverySettings.pricePerKm;
+  
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("🚚 DELIVERY TYPE: SINGLE STORE");
+      console.log(`Base Charge: ₹${deliverySettings.baseCharge}`);
+      console.log(`KM: ${km.toFixed(2)}`);
+      console.log(`Price/KM: ₹${deliverySettings.pricePerKm}`);
+      console.log(`TOTAL DELIVERY CHARGE: ₹${charge.toFixed(2)}`);
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   
       return {
         stores: [nearestStore.name],
@@ -388,7 +410,13 @@ const Checkout = () => {
     );
   
     if (!ok) return null;
-
+  
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("🚚 DELIVERY TYPE: MULTI STORE");
+  
+    console.log(`Store 1: ${nearestStore.name}`);
+    console.log(`Products: ${productsInNearest.join(", ")}`);
+    console.log(`Distance: ${nearestStore.distance.toFixed(2)} KM`);
   
     const leg2 = calculateDistance(
       nearestStore.latitude,
@@ -396,7 +424,11 @@ const Checkout = () => {
       secondStore.latitude,
       secondStore.longitude
     );
-
+  
+    console.log(`Store 2: ${secondStore.name}`);
+    console.log(`Products: ${missingProducts.join(", ")}`);
+    console.log(`Distance from store 1: ${leg2.toFixed(2)} KM`);
+  
     const totalKm =
       nearestStore.distance + leg2;
   
@@ -404,7 +436,14 @@ const Checkout = () => {
       deliverySettings.baseCharge +
       totalKm * deliverySettings.pricePerKm;
   
-
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("💰 FINAL CALCULATION");
+    console.log(`Base Charge: ₹${deliverySettings.baseCharge}`);
+    console.log(`Total KM: ${totalKm.toFixed(2)}`);
+    console.log(`Price/KM: ₹${deliverySettings.pricePerKm}`);
+    console.log(`FINAL DELIVERY CHARGE: ₹${charge.toFixed(2)}`);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  
     return {
       stores: [nearestStore.name, secondStore.name],
       totalKm,

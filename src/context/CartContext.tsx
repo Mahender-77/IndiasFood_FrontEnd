@@ -148,8 +148,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const { data: cartData } = await api.get('/user/cart');
       const { data: wishlistData } = await api.get('/user/wishlist');
 
-      dispatch({ type: 'SET_CART', payload: cartData });
-      dispatch({ type: 'SET_WISHLIST', payload: wishlistData.map((item: Product) => item._id) });
+      dispatch({ type: 'SET_CART', payload: Array.isArray(cartData) ? cartData : [] });
+      dispatch({ type: 'SET_WISHLIST', payload: Array.isArray(wishlistData) ? wishlistData.map((item: Product) => item._id) : [] });
     } catch (error: any) {
       console.error('Failed to fetch cart or wishlist', error);
       dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || 'Failed to fetch cart/wishlist' });

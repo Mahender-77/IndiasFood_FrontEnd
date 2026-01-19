@@ -11,23 +11,35 @@ export function Categories() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
+   const fetchCategories = async () => {
       try {
         setLoading(true);
         setError(null);
+  
         const { data } = await api.get('/products/categories');
-        setCategories(data);
+             console.log("data category", data)
+        // ✅ SAFETY CHECK
+        if (Array.isArray(data)) {
+          setCategories(data);
+        } else {
+          console.error("Unexpected categories response:", data);
+          setCategories([]);
+        }
+  
       } catch (err: any) {
+        console.error("Fetch categories error:", err);
         setError(err.response?.data?.message || 'Failed to fetch categories');
+        setCategories([]); // prevent map crash
       } finally {
         setLoading(false);
       }
     };
 
+  useEffect(() => {
     fetchCategories();
   }, []);
 
+  
   if (loading) {
     return (
       <section className="section-padding bg-muted/50">
@@ -52,7 +64,7 @@ export function Categories() {
         <div className="container-custom text-center py-16">
           <h2 className="font-display text-2xl font-bold text-red-500 mb-4">Error</h2>
           <p className="text-red-500 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()} variant="outline">
+          <Button onClick={() => fetchCategories()} variant="outline">
             Try Again
           </Button>
         </div>
@@ -71,7 +83,7 @@ export function Categories() {
           <p className="text-muted-foreground mb-4">
             It looks like there are no product categories available at the moment.
           </p>
-          <Button onClick={() => window.location.reload()} variant="outline">
+          <Button onClick={() =>fetchCategories()} variant="outline">
             Refresh Page
           </Button>
         </div>
@@ -95,7 +107,7 @@ export function Categories() {
         {/* Categories Grid - 2 columns on mobile, 3 on tablet, 4 on desktop */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Dynamic categories from DB */}
-          {categories.map((category, index) => (
+          {Array.isArray(categories) && categories.map((category, index) => (
             <Link
               key={category._id}
               to={`/products?category=${category.name}`}

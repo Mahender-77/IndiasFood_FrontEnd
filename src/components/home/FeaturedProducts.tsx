@@ -20,7 +20,7 @@ export function FeaturedProducts() {
         setError(null);
         // Fetch a limited number of products, e.g., 6, and filter by category if needed
         const { data } = await api.get('/products?pageSize=6'); // Fetch a limited number of products (e.g., 6) from all categories
-        setFeaturedProducts(data.products);
+        setFeaturedProducts(data?.products || []);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch featured products');
       } finally {

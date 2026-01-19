@@ -147,7 +147,7 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <div className={cn(
       "group relative bg-card rounded-2xl overflow-hidden shadow-card w-full h-full flex flex-col",
-      isEntirelyOutOfStock ? "opacity-70" : "card-hover"
+      isEntirelyOutOfStock ? "opacity-70 pointer-events-none cursor-not-allowed" : "card-hover"
     )}>
       {isEntirelyOutOfStock && (
         <div className="absolute inset-0 bg-red-500/10 z-10 flex items-center justify-center">

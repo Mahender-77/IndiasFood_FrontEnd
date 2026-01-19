@@ -70,21 +70,22 @@ const Orders = () => {
   const [isCancelling, setIsCancelling] = useState(false);
 
   const fetchOrders = async () => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
     try {
       const { data } = await api.get(`/user/orders`);
-      setOrders(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch orders');
-    } finally {
-      setLoading(false);
+  
+      if (Array.isArray(data)) {
+        setOrders(data);
+      } else {
+        console.error("Orders API returned:", data);
+        setOrders([]);
+      }
+  
+    } catch (err) {
+      console.error(err);
+      setOrders([]);
     }
   };
-
+  
   useEffect(() => {
     fetchOrders();
   }, [token]);
@@ -211,7 +212,7 @@ const Orders = () => {
 
           {/* Orders List */}
           <div className="space-y-6">
-            {orders.map((order) => {
+          {Array.isArray(orders) && orders.map((order) => {
               const currentStatus = getOrderStatus(order);
               const status = statusConfig[currentStatus as keyof typeof statusConfig];
               const StatusIcon = status.icon;

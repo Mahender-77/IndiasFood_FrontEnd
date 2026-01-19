@@ -40,10 +40,10 @@ export function Navbar() {
   }, []);
 
   // Dynamic product categories from backend
-  const productCategories = categories.map(cat => ({
+  const productCategories = Array.isArray(categories) ? categories.map(cat => ({
     name: cat.name,
     href: `/products?category=${encodeURIComponent(cat.name)}`
-  }));
+  })) : [];
 
   const mainNavLinks = [
     // { href: '/', label: 'Home' },
