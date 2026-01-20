@@ -72,23 +72,28 @@ const Orders = () => {
   const fetchOrders = async () => {
     try {
       const { data } = await api.get(`/user/orders`);
-  
+
       if (Array.isArray(data)) {
         setOrders(data);
       } else {
         console.error("Orders API returned:", data);
         setOrders([]);
       }
-  
+
     } catch (err) {
       console.error(err);
       setOrders([]);
+      setError('Failed to load orders. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
   
   useEffect(() => {
     fetchOrders();
   }, [token]);
+
+  console.log("ajnefkawj")
 
   const handleCancelOrder = async () => {
     if (!selectedOrder || !cancelReason.trim()) {
