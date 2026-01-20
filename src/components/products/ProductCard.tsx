@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
@@ -20,6 +21,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addToCart, updateCartItemQuantity, removeFromCart, getCartItemQuantity, toggleWishlist, isInWishlist, cartLoading } = useCart();
+  const { user } = useAuth();
   const inWishlist = isInWishlist(product._id);
   const [isAdding, setIsAdding] = useState(false);
   
@@ -83,6 +85,15 @@ export function ProductCard({ product }: ProductCardProps) {
   }, [hasVariants, selectedVariant, product.originalPrice, product.offerPrice]);
 
   const handleAddToCart = async () => {
+    // Check if user is logged in
+    if (!user) {
+      toast.error('Please login to add items to cart', {
+        description: 'You need to be logged in to add products to your cart',
+        duration: 3000,
+      });
+      return;
+    }
+
     setIsAdding(true);
     try {
       const variantIdx = hasVariants ? selectedVariantIndex : 0;
@@ -104,8 +115,17 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   const handleIncreaseQuantity = async () => {
+    // Check if user is logged in
+    if (!user) {
+      toast.error('Please login to modify cart items', {
+        description: 'You need to be logged in to modify items in your cart',
+        duration: 3000,
+      });
+      return;
+    }
+
     const maxStock = hasVariants ? selectedVariantStock : totalStock;
-  
+
     if (cartQuantity < maxStock) {
       await updateCartItemQuantity(
         product._id,
@@ -121,8 +141,17 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   const handleDecreaseQuantity = async () => {
+    // Check if user is logged in
+    if (!user) {
+      toast.error('Please login to modify cart items', {
+        description: 'You need to be logged in to modify items in your cart',
+        duration: 3000,
+      });
+      return;
+    }
+
     const variantIdx = hasVariants ? selectedVariantIndex : 0;
-  
+
     if (cartQuantity > 1) {
       await updateCartItemQuantity(
         product._id,

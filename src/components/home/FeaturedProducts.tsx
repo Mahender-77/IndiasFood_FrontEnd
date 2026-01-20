@@ -13,21 +13,21 @@ export function FeaturedProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchFeaturedProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        // Fetch a limited number of products, e.g., 6, and filter by category if needed
-        const { data } = await api.get('/products?pageSize=6'); // Fetch a limited number of products (e.g., 6) from all categories
-        setFeaturedProducts(data?.products || []);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to fetch featured products');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchFeaturedProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Fetch a limited number of products, e.g., 6, and filter by category if needed
+      const { data } = await api.get('/products?pageSize=6'); // Fetch a limited number of products (e.g., 6) from all categories
+      setFeaturedProducts(data?.products || []);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to fetch featured products');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchFeaturedProducts();
   }, []);
 
@@ -59,7 +59,7 @@ export function FeaturedProducts() {
         <div className="container-custom text-center py-16">
           <h2 className="font-display text-2xl font-bold text-red-500 mb-4">Error</h2>
           <p className="text-red-500 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()} variant="outline">
+          <Button onClick={() => fetchFeaturedProducts()} variant="outline">
             Try Again
           </Button>
         </div>

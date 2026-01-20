@@ -153,44 +153,31 @@ const Checkout = () => {
   /* ---------------- HELPERS ---------------- */
 
   const reverseGeocode = async (lat: number, lng: number) => {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-    );
-    const data = await res.json();
-
-    const addr = data.address || {};
-
-    return {
-      address: addr.road || addr.neighbourhood || '',
-      city: addr.city || addr.town || addr.village || '',
-      postalCode: addr.postcode || '',
-      locationName: data.display_name,
-      latitude: lat,
-      longitude: lng
-    };
+    const res = await api.get('/user/reverse-geocode', {
+      params: { lat, lon: lng }
+    });
+    return res.data;
   };
 
   const geocodeAddress = async () => {
     const query = `${address.address}, ${address.city}, ${address.postalCode}`;
 
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`
-    );
+    try {
+      const res = await api.get('/user/geocode', {
+        params: { q: query }
+      });
 
-    const data = await res.json();
-
-    if (!data.length) {
+      return {
+        latitude: res.data.latitude,
+        longitude: res.data.longitude
+      };
+    } catch (error: any) {
       toast({
         title: 'Address not found, Please enter the correct address',
         variant: 'destructive'
       });
       return null;
     }
-
-    return {
-      latitude: parseFloat(data[0].lat),
-      longitude: parseFloat(data[0].lon)
-    };
   };
 
   const calculateDistance = (
@@ -347,14 +334,14 @@ const Checkout = () => {
     const nearestStore = sortedStores[0];
     const secondStore = sortedStores[1];
   
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("📍 USER LOCATION");
-    console.log(`Lat: ${userLat}`);
-    console.log(`Lng: ${userLng}`);
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    // console.log("📍 USER LOCATION");
+    // console.log(`Lat: ${userLat}`);
+    // console.log(`Lng: ${userLng}`);
+    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   
-    console.log(`🏬 NEAREST STORE: ${nearestStore.name}`);
-    console.log(`Distance: ${nearestStore.distance.toFixed(2)} KM`);
+    // console.log(`🏬 NEAREST STORE: ${nearestStore.name}`);
+    // console.log(`Distance: ${nearestStore.distance.toFixed(2)} KM`);
   
     const productsInNearest: string[] = [];
     const missingProducts: string[] = [];
@@ -375,10 +362,10 @@ const Checkout = () => {
       }
     });
   
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("📦 PRODUCT DISTRIBUTION");
-    console.log("From nearest store:", productsInNearest);
-    console.log("Missing products:", missingProducts);
+    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    // console.log("📦 PRODUCT DISTRIBUTION");
+    // console.log("From nearest store:", productsInNearest);
+    // console.log("Missing products:", missingProducts);
   
     /* ---------- SINGLE STORE ---------- */
     if (missingProducts.length === 0) {
@@ -389,13 +376,13 @@ const Checkout = () => {
         deliverySettings.baseCharge +
         km * deliverySettings.pricePerKm;
   
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("🚚 DELIVERY TYPE: SINGLE STORE");
-      console.log(`Base Charge: ₹${deliverySettings.baseCharge}`);
-      console.log(`KM: ${km.toFixed(2)}`);
-      console.log(`Price/KM: ₹${deliverySettings.pricePerKm}`);
-      console.log(`TOTAL DELIVERY CHARGE: ₹${charge.toFixed(2)}`);
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      // console.log("🚚 DELIVERY TYPE: SINGLE STORE");
+      // console.log(`Base Charge: ₹${deliverySettings.baseCharge}`);
+      // console.log(`KM: ${km.toFixed(2)}`);
+      // console.log(`Price/KM: ₹${deliverySettings.pricePerKm}`);
+      // console.log(`TOTAL DELIVERY CHARGE: ₹${charge.toFixed(2)}`);
+      // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   
       return {
         stores: [nearestStore.name],
@@ -411,12 +398,12 @@ const Checkout = () => {
   
     if (!ok) return null;
   
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("🚚 DELIVERY TYPE: MULTI STORE");
+    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    // console.log("🚚 DELIVERY TYPE: MULTI STORE");
   
-    console.log(`Store 1: ${nearestStore.name}`);
-    console.log(`Products: ${productsInNearest.join(", ")}`);
-    console.log(`Distance: ${nearestStore.distance.toFixed(2)} KM`);
+    // console.log(`Store 1: ${nearestStore.name}`);
+    // console.log(`Products: ${productsInNearest.join(", ")}`);
+    // console.log(`Distance: ${nearestStore.distance.toFixed(2)} KM`);
   
     const leg2 = calculateDistance(
       nearestStore.latitude,
@@ -425,9 +412,9 @@ const Checkout = () => {
       secondStore.longitude
     );
   
-    console.log(`Store 2: ${secondStore.name}`);
-    console.log(`Products: ${missingProducts.join(", ")}`);
-    console.log(`Distance from store 1: ${leg2.toFixed(2)} KM`);
+    // console.log(`Store 2: ${secondStore.name}`);
+    // console.log(`Products: ${missingProducts.join(", ")}`);
+    // console.log(`Distance from store 1: ${leg2.toFixed(2)} KM`);
   
     const totalKm =
       nearestStore.distance + leg2;
@@ -436,13 +423,13 @@ const Checkout = () => {
       deliverySettings.baseCharge +
       totalKm * deliverySettings.pricePerKm;
   
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("💰 FINAL CALCULATION");
-    console.log(`Base Charge: ₹${deliverySettings.baseCharge}`);
-    console.log(`Total KM: ${totalKm.toFixed(2)}`);
-    console.log(`Price/KM: ₹${deliverySettings.pricePerKm}`);
-    console.log(`FINAL DELIVERY CHARGE: ₹${charge.toFixed(2)}`);
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    // console.log("💰 FINAL CALCULATION");
+    // console.log(`Base Charge: ₹${deliverySettings.baseCharge}`);
+    // console.log(`Total KM: ${totalKm.toFixed(2)}`);
+    // console.log(`Price/KM: ₹${deliverySettings.pricePerKm}`);
+    // console.log(`FINAL DELIVERY CHARGE: ₹${charge.toFixed(2)}`);
+    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   
     return {
       stores: [nearestStore.name, secondStore.name],
@@ -470,35 +457,35 @@ const Checkout = () => {
     <Layout>
 
       {/* HEADER */}
-      <div className="bg-white py-4 border-b">
-        <div className="container-custom">
+      <div className="bg-white py-3 sm:py-4 border-b">
+        <div className="container-custom px-4">
           <Link to="/cart" className="flex items-center gap-2 text-sm">
             <ArrowLeft className="h-4 w-4" /> Back to Cart
           </Link>
         </div>
       </div>
 
-      <section className="section-padding bg-gray-50">
-        <div className="container-custom max-w-5xl mx-auto">
+      <section className="section-padding bg-gray-50 py-4 sm:py-6">
+        <div className="container-custom max-w-5xl mx-auto px-4">
 
-          <h1 className="text-2xl font-bold mb-6">Checkout</h1>
+          <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Checkout</h1>
 
-          <div className="grid lg:grid-cols-3 gap-6">
+          <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
 
             {/* LEFT */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
 
-              <div className="bg-white rounded-xl p-5 shadow-sm">
+              <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm">
 
-                <h2 className="font-semibold text-lg mb-4">Delivery Address</h2>
+                <h2 className="font-semibold text-base sm:text-lg mb-3 sm:mb-4">Delivery Address</h2>
 
                 {/* TABS */}
-                <div className="flex gap-2 mb-5">
+                <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:mb-5">
                   <Button
                     type="button"
                     variant={addressMethod === 'current' ? 'default' : 'outline'}
                     onClick={() => setAddressMethod('current')}
-                    className="flex-1"
+                    className="flex-1 h-10 sm:h-auto text-sm"
                   >
                     <Navigation className="h-4 w-4 mr-2" />
                     Current Location
@@ -508,7 +495,7 @@ const Checkout = () => {
                     type="button"
                     variant={addressMethod === 'manual' ? 'default' : 'outline'}
                     onClick={() => setAddressMethod('manual')}
-                    className="flex-1"
+                    className="flex-1 h-10 sm:h-auto text-sm"
                   >
                     <MapPin className="h-4 w-4 mr-2" />
                     Enter Address
@@ -521,7 +508,7 @@ const Checkout = () => {
                     type="button"
                     onClick={getCurrentLocation}
                     disabled={gettingLocation}
-                    className="w-full h-12"
+                    className="w-full h-11 sm:h-12 text-sm sm:text-base"
                   >
                     {gettingLocation ? 'Fetching location...' : 'Use my current location'}
                   </Button>
@@ -530,44 +517,49 @@ const Checkout = () => {
                 {/* MANUAL FORM */}
                 {addressMethod === 'manual' && (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <Label>Full Name</Label>
+                        <Label className="text-sm">Full Name</Label>
                         <Input
                           value={address.fullName}
                           onChange={(e) => setAddress({...address, fullName: e.target.value})}
+                          className="h-10 sm:h-auto text-sm sm:text-base"
                         />
                       </div>
 
                       <div>
-                        <Label>Phone</Label>
+                        <Label className="text-sm">Phone</Label>
                         <Input
                           value={address.phone}
                           onChange={(e) => setAddress({...address, phone: e.target.value})}
+                          className="h-10 sm:h-auto text-sm sm:text-base"
                         />
                       </div>
 
-                      <div className="md:col-span-2">
-                        <Label>Address</Label>
+                      <div className="sm:col-span-2">
+                        <Label className="text-sm">Address</Label>
                         <Input
                           value={address.address}
                           onChange={(e) => setAddress({...address, address: e.target.value})}
+                          className="h-10 sm:h-auto text-sm sm:text-base"
                         />
                       </div>
 
                       <div>
-                        <Label>City</Label>
+                        <Label className="text-sm">City</Label>
                         <Input
                           value={address.city}
                           onChange={(e) => setAddress({...address, city: e.target.value})}
+                          className="h-10 sm:h-auto text-sm sm:text-base"
                         />
                       </div>
 
                       <div>
-                        <Label>PIN Code</Label>
+                        <Label className="text-sm">PIN Code</Label>
                         <Input
                           value={address.postalCode}
                           onChange={(e) => setAddress({...address, postalCode: e.target.value})}
+                          className="h-10 sm:h-auto text-sm sm:text-base"
                         />
                       </div>
                     </div>
@@ -575,7 +567,7 @@ const Checkout = () => {
                     {/* CONFIRM BUTTON */}
                     <Button
                       onClick={confirmAddress}
-                      className="w-full mt-6 h-12"
+                      className="w-full mt-4 sm:mt-6 h-11 sm:h-12 text-sm sm:text-base"
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Confirm Address
@@ -588,11 +580,11 @@ const Checkout = () => {
 
             {/* RIGHT */}
             <div>
-              <div className="bg-white rounded-xl p-5 shadow-sm sticky top-24">
+              <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-sm lg:sticky lg:top-24">
 
-                <h2 className="font-semibold text-lg mb-4">Order Summary</h2>
+                <h2 className="font-semibold text-base sm:text-lg mb-3 sm:mb-4">Order Summary</h2>
 
-                <div className="space-y-4 mb-4">
+                <div className="space-y-3 sm:space-y-4 mb-3 sm:mb-4 max-h-64 sm:max-h-80 overflow-y-auto">
                   {state.items.map(item => {
                     const product = item.product as Product;
                     let price = product.offerPrice ?? product.originalPrice ?? 0;
@@ -603,18 +595,18 @@ const Checkout = () => {
                     }
 
                     return (
-                      <div key={product._id} className="flex gap-3">
+                      <div key={product._id} className="flex gap-2 sm:gap-3">
                         <img
                           src={product.images?.[0]}
-                          className="w-14 h-14 rounded-lg object-cover"
+                          className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover flex-shrink-0"
                         />
 
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{product.name}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium truncate">{product.name}</p>
                           <p className="text-xs text-gray-500">Qty: {item.qty}</p>
                         </div>
 
-                        <p className="font-semibold text-sm">
+                        <p className="font-semibold text-xs sm:text-sm flex-shrink-0">
                           ₹{(price * item.qty).toLocaleString()}
                         </p>
                       </div>
@@ -623,59 +615,58 @@ const Checkout = () => {
                 </div>
 
                 {deliveryResult && (
-  <div className="border-t pt-4 space-y-3 text-sm">
+                  <div className="border-t pt-3 sm:pt-4 space-y-2 sm:space-y-3 text-xs sm:text-sm">
 
-    <div className="flex justify-between">
-      <span>Delivery Distance</span>
-      <span>{deliveryResult.totalKm.toFixed(2)} KM</span>
-    </div>
+                    <div className="flex justify-between">
+                      <span>Delivery Distance</span>
+                      <span className="font-medium">{deliveryResult.totalKm.toFixed(2)} KM</span>
+                    </div>
 
-    <div className="flex justify-between">
-      <span>Delivery Charges</span>
-      <span className="font-semibold text-green-600">
-        ₹{deliveryResult.charge.toFixed(2)}
-      </span>
-    </div>
+                    <div className="flex justify-between">
+                      <span>Delivery Charges</span>
+                      <span className="font-semibold text-green-600">
+                        ₹{deliveryResult.charge.toFixed(2)}
+                      </span>
+                    </div>
 
-    <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-600">
-      {deliveryResult.stores.length > 1
-        ? "Some items are delivered from multiple nearby stores. Additional charges applied based on distance."
-        : "Your order will be delivered from the nearest store."}
-    </div>
+                    <div className="bg-gray-50 p-2 sm:p-3 rounded-lg text-xs text-gray-600">
+                      {deliveryResult.stores.length > 1
+                        ? "Some items are delivered from multiple nearby stores. Additional charges applied based on distance."
+                        : "Your order will be delivered from the nearest store."}
+                    </div>
 
-  </div>
-)}
+                  </div>
+                )}
 
-<div className="border-t pt-4 space-y-3">
-  <div className="flex justify-between text-sm">
-    <span>Subtotal</span>
-    <span className="font-semibold">₹{cartTotal}</span>
-  </div>
+                <div className="border-t pt-3 sm:pt-4 space-y-2 sm:space-y-3">
+                  <div className="flex justify-between text-xs sm:text-sm">
+                    <span>Subtotal</span>
+                    <span className="font-semibold">₹{cartTotal}</span>
+                  </div>
 
-  {deliveryResult && (
-    <>
-      <div className="flex justify-between text-sm">
-        <span>Delivery Charges</span>
-        <span className="font-semibold">
-          ₹{deliveryResult.charge.toFixed(2)}
-        </span>
-      </div>
+                  {deliveryResult && (
+                    <>
+                      <div className="flex justify-between text-xs sm:text-sm">
+                        <span>Delivery Charges</span>
+                        <span className="font-semibold">
+                          ₹{deliveryResult.charge.toFixed(2)}
+                        </span>
+                      </div>
 
-      <div className="flex justify-between text-base font-bold">
-        <span>Total Payable</span>
-        <span>
-          ₹{(cartTotal + deliveryResult.charge).toFixed(2)}
-        </span>
-      </div>
-    </>
-  )}
-</div>
-
+                      <div className="flex justify-between text-sm sm:text-base font-bold">
+                        <span>Total Payable</span>
+                        <span>
+                          ₹{(cartTotal + deliveryResult.charge).toFixed(2)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 {/* PLACE ORDER */}
                 <Button
                   disabled={!isAddressConfirmed}
-                  className="w-full mt-6 h-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full mt-4 sm:mt-6 h-11 sm:h-12 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                   onClick={placeOrder}
                 >
                   <Check className="h-4 w-4 mr-2" />
