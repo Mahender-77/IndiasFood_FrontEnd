@@ -24,6 +24,7 @@ const Auth = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    phone: '',
     address: '',
     city: '',
     postalCode: '',
@@ -62,6 +63,7 @@ const Auth = () => {
           username: formData.username,
           email: formData.email,
           password: formData.password,
+          phone: formData.phone,
           addresses: [
             {
               address: formData.address,
@@ -157,6 +159,21 @@ const Auth = () => {
                     />
                   </div>
                 </div>
+
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="Enter your phone number"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>

@@ -75,6 +75,7 @@ export function InventoryTable({
                 <TableHead className="w-[70px] py-4">Image</TableHead>
                 <TableHead className="min-w-[200px] py-4">Product</TableHead>
                 <TableHead className="min-w-[130px] py-4">Category</TableHead>
+                <TableHead className="min-w-[130px] py-4">Subcategory</TableHead>
                 <TableHead className="min-w-[180px] py-4">Pricing</TableHead>
                 <TableHead className="min-w-[130px] py-4">Variants</TableHead>
                 <TableHead className="min-w-[220px] py-4">Stock by Location</TableHead>
@@ -129,6 +130,17 @@ export function InventoryTable({
                     {/* Category */}
                     <TableCell className="py-3">
                       <Badge variant="outline" className="text-xs font-medium">{categoryName}</Badge>
+                    </TableCell>
+
+                    {/* Subcategory */}
+                    <TableCell className="py-3">
+                      {product.subcategory ? (
+                        <Badge variant="outline" className="text-xs font-medium bg-blue-50 text-blue-700 border-blue-200">
+                          {product.subcategory.charAt(0).toUpperCase() + product.subcategory.slice(1)}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
 
                     {/* Pricing */}
@@ -279,7 +291,14 @@ export function InventoryTable({
                           </Badge>
                         )}
                       </div>
-                      <Badge variant="outline" className="text-xs">{categoryName}</Badge>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-xs">{categoryName}</Badge>
+                        {product.subcategory && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            {product.subcategory.charAt(0).toUpperCase() + product.subcategory.slice(1)}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
 

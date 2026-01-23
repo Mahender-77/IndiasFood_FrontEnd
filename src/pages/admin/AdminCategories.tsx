@@ -9,8 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import { Category } from '@/types';
-import { PlusCircle, Edit, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
+import { Category, SubCategory } from '@/types';
+import { PlusCircle, Edit, Trash2, ArrowLeft, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -22,6 +22,8 @@ const AdminCategoriesPage = () => {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryName, setCategoryName] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [subcategories, setSubcategories] = useState<SubCategory[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [isMutating, setIsMutating] = useState(false); // New state for mutation loading
   const { toast } = useToast();
 
@@ -50,7 +52,13 @@ const AdminCategoriesPage = () => {
   const handleCreateCategory = async () => {
     setIsMutating(true);
     try {
-      await api.post('/admin/categories', { name: categoryName, isActive });
+      // Filter out empty subcategory names
+      const validSubcategories = subcategories.filter(sub => sub.name.trim() !== '');
+      await api.post('/admin/categories', {
+        name: categoryName,
+        isActive,
+        subcategories: validSubcategories
+      });
       toast({
         title: 'Category Created',
         description: `Category "${categoryName}" has been added.`, 
@@ -58,6 +66,7 @@ const AdminCategoriesPage = () => {
       setIsDialogOpen(false);
       setCategoryName('');
       setIsActive(true);
+      setSubcategories([]);
       fetchCategories();
     } catch (err: any) {
       toast({
@@ -74,7 +83,13 @@ const AdminCategoriesPage = () => {
     if (!editingCategory) return;
     setIsMutating(true);
     try {
-      await api.put(`/admin/categories/${editingCategory._id}`, { name: categoryName, isActive });
+      // Filter out empty subcategory names
+      const validSubcategories = subcategories.filter(sub => sub.name.trim() !== '');
+      await api.put(`/admin/categories/${editingCategory._id}`, {
+        name: categoryName,
+        isActive,
+        subcategories: validSubcategories
+      });
       toast({
         title: 'Category Updated',
         description: `Category "${categoryName}" has been updated.`, 
@@ -83,6 +98,7 @@ const AdminCategoriesPage = () => {
       setEditingCategory(null);
       setCategoryName('');
       setIsActive(true);
+      setSubcategories([]);
       fetchCategories();
     } catch (err: any) {
       toast({
@@ -119,8 +135,38 @@ const AdminCategoriesPage = () => {
   const openEditDialog = (category: Category) => {
     setEditingCategory(category);
     setCategoryName(category.name);
-    setIsActive(category.isActive);
+    setIsActive(category.isActive ?? true);
+    setSubcategories(category.subcategories ?? []);
     setIsDialogOpen(true);
+  };
+
+  const addSubcategory = () => {
+    const newSubcategory = {
+      _id: `temp-${Date.now()}-${Math.random()}`,
+      name: '',
+      isActive: true
+    };
+    setSubcategories([...subcategories, newSubcategory]);
+  };
+
+  const removeSubcategory = (index: number) => {
+    setSubcategories(subcategories.filter((_, i) => i !== index));
+  };
+
+  const updateSubcategory = (index: number, field: keyof SubCategory, value: any) => {
+    const updated = [...subcategories];
+    updated[index] = { ...updated[index], [field]: value };
+    setSubcategories(updated);
+  };
+
+  const toggleCategoryExpansion = (categoryId: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId);
+    } else {
+      newExpanded.add(categoryId);
+    }
+    setExpandedCategories(newExpanded);
   };
 
   const handleDialogClose = () => {
@@ -128,6 +174,7 @@ const AdminCategoriesPage = () => {
     setEditingCategory(null);
     setCategoryName('');
     setIsActive(true);
+    setSubcategories([]);
   };
 
   if (loading) {
@@ -183,6 +230,7 @@ const AdminCategoriesPage = () => {
                   setEditingCategory(null);
                   setCategoryName('');
                   setIsActive(true);
+                  setSubcategories([]);
                   setIsDialogOpen(true);
                 }} disabled={isMutating}>
                   <PlusCircle className="h-4 w-4 mr-2" /> New Category
@@ -212,6 +260,57 @@ const AdminCategoriesPage = () => {
                     />
                     <Label htmlFor="isActive">Is Active</Label>
                   </div>
+
+                  {/* Subcategories Section */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Subcategories</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addSubcategory}
+                        disabled={isMutating}
+                      >
+                        <PlusCircle className="h-4 w-4 mr-1" />
+                        Add Subcategory
+                      </Button>
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {subcategories.map((subcategory, index) => (
+                        <div key={subcategory._id || `sub-${index}`} className="flex items-center gap-2 p-2 border rounded">
+                          <Input
+                            value={subcategory.name}
+                            onChange={(e) => updateSubcategory(index, 'name', e.target.value)}
+                            placeholder="Subcategory name"
+                            className="flex-1"
+                            disabled={isMutating}
+                          />
+                          <Checkbox
+                            checked={subcategory.isActive ?? true}
+                            onCheckedChange={(checked) => updateSubcategory(index, 'isActive', !!checked)}
+                            disabled={isMutating}
+                          />
+                          <Label className="text-xs">Active</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeSubcategory(index)}
+                            disabled={isMutating}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      {subcategories.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No subcategories added yet
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={handleDialogClose} disabled={isMutating}>Cancel</Button>
@@ -235,6 +334,7 @@ const AdminCategoriesPage = () => {
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>NAME</TableHead>
+                  <TableHead>SUBCATEGORIES</TableHead>
                   <TableHead>STATUS</TableHead>
                   <TableHead>ACTIONS</TableHead>
                 </TableRow>
@@ -242,29 +342,81 @@ const AdminCategoriesPage = () => {
               <TableBody>
                 {categories.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                       No categories found.
                     </TableCell>
                   </TableRow>
                 ) : (
                   categories.map((category) => (
-                    <TableRow key={category._id}>
-                      <TableCell className="font-medium">{category._id}</TableCell>
-                      <TableCell>{category.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={category.isActive ? 'default' : 'secondary'}>
-                          {category.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => openEditDialog(category)} disabled={isMutating}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category._id)} disabled={isMutating}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                    <>
+                      <TableRow key={category._id}>
+                        <TableCell className="font-medium">{category._id}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {(category.subcategories && category.subcategories.length > 0) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleCategoryExpansion(category._id)}
+                                className="p-0 h-4 w-4"
+                              >
+                                {expandedCategories.has(category._id) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+                            {category.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {category.subcategories && category.subcategories.length > 0 ? (
+                            <Badge variant="outline">
+                              {category.subcategories.length} subcategories
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">None</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={category.isActive ? 'default' : 'secondary'}>
+                            {category.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openEditDialog(category)} disabled={isMutating}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category._id)} disabled={isMutating}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      {/* Subcategories rows */}
+                      {expandedCategories.has(category._id) && category.subcategories && category.subcategories.map((subcategory, index) => (
+                        <TableRow key={subcategory._id || `${category._id}-sub-${index}`} className="bg-muted/30">
+                          <TableCell></TableCell>
+                          <TableCell className="pl-8">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 bg-primary rounded-full"></span>
+                              {subcategory.name}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              Subcategory
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={subcategory.isActive ? 'default' : 'secondary'} className="text-xs">
+                              {subcategory.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      ))}
+                    </>
                   ))
                 )}
               </TableBody>

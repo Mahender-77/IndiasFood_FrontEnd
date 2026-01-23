@@ -93,7 +93,6 @@ const Orders = () => {
     fetchOrders();
   }, [token]);
 
-  console.log("ajnefkawj")
 
   const handleCancelOrder = async () => {
     if (!selectedOrder || !cancelReason.trim()) {

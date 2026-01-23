@@ -38,6 +38,29 @@ const Checkout = () => {
   });
   
 
+  const checkServiceability = async (
+    userLat: number,
+    userLng: number
+  ) => {
+  
+     
+    const pickup = {
+      latitude: storeLocations[0].latitude, // nearest store later
+      longitude: storeLocations[0].longitude
+    };
+  
+    const drop = {
+      latitude: userLat,
+      longitude: userLng
+    };
+  
+    const res = await api.post(
+      "/user/check-availability",
+      { pickup, drop }
+    );
+  
+    return res.data;
+  };
   
 
   const [address, setAddress] = useState({
@@ -304,11 +327,27 @@ const Checkout = () => {
      
       setDeliveryResult(result);
     }
-  
+      // 🔥 UENGAGE SERVICEABILITY
+  const service = await checkServiceability(
+    finalAddress.latitude!,
+    finalAddress.longitude!
+  );
+
+  console.log("serviceability",service);
+
+  if (!service.serviceability.riderServiceAble) {
     toast({
-      title: 'Address confirmed',
-      description: `Delivery fee: ₹${result?.charge}`
+      title: "Delivery not available",
+      description: "No rider available currently",
+      variant: "destructive"
     });
+    return;
+  }
+
+  toast({
+    title: "Delivery available",
+    description: `Uengage fee: ₹${service.payouts.total}`
+  });
   };
   
   
@@ -334,14 +373,7 @@ const Checkout = () => {
     const nearestStore = sortedStores[0];
     const secondStore = sortedStores[1];
   
-    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    // console.log("📍 USER LOCATION");
-    // console.log(`Lat: ${userLat}`);
-    // console.log(`Lng: ${userLng}`);
-    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   
-    // console.log(`🏬 NEAREST STORE: ${nearestStore.name}`);
-    // console.log(`Distance: ${nearestStore.distance.toFixed(2)} KM`);
   
     const productsInNearest: string[] = [];
     const missingProducts: string[] = [];
@@ -362,10 +394,6 @@ const Checkout = () => {
       }
     });
   
-    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    // console.log("📦 PRODUCT DISTRIBUTION");
-    // console.log("From nearest store:", productsInNearest);
-    // console.log("Missing products:", missingProducts);
   
     /* ---------- SINGLE STORE ---------- */
     if (missingProducts.length === 0) {
@@ -376,13 +404,6 @@ const Checkout = () => {
         deliverySettings.baseCharge +
         km * deliverySettings.pricePerKm;
   
-      // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      // console.log("🚚 DELIVERY TYPE: SINGLE STORE");
-      // console.log(`Base Charge: ₹${deliverySettings.baseCharge}`);
-      // console.log(`KM: ${km.toFixed(2)}`);
-      // console.log(`Price/KM: ₹${deliverySettings.pricePerKm}`);
-      // console.log(`TOTAL DELIVERY CHARGE: ₹${charge.toFixed(2)}`);
-      // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   
       return {
         stores: [nearestStore.name],
@@ -412,9 +433,6 @@ const Checkout = () => {
       secondStore.longitude
     );
   
-    // console.log(`Store 2: ${secondStore.name}`);
-    // console.log(`Products: ${missingProducts.join(", ")}`);
-    // console.log(`Distance from store 1: ${leg2.toFixed(2)} KM`);
   
     const totalKm =
       nearestStore.distance + leg2;
@@ -423,13 +441,6 @@ const Checkout = () => {
       deliverySettings.baseCharge +
       totalKm * deliverySettings.pricePerKm;
   
-    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    // console.log("💰 FINAL CALCULATION");
-    // console.log(`Base Charge: ₹${deliverySettings.baseCharge}`);
-    // console.log(`Total KM: ${totalKm.toFixed(2)}`);
-    // console.log(`Price/KM: ₹${deliverySettings.pricePerKm}`);
-    // console.log(`FINAL DELIVERY CHARGE: ₹${charge.toFixed(2)}`);
-    // console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   
     return {
       stores: [nearestStore.name, secondStore.name],

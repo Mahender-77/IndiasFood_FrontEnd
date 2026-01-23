@@ -38,11 +38,11 @@ export function AutoCarousel({
         <CarouselContent>
           {images.map((image, index) => (
             <CarouselItem key={index}>
-              <div className="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 xl:h-[500px] overflow-hidden">
+              <div className="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 xl:h-[500px] overflow-hidden bg-gray-100">
                 <img
                   src={image}
                   alt={`Slide ${index + 1}`}
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                  className="w-full h-full object-contain transition-transform duration-500 hover:scale-105"
                   loading={index === 0 ? "eager" : "lazy"}
                 />
               </div>

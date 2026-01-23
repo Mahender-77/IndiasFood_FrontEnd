@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 export const WelcomeHero = () => {
   return (
-    <section className="relative py-12 px-4 sm:py-16 md:py-20 overflow-hidden bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
+    <section className="relative pt-8 px-4 sm:py-16 md:py-20 overflow-hidden bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
       {/* Decorative SVG Patterns - Reduced opacity on mobile */}
       <div className="absolute inset-0 opacity-10 sm:opacity-20">
         <svg className="w-full h-full" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
@@ -76,23 +76,23 @@ export const WelcomeHero = () => {
 
       {/* Main Content */}
       <div className="relative z-10 max-w-4xl mx-auto text-center px-4">
-        <h1 className="text-3xl sm:text-xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-amber-800 via-yellow-600 to-orange-600 bg-clip-text text-transparent animate-pulse leading-tight">
+        <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-amber-800 via-yellow-600 to-orange-600 bg-clip-text text-transparent animate-pulse leading-tight">
           Taste the Originals — From Original Source to Your Door
         </h1>
 
-        <p className="text-lg sm:text-xl md:text-2xl text-amber-900 mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed px-2">
+        <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-amber-900 mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed px-2">
           Discover India's most authentic regional foods, crafted by the original inventors and traditional makers who've perfected them for generations.
         </p>
 
-        <Link
+        {/* <Link
           to="/products"
           className="inline-block px-8 sm:px-12 py-3 sm:py-4 bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 text-white font-semibold text-lg sm:text-xl rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 border-2 border-yellow-400"
         >
           Explore Sweets
-        </Link>
+        </Link> */}
       </div>
            {/* Trust Badges */}
-      <div className="relative z-10 mt-8 sm:mt-12">
+      {/* <div className="relative z-10 mt-8 sm:mt-12">
         <div className="flex flex-col justify-center items-center gap-4 sm:gap-6 sm:flex-row sm:flex-wrap max-w-4xl mx-auto px-4">
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <div className="p-2 sm:p-3 rounded-full bg-saffron-light flex-shrink-0">
@@ -113,7 +113,7 @@ export const WelcomeHero = () => {
             <span className="text-center sm:text-left">Made to Order</span>
           </div>
         </div>
-      </div>
+      </div> */}
 
     </section>
   );

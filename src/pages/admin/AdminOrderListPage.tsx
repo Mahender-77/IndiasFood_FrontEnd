@@ -44,6 +44,7 @@ export const AdminOrderListPage = () => {
     freeDeliveryThreshold: 500,
     storeLocations: [] as StoreLocation[]
   });
+  const [locationFilter, setLocationFilter] = useState<string>('all');
 
   const itemsPerPage = 10;
   
@@ -96,17 +97,44 @@ export const AdminOrderListPage = () => {
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
-  const totalPages = Math.ceil(sortedOrders.length / itemsPerPage);
+  // Get store locations for filter
+  const uniqueLocations = deliverySettings.storeLocations
+    .filter(store => store.isActive && store.name && store.name.trim() !== '')
+    .map(store => store.name)
+    .sort();
+
+  // Function to get the responsible store for an order
+  const getResponsibleStore = (order: Order) => {
+    const shippingCity = order.shippingAddress?.city;
+    if (!shippingCity) return 'N/A';
+
+    // Find store with matching name/city
+    const matchingStore = deliverySettings.storeLocations.find(
+      store => store.isActive && store.name.toLowerCase() === shippingCity.toLowerCase()
+    );
+
+    if (matchingStore) return matchingStore.name;
+
+    // Fallback: find first active store
+    const firstActiveStore = deliverySettings.storeLocations.find(store => store.isActive);
+    return firstActiveStore ? firstActiveStore.name : 'N/A';
+  };
+
+  // Filter orders by responsible store
+  const filteredOrders = sortedOrders.filter(order => {
+    if (locationFilter === 'all') return true;
+    return getResponsibleStore(order) === locationFilter;
+  });
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedOrders = sortedOrders.slice(startIndex, endIndex);
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
-  // Reset to first page when orders change
+  // Reset to first page when orders change or location filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [orders.length]);
-
-  console.log("deliverySettings",deliverySettings)
+  }, [orders.length, locationFilter]);
 
   const updateOrderStatus = async (orderId: string, status: string) => {
     setUpdatingStatus(orderId);
@@ -296,16 +324,36 @@ export const AdminOrderListPage = () => {
         <div className="container-custom pt-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <h1 className="font-display text-2xl sm:text-3xl font-bold">Manage Orders</h1>
-            
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowSettings(!showSettings)}
-              className="gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Delivery Settings
-            </Button>
+
+            <div className="flex items-center gap-4">
+              {/* Location Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Location:</span>
+                <Select value={locationFilter} onValueChange={setLocationFilter}>
+                  <SelectTrigger className="w-[140px] h-9">
+                    <SelectValue placeholder="All Locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Locations</SelectItem>
+                    {uniqueLocations.map(location => (
+                      <SelectItem key={location} value={location}>
+                        {location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSettings(!showSettings)}
+                className="gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Delivery Settings
+              </Button>
+            </div>
           </div>
 
           {/* Delivery Settings Card - Collapsible */}
@@ -580,18 +628,19 @@ export const AdminOrderListPage = () => {
                   <TableHead className="w-[8%]">Order ID</TableHead>
                   <TableHead className="w-[10%]">Customer</TableHead>
                   <TableHead className="w-[8%]">Date</TableHead>
-                  <TableHead className="w-[25%]">Products & Pricing</TableHead>
+                  <TableHead className="w-[20%]">Products & Pricing</TableHead>
+                  <TableHead className="w-[6%]">Store</TableHead>
                   <TableHead className="w-[8%]">Status</TableHead>
                   <TableHead className="w-[12%]">Delivery Person</TableHead>
                   <TableHead className="w-[6%]">Distance</TableHead>
-                  <TableHead className="w-[23%]">Actions</TableHead>
+                  <TableHead className="w-[22%]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedOrders.length === 0 ? (
+                {filteredOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                      No orders found.
+                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                      {locationFilter === 'all' ? 'No orders found.' : `No orders found for ${locationFilter}.`}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -603,7 +652,7 @@ export const AdminOrderListPage = () => {
                       <TableCell>
                         <div className="space-y-1">
                           <p className="font-medium text-sm">
-                            {(order.user as unknown as User)?.name || 'N/A'}
+                            {(order.user as unknown as User)?.username || 'N/A'}
                           </p>
                           <Collapsible>
                             <CollapsibleTrigger asChild>
@@ -633,7 +682,8 @@ export const AdminOrderListPage = () => {
                       <TableCell className="text-xs">
                         {new Date(order.createdAt).toLocaleDateString('en-IN', {
                           day: '2-digit',
-                          month: 'short'
+                          month: 'short',
+                          year: '2-digit'
                         })}
                       </TableCell>
                       <TableCell className="text-xs">
@@ -692,6 +742,11 @@ export const AdminOrderListPage = () => {
                           </div>
                         </div>
                       </TableCell>
+                      <TableCell className="text-xs">
+                        <Badge variant="outline" className="text-xs font-medium">
+                          {getResponsibleStore(order)}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <div className="space-y-2">
                           {getStatusBadge(order)}
@@ -715,7 +770,7 @@ export const AdminOrderListPage = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {(order.deliveryPerson as unknown as User)?.name || (
+                        {(order.deliveryPerson as unknown as User)?.username || (
                           <span className="text-muted-foreground">Unassigned</span>
                         )}
                         {order.eta && (
@@ -775,7 +830,7 @@ export const AdminOrderListPage = () => {
                                         <SelectContent>
                                           {deliveryPersons.map(person => (
                                             <SelectItem key={person._id} value={person._id}>
-                                              {person.name}
+                                              {person.username}
                                             </SelectItem>
                                           ))}
                                         </SelectContent>
@@ -878,7 +933,8 @@ export const AdminOrderListPage = () => {
               </Pagination>
 
               <div className="text-center text-sm text-muted-foreground mt-2">
-                Showing {startIndex + 1}-{Math.min(endIndex, sortedOrders.length)} of {sortedOrders.length} orders
+                Showing {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
+                {locationFilter !== 'all' && ` (filtered by ${locationFilter})`}
               </div>
             </div>
           )}

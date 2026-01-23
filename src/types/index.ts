@@ -1,10 +1,12 @@
 export interface User {
   _id: string;
-  name: string;
+  username: string;
   email: string;
   isAdmin: boolean;
   token: string;
   isDelivery: boolean;
+  phone?: string;
+  newsletterSubscribed?: boolean;
   deliveryProfile?: {
     vehicleType: string;
     licenseNumber: string;
@@ -60,6 +62,7 @@ export interface Product {
   countInStock?: number;
 
   category: Category;
+  subcategory?: string; // Subcategory ID or name
   isActive?: boolean;
   reviews?: any[]; // You might want to define a more specific type for reviews
   rating?: number;
@@ -68,9 +71,17 @@ export interface Product {
   updatedAt: string;
 }
 
+export interface SubCategory {
+  _id?: string;
+  name: string;
+  isActive?: boolean;
+}
+
 export interface Category {
   _id: string;
   name: string;
+  isActive?: boolean;
+  subcategories?: SubCategory[];
   image?: string; // Made optional as it's not coming from category model directly
   description: string;
   imageUrl?: string; // Add imageUrl from product

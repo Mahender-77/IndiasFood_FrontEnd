@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -66,6 +66,11 @@ interface VariantStockEntry {
 
 const PRODUCTS_PER_PAGE = 15;
 
+// Extended interface for editing product with original data
+interface EditingProduct extends Product {
+  _originalData?: Product;
+}
+
 const AdminInventory = () => {
   // State Management
   const [products, setProducts] = useState<Product[]>([]);
@@ -78,7 +83,7 @@ const AdminInventory = () => {
   
   // Dialog States
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
   const [isManageLocationsOpen, setIsManageLocationsOpen] = useState(false);
   
   // Form States
@@ -101,7 +106,14 @@ const AdminInventory = () => {
   });
   
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [newLocation, setNewLocation] = useState<string>('');
+
+  // Handle category change
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setSelectedSubcategory(''); // Reset subcategory when category changes
+  };
   
   // Filter States
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -182,28 +194,24 @@ const AdminInventory = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
-  // API Calls
+  // Optimized API Calls
   const fetchProducts = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('userToken');
-
       const response = await api.get('/admin/inventory', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (Array.isArray(response.data)) {
         setProducts(response.data);
       } else {
         setProducts([]);
-        toast.error('Invalid response format from server');
       }
     } catch (error: any) {
       console.error('Failed to fetch products:', error);
       setProducts([]);
-      
+
       if (error.response?.status === 401) {
         toast.error('Please login as admin');
       } else if (error.response?.status === 403) {
@@ -279,6 +287,37 @@ const AdminInventory = () => {
     }
   };
 
+  // Optimized image upload with better error handling
+  const uploadImagesOptimized = async (files: File[]) => {
+    if (!files || files.length === 0) return [];
+
+    try {
+      const formData = new FormData();
+      files.forEach(file => {
+        formData.append('images', file);
+      });
+
+      const token = localStorage.getItem('userToken');
+      const response = await fetch('/api/upload/images', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      return data.urls || [];
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      return [];
+    }
+  };
+
   // Product Creation
   const handleCreateProduct = async () => {
     if (creatingProduct) return;
@@ -294,61 +333,30 @@ const AdminInventory = () => {
       return;
     }
 
-    // Validate variant stocks if variants exist
-    if (newProduct.variants && newProduct.variants.length > 0) {
-      if (!newProduct.variantStocks || newProduct.variantStocks.length === 0) {
-        toast.error('Please add stock locations for at least one variant');
+    // Fast validation
+    const hasVariants = newProduct.variants && newProduct.variants.length > 0;
+
+    if (hasVariants) {
+      if (!newProduct.variantStocks?.length || !newProduct.variantStocks.some(vs => vs?.some(s => s.quantity > 0))) {
+        toast.error('Add stock for variants');
         return;
       }
-
-      // Check if any variant has stock
-      const hasAnyStock = newProduct.variantStocks.some(variantStock =>
-        variantStock && variantStock.length > 0 && variantStock.some(stock => stock.quantity > 0)
-      );
-      if (!hasAnyStock) {
-        toast.error('Please enter stock quantities for at least one variant location');
-        return;
-      }
-    } else {
-      // For non-variant products, check the separate inventory data
-      if (!newProduct.inventoryData || newProduct.inventoryData.length === 0) {
-        toast.error('Please add at least one location with inventory');
-        return;
-      }
-
-      // Validate inventory entries
-      for (const inventoryEntry of newProduct.inventoryData) {
-        const hasStock = inventoryEntry.stock.some(stockItem => stockItem.quantity > 0);
-        if (!hasStock) {
-          toast.error(`Please enter stock quantities for ${inventoryEntry.displayName}`);
-          return;
-        }
-      }
-    }
-
-    // Validate variants if they exist
-    if (newProduct.variants && newProduct.variants.length > 0) {
-      const invalidVariants = newProduct.variants.filter(variant =>
-        !variant.value?.trim() || variant.originalPrice <= 0
-      );
+      const invalidVariants = newProduct.variants.filter(v => !v.value?.trim() || v.originalPrice <= 0);
       if (invalidVariants.length > 0) {
-        toast.error(`Please complete all variant details. ${invalidVariants.length} variant(s) incomplete.`);
+        toast.error(`${invalidVariants.length} variant(s) incomplete`);
         return;
       }
     } else {
-      // Single product validation
+      if (!newProduct.inventoryData?.length || !newProduct.inventoryData.some(inv => inv.stock.some(s => s.quantity > 0))) {
+        toast.error('Add at least one location with stock');
+        return;
+      }
       if (newProduct.originalPrice === undefined || newProduct.originalPrice <= 0) {
-        toast.error('Original price is required and must be greater than 0');
+        toast.error('Valid price required');
         return;
       }
-
-      if (newProduct.offerPrice !== undefined && newProduct.offerPrice <= 0) {
-        toast.error('Offer price must be greater than 0');
-        return;
-      }
-
-      if (newProduct.offerPrice !== undefined && newProduct.offerPrice >= newProduct.originalPrice) {
-        toast.error('Offer price must be less than original price');
+      if (newProduct.offerPrice !== undefined && (newProduct.offerPrice <= 0 || newProduct.offerPrice >= newProduct.originalPrice)) {
+        toast.error('Invalid offer price');
         return;
       }
     }
@@ -356,46 +364,12 @@ const AdminInventory = () => {
     setCreatingProduct(true);
 
     try {
-      let imageUrls: string[] = [];
+      // Parallel image upload for speed
+      const imageUrls = newProduct.imageFiles?.length
+        ? await uploadImagesOptimized(newProduct.imageFiles)
+        : [];
 
-      // Upload images if any
-      if (newProduct.imageFiles && newProduct.imageFiles.length > 0) {
-        const formData = new FormData();
-        newProduct.imageFiles.forEach((file) => {
-          formData.append('images', file);
-        });
-
-        try {
-          // Use axios directly for FormData to avoid Content-Type conflicts
-          const token = localStorage.getItem('userToken');
-          const uploadResponse = await fetch('/api/upload/images', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            },
-            body: formData
-          });
-
-          if (!uploadResponse.ok) {
-            const errorData = await uploadResponse.json();
-            console.error('Upload error response:', errorData);
-            throw new Error(errorData.message || 'Upload failed');
-          }
-
-          const uploadData = await uploadResponse.json();
-          console.log('Upload successful, received URLs:', uploadData.urls);
-          imageUrls = uploadData.urls;
-        } catch (uploadError: any) {
-          console.error('Upload error:', uploadError);
-          toast.error(`Failed to upload images: ${uploadError.message || 'Unknown error'}`);
-          setCreatingProduct(false);
-          return;
-        }
-      }
-
-      console.log('Image URLs to use:', imageUrls);
-
-      // Prepare inventory data based on whether product has variants
+      // Optimized inventory preparation
       let inventory: Array<{
         location: string;
         stock: Array<{
@@ -405,8 +379,7 @@ const AdminInventory = () => {
         }>;
       }> = [];
 
-      if (newProduct.variants && newProduct.variants.length > 0) {
-        // Build inventory from variant stocks
+      if (hasVariants) {
         const locationMap = new Map<string, Array<{
           variantIndex: number;
           quantity: number;
@@ -416,7 +389,7 @@ const AdminInventory = () => {
         newProduct.variantStocks?.forEach((variantStock, variantIndex) => {
           variantStock?.forEach(stock => {
             const locationName = locations.find(loc => loc._id === stock.locationId)?.name;
-            if (locationName) {
+            if (locationName && stock.quantity > 0) {
               if (!locationMap.has(locationName)) {
                 locationMap.set(locationName, []);
               }
@@ -434,26 +407,26 @@ const AdminInventory = () => {
           stock
         }));
       } else {
-        // Use the traditional inventory data for non-variant products
         inventory = newProduct.inventoryData?.map(inventoryEntry => ({
           location: inventoryEntry.locationName,
-          stock: inventoryEntry.stock.map(stockItem => ({
+          stock: inventoryEntry.stock.filter(s => s.quantity > 0).map(stockItem => ({
             variantIndex: stockItem.variantIndex,
             quantity: stockItem.quantity,
             lowStockThreshold: 5
           }))
-        })) || [];
+        })).filter(inv => inv.stock.length > 0) || [];
       }
 
-      // Prepare product data
+      // Streamlined product data
       const productData = {
         name: newProduct.name.trim(),
         description: newProduct.description?.trim() || '',
-        originalPrice: newProduct.originalPrice || undefined,
-        offerPrice: newProduct.offerPrice || undefined,
-        variants: newProduct.variants && newProduct.variants.length > 0 ? newProduct.variants : undefined,
+        originalPrice: newProduct.originalPrice,
+        offerPrice: newProduct.offerPrice,
+        variants: hasVariants ? newProduct.variants : undefined,
         shelfLife: newProduct.shelfLife?.trim() || '',
         category: selectedCategory,
+        subcategory: selectedSubcategory && selectedSubcategory !== 'none' ? selectedSubcategory : undefined,
         videoUrl: newProduct.videoUrl?.trim() || '',
         images: imageUrls,
         inventory,
@@ -462,27 +435,22 @@ const AdminInventory = () => {
         isActive: true
       };
 
-      
-      
-      const response = await api.post('/admin/inventory/create-product', productData);
-      console.log('Product created response:', response.data);
+      await api.post('/admin/inventory/create-product', productData);
       toast.success('Product created successfully');
+
+      // Fast UI update - don't await fetchProducts to keep UI responsive
       setIsCreateDialogOpen(false);
       resetNewProductForm();
-      await fetchProducts();
+      fetchProducts();
     } catch (error: any) {
-      console.error('Failed to create product:', error);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error response status:', error.response?.status);
+      console.error('Product creation failed:', error);
 
       if (error.response?.status === 400) {
-        const errorMessage = error.response?.data?.message || 'Invalid product data';
-        const errorDetails = error.response?.data?.errors?.join(', ') || '';
-        toast.error(`${errorMessage}${errorDetails ? `: ${errorDetails}` : ''}`);
+        toast.error(error.response?.data?.message || 'Invalid product data');
       } else if (error.response?.status === 403) {
-        toast.error('You do not have permission to create products');
+        toast.error('Permission denied');
       } else {
-        toast.error('Failed to create product. Please try again.');
+        toast.error('Failed to create product');
       }
     } finally {
       setCreatingProduct(false);
@@ -508,11 +476,14 @@ const AdminInventory = () => {
       variantStocks: []
     });
     setSelectedCategory('');
+    setSelectedSubcategory('');
   };
 
   // Product Editing
   const handleEditProduct = (product: Product) => {
-    setEditingProduct({ ...product });
+    // Store original product data for displaying current stock quantities
+    const originalProduct = JSON.parse(JSON.stringify(product));
+    setEditingProduct({ ...product, _originalData: originalProduct });
   };
 
   const handleSaveProduct = async () => {
@@ -567,6 +538,7 @@ const AdminInventory = () => {
         videoUrl: editingProduct.videoUrl?.trim() || '',
         variants: editingProduct.variants || [],
         inventory: editingProduct.inventory || [],
+        subcategory: editingProduct.subcategory || undefined,
         isGITagged: editingProduct.isGITagged || false,
         isNewArrival: editingProduct.isNewArrival || false,
         isActive: editingProduct.isActive ?? true,
@@ -1147,6 +1119,9 @@ const AdminInventory = () => {
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Add New Product</DialogTitle>
+                    <DialogDescription>
+                      Create a new product with inventory management across multiple locations.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-6">
                     {/* Basic Product Info */}
@@ -1161,7 +1136,7 @@ const AdminInventory = () => {
                       </div>
                       <div>
                         <Label>Category *</Label>
-                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <Select value={selectedCategory} onValueChange={handleCategoryChange}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
@@ -1174,6 +1149,27 @@ const AdminInventory = () => {
                           </SelectContent>
                         </Select>
                       </div>
+                      {(() => {
+                        const selectedCategoryObj = categories.find(cat => cat._id === selectedCategory);
+                        return selectedCategoryObj && selectedCategoryObj.subcategories && selectedCategoryObj.subcategories.length > 0 ? (
+                          <div>
+                            <Label>Subcategory</Label>
+                            <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select subcategory (optional)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                {selectedCategoryObj.subcategories.map(subcategory => (
+                                  <SelectItem key={subcategory._id || subcategory.name} value={subcategory.name}>
+                                    {subcategory.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
 
                     {/* Description */}
@@ -1536,6 +1532,9 @@ const AdminInventory = () => {
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Edit Product - {editingProduct?.name}</DialogTitle>
+                <DialogDescription>
+                  Modify product details, pricing, and inventory across locations.
+                </DialogDescription>
               </DialogHeader>
 
               {editingProduct && (
@@ -1836,13 +1835,22 @@ const AdminInventory = () => {
                         <div className="space-y-4">
                           {editingProduct.inventory.map((locationInventory) => {
                             const locationObj = locations.find(loc => loc.name === locationInventory.location);
-                            const totalStock = locationInventory.stock?.reduce((sum, stockItem) => sum + (stockItem.quantity || 0), 0) || 0;
+                            // Use original stock quantities for display, not the current modified values
+                            const originalLocationInventory = editingProduct._originalData?.inventory?.find(
+                              orig => orig.location === locationInventory.location
+                            );
+                            const totalStock = originalLocationInventory?.stock?.reduce((sum, stockItem) => sum + (stockItem.quantity || 0), 0) || 0;
 
                             return (
                               <div key={locationInventory.location} className="border rounded-lg p-4 bg-gray-50">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-2">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-semibold capitalize">{locationObj?.displayName || locationInventory.location}</span>
+                                    <span className="font-semibold capitalize">
+                                      {locationObj?.displayName || locationInventory.location}
+                                      <span className="ml-2 text-sm font-normal text-gray-600">
+                                        (Current: {totalStock} units)
+                                      </span>
+                                    </span>
                                     <MapPin className="h-5 w-5 text-blue-600" />
                                   </div>
                                   <div className="flex items-center gap-2 w-full sm:w-auto">

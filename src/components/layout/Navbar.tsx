@@ -11,6 +11,12 @@ import api from '@/lib/api';
 interface Category {
   _id: string;
   name: string;
+  isActive?: boolean;
+  subcategories?: Array<{
+    _id?: string;
+    name: string;
+    isActive?: boolean;
+  }>;
 }
 
 export function Navbar() {
@@ -18,6 +24,7 @@ export function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
   const [isMobileProductsOpen, setIsMobileProductsOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { cartCount, state } = useCart();
@@ -46,11 +53,11 @@ export function Navbar() {
   })) : [];
 
   const mainNavLinks = [
-    // { href: '/', label: 'Home' },
+    { href: '/', label: 'Home' },
     { href: '/products', label: 'Products', hasDropdown: true },
     { href: '/gi-tag-products', label: 'GI Tag Products' },
     { href: '/new-arrivals', label: 'New Arrivals' },
-    { href: '/orders', label: 'Orders' },
+    // { href: '/orders', label: 'Orders' },
     { href: '/about', label: 'About Us' },
     { href: '/gifting', label: 'Gifting' },
     { href: '/bulk-orders', label: 'Bulk Orders' },
@@ -80,7 +87,7 @@ export function Navbar() {
         <div className="border-b border-gray-200 ">
           <div className="container mx-auto px-10">
             <div className="flex h-22 items-center justify-around  ">
-              <div className="flex items-center justify-center gap-2" >
+              <div className="flex items-center justify-center " >
                   {/* Logo */}
               <Link to="/" className="flex items-center shrink-0">
                 <img
@@ -89,16 +96,21 @@ export function Navbar() {
                   className="h-24 w-auto"
                 />
               </Link>
+              <div>
+                <h1 className="text-3xl font-bold text-orange-600 whitespace-nowrap">
+                  India's Food
+                </h1>
+              </div>
 
               {/* Home Icon and Text */}
-              <Link to="/" className="flex items-center gap-3 ml-6 group">
+              {/* <Link to="/" className="flex items-center gap-3 ml-6 group">
                 <div className="flex items-center justify-center w-10 h-10 bg-orange-50 rounded-full group-hover:bg-orange-100 transition-colors">
                   <Home className="h-5 w-5 text-orange-600" />
                 </div>
                 <span className="text-lg font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
                   Home
                 </span>
-              </Link>
+              </Link> */}
               </div>
             
 
@@ -213,7 +225,7 @@ export function Navbar() {
         <div className="bg-orange-600">
           <div className="container mx-auto px-6">
             <nav className="flex items-center justify-center h-12">
-              <ul className="flex items-center gap-20">
+              <ul className="flex items-center gap-16">
                 {mainNavLinks.map((link) => (
                   <li key={link.href} className="relative group">
                     {link.hasDropdown ? (
@@ -271,10 +283,11 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Navigation - Single Layer */}
-      <div className="lg:hidden">
+     
+     {/* Mobile Navigation - Single Layer */}
+     <div className="lg:hidden">
         <div className="container mx-auto px-2">
-          <div className="flex h-18 items-center justify-between gap-3">
+          <div className="flex h-18 items-center justify-between ">
             {/* Logo */}
             <Link to="/" className="shrink-0">
               <img 
@@ -284,30 +297,72 @@ export function Navbar() {
               />
             </Link>
 
-            {/* Search Bar */}
-            <div className="flex-1 max-w-xs">
+            {/* India's Food Text with fade animation */}
+            <div 
+              className={cn(
+                "transition-all duration-300 ease-in-out",
+                isSearchOpen ? "w-0 opacity-0 overflow-hidden" : "opacity-100"
+              )}
+            >
+              <span className="text-lg font-bold text-orange-600 whitespace-nowrap">
+                India's Food
+              </span>
+            </div>
+
+            {/* Search Bar with slide-in animation */}
+            <div 
+              className={cn(
+                "transition-all duration-300 ease-in-out overflow-hidden",
+                isSearchOpen ? "flex-1 opacity-100" : "w-0 opacity-0"
+              )}
+            >
               <form onSubmit={handleSearch}>
-                <div className="relative">
+                <div className=" w-full relative border border-gray-300 bg-gray-50 flex items-center justify-center rounded-lg w-full mr-4">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                   <Input
                     type="search"
                     placeholder="Search..."
-                    className="w-full h-8 pl-6 pr-3 text-[12px] bg-gray-50 border border-gray-300 rounded-lg"
+                    className="w-full h-8 pl-6 pr-3 text-[12px] border-none"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    autoFocus={isSearchOpen}
                   />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    type="button"
+                    onClick={() => {
+                      setIsSearchOpen(false);
+                      setSearchTerm('');
+                    }}
+                  >
+                    <X className="h-5 w-5 text-gray-700" />
+                  </Button>
                 </div>
               </form>
             </div>
 
             {/* Right Icons */}
-            <div className="flex items-center shrink-0 ">
+            <div className="flex items-center shrink-0">
+              {/* Search Icon Toggle - Only show when search is closed */}
+              {!isSearchOpen && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6"  
+                  onClick={() => setIsSearchOpen(true)}
+                >
+                  <Search className="h-5 w-5 text-gray-700" />
+                </Button>
+              )}
+
               {/* Wishlist */}
               <Link to="/wishlist">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative h-6 w-6 "
+                  className="relative h-6 w-6"
                 >
                   <Heart className="h-6 w-4" />
                   {state.wishlist.length > 0 && (
@@ -361,10 +416,23 @@ export function Navbar() {
         {/* Mobile Menu Dropdown */}
         {isMenuOpen && (
           <div className="border-t bg-white shadow-lg animate-slide-down">
-            <nav className="container mx-auto ">
-              <div className="flex flex-col ">
+            <nav className="container mx-auto">
+              <div className="flex flex-col">
+                {/* Home Link - First in menu */}
+                <Link
+                  to="/"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                    location.pathname === "/" ? "bg-orange-50 text-orange-600" : "text-gray-700 hover:bg-gray-100"
+                  )}
+                >
+                  <Home className="w-4 h-4" />
+                  Home
+                </Link>
+
                 {/* Products with Dropdown */}
-                <div >
+                <div>
                   <button
                     onClick={() => setIsMobileProductsOpen(!isMobileProductsOpen)}
                     className="flex items-center justify-between w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
@@ -399,7 +467,7 @@ export function Navbar() {
                 </div>
 
                 {/* Other Nav Links */}
-                {mainNavLinks.filter(link => !link.hasDropdown).map((link) => (
+                {mainNavLinks.filter(link => !link.hasDropdown && link.href !== '/').map((link) => (
                   <Link
                     key={link.href}
                     to={link.href}

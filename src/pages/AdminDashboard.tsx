@@ -1,10 +1,15 @@
 import { Layout } from '@/components/layout/Layout';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, PlusCircle, FileText, Users, Tags, TrendingUp, Truck, Warehouse } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Package, PlusCircle, FileText, Users, Tags, TrendingUp, Truck, Warehouse, Download, Calendar } from 'lucide-react';
 import ExportButton from '@/components/admin/ExportButton';
 import api from '@/lib/api';
 import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { SEO } from '@/components/seo/SEO';
 
 const AdminDashboard = () => {
@@ -14,6 +19,15 @@ const AdminDashboard = () => {
     activeDeliveryPersons: 0,
     revenueToday: 0,
   });
+
+  // Time-based export state
+  const [exportPeriod, setExportPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedWeek, setSelectedWeek] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -44,6 +58,78 @@ const AdminDashboard = () => {
 
     fetchStats();
   }, []);
+
+  // Time-based export function
+  const handleTimeBasedExport = async (type: 'orders' | 'sales', format: 'json' | 'csv') => {
+    let queryParams = '';
+    let filename = '';
+
+    if (exportPeriod === 'daily') {
+      if (!selectedDate) {
+        toast({
+          title: 'Error',
+          description: 'Please select a date for daily export.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryParams = `?date=${selectedDate}`;
+      filename = `${type}_daily_${selectedDate}`;
+    } else if (exportPeriod === 'weekly') {
+      if (!selectedWeek) {
+        toast({
+          title: 'Error',
+          description: 'Please select a week for weekly export.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryParams = `?week=${selectedWeek}`;
+      filename = `${type}_weekly_${selectedWeek}`;
+    } else if (exportPeriod === 'monthly') {
+      if (!selectedMonth) {
+        toast({
+          title: 'Error',
+          description: 'Please select a month for monthly export.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryParams = `?month=${selectedMonth}`;
+      filename = `${type}_monthly_${selectedMonth}`;
+    }
+
+    setExporting(`${type}-${format}`);
+
+    try {
+      const response = await api.get(`/admin/export/${type}/${exportPeriod}${queryParams}`, {
+        responseType: 'blob'
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${filename}.${format}`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Export Successful',
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} ${exportPeriod} data exported successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Export Failed',
+        description: error.response?.data?.message || `Failed to export ${type} data.`,
+        variant: 'destructive',
+      });
+    } finally {
+      setExporting(null);
+    }
+  };
 
   return (
     <Layout>
@@ -192,27 +278,118 @@ const AdminDashboard = () => {
                   <FileText className="h-4 w-4" /> Data Exports
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <ExportButton
-                  dataFetcher={() => api.get('/admin/export/orders').then(res => res.data)}
-                  fileName="orders_export"
-                  label="Export Orders"
-                />
-                <ExportButton
-                  dataFetcher={() => api.get('/admin/export/customers').then(res => res.data)}
-                  fileName="customers_export"
-                  label="Export Customers"
-                />
-                <ExportButton
-                  dataFetcher={() => api.get('/admin/export/products').then(res => res.data)}
-                  fileName="products_export"
-                  label="Export Products"
-                />
-                <ExportButton
-                  dataFetcher={() => api.get('/admin/export/sales').then(res => res.data)}
-                  fileName="sales_report"
-                  label="Export Sales Data"
-                />
+              <CardContent className="space-y-6">
+                {/* Time-based Export Controls */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Calendar className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">Time-based Exports</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Period Selection */}
+                    <div className="space-y-2">
+                      <Label htmlFor="exportPeriod" className="text-xs text-gray-600">Period</Label>
+                      <Select value={exportPeriod} onValueChange={(value: 'daily' | 'weekly' | 'monthly') => setExportPeriod(value)}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Date Input Based on Period */}
+                    {exportPeriod === 'daily' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="exportDate" className="text-xs text-gray-600">Date</Label>
+                        <Input
+                          id="exportDate"
+                          type="date"
+                          value={selectedDate}
+                          onChange={(e) => setSelectedDate(e.target.value)}
+                          className="h-9"
+                        />
+                      </div>
+                    )}
+
+                    {exportPeriod === 'weekly' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="exportWeek" className="text-xs text-gray-600">Week</Label>
+                        <Input
+                          id="exportWeek"
+                          type="week"
+                          value={selectedWeek}
+                          onChange={(e) => setSelectedWeek(e.target.value)}
+                          className="h-9"
+                        />
+                      </div>
+                    )}
+
+                    {exportPeriod === 'monthly' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="exportMonth" className="text-xs text-gray-600">Month</Label>
+                        <Input
+                          id="exportMonth"
+                          type="month"
+                          value={selectedMonth}
+                          onChange={(e) => setSelectedMonth(e.target.value)}
+                          className="h-9"
+                        />
+                      </div>
+                    )}
+
+                    {/* Export Actions */}
+                    <div className="flex gap-2 lg:col-span-1">
+                      <Button
+                        onClick={() => handleTimeBasedExport('orders', 'json')}
+                        disabled={!!exporting}
+                        size="sm"
+                        className="flex-1 h-9 gap-1"
+                      >
+                        <Download className="h-3 w-3" />
+                        Orders
+                      </Button>
+                      <Button
+                        onClick={() => handleTimeBasedExport('sales', 'json')}
+                        disabled={!!exporting}
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-9 gap-1"
+                      >
+                        <Download className="h-3 w-3" />
+                        Sales
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Standard Export Buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <ExportButton
+                    dataFetcher={() => api.get('/admin/export/orders').then(res => res.data)}
+                    fileName="orders_export"
+                    label="Export All Orders"
+                  />
+                  <ExportButton
+                    dataFetcher={() => api.get('/admin/export/customers').then(res => res.data)}
+                    fileName="customers_export"
+                    label="Export Customers"
+                  />
+                  <ExportButton
+                    dataFetcher={() => api.get('/admin/export/products').then(res => res.data)}
+                    fileName="products_export"
+                    label="Export Products"
+                  />
+                  <ExportButton
+                    dataFetcher={() => api.get('/admin/export/sales').then(res => res.data)}
+                    fileName="sales_report"
+                    label="Export All Sales Data"
+                  />
+                </div>
               </CardContent>
             </Card>
 
