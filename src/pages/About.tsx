@@ -1,142 +1,130 @@
 import { Layout } from '@/components/layout/Layout';
 import { SEO } from '@/components/seo/SEO';
-import { Award, Heart, Users, Truck, MapPin, Clock } from 'lucide-react';
+import { MapPin, Clock, Star } from 'lucide-react';
 
 const About = () => {
   return (
     <Layout>
       <SEO
         title="About Us - India's Food | Authentic Indian Sweets"
-        description="Learn about India's Food - your trusted source for authentic Indian sweets. Our story, values, and commitment to quality traditional recipes."
-        keywords="about us, Indian sweets company, authentic sweets, traditional recipes, our story"
+        description="Learn about India's Food - bringing India's most iconic foods from their true place of origin directly to your plate since 2026."
+        keywords="about us, Indian sweets company, authentic sweets, traditional recipes, origin-based sourcing"
       />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-orange-50 to-amber-50 py-16">
-        <div className="container-custom text-center">
-          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
-            About India's Food
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Bringing the authentic taste of India to your doorstep since 2020.
-            Every sweet tells a story of tradition, love, and craftsmanship.
-          </p>
+      <section className="relative bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 py-10 md:py-18 overflow-hidden">
+        <div className="absolute inset-0 pattern-dots opacity-20"></div>
+        <div className="container-custom relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-block ">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full text-sm font-medium text-orange-600 shadow-sm">
+                <Star className="h-4 w-4 fill-orange-600" />
+                Since 2026
+              </span>
+            </div>
+            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
+              About Us
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
+              Bringing India's most iconic foods from their true place of origin directly to your plate
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* Our Story */}
-      <section className="py-16 bg-white">
+      {/* Main Story Section */}
+      <section className="py-10 md:py-14 bg-white">
         <div className="container-custom">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-6">
-                Our Story
-              </h2>
-              <p className="text-muted-foreground mb-4">
-                India's Food was born from a simple dream - to share the authentic flavors 
-                of Indian sweets with sweet lovers everywhere. What started as a small 
-                family kitchen has grown into a beloved brand trusted by thousands.
-              </p>
-              <p className="text-muted-foreground mb-4">
-                Our recipes have been passed down through generations, each one carrying 
-                the warmth and love of traditional Indian households. We believe that 
-                every sweet should be made with the finest ingredients and utmost care.
-              </p>
-              <p className="text-muted-foreground">
-                Today, we continue to honor these traditions while embracing modern 
-                standards of quality and hygiene, ensuring that every bite takes you 
-                on a journey through India's rich culinary heritage.
-              </p>
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Content */}
+            <div className="order-2 lg:order-1 space-y-6">
+              <div className="space-y-4">
+                <p className="text-base md:text-lg text-gray-700 leading-relaxed">
+                  Founded in <span className="font-semibold text-orange-600">2026</span>, our journey began with a simple yet powerful vision — to bring India's most iconic foods from their true place of origin directly to your plate.
+                </p>
+                <p className="text-base md:text-lg text-gray-700 leading-relaxed">
+                  India is a land of rich culinary heritage, where every region tells a story through its flavors. We bring together famous sweets, traditional snacks, pickles, and namkeens from across the country — all under one roof — exactly as they are made in their hometowns.
+                </p>
+              </div>
+
+              {/* Highlight Box */}
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-6 md:p-8 rounded-2xl border border-orange-100">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
+                    <MapPin className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg text-foreground mb-2">
+                      Origin-Based Sourcing
+                    </h3>
+                    <p className="text-sm md:text-base text-gray-700 leading-relaxed">
+                      What makes us unique is our commitment to origin-based sourcing. We are among the first to curate and deliver foods from their actual place of origin, preserving authenticity while making them easily accessible.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-100">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
+                  <Clock className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg text-foreground mb-2">
+                    Fresh & Fast
+                  </h3>
+                  <p className="text-sm md:text-base text-gray-700 leading-relaxed">
+                    With just one click and within a few hours, India's world-famous flavors reach your doorstep — fresh, genuine, and full of tradition.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="bg-gradient-to-br from-orange-100 to-amber-100 rounded-2xl p-8 aspect-square flex items-center justify-center">
-              <img 
-                src="/IndiasFood-.png" 
-                alt="India's Food Logo" 
-                className="w-3/4 h-auto"
-              />
+
+            {/* Image/Logo */}
+            <div className="order-1 lg:order-2">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-200 to-amber-200 rounded-3xl transform rotate-3"></div>
+                <div className="relative bg-white rounded-3xl p-8 md:p-12 shadow-xl">
+                  <img 
+                    src="/IndiasFood-.png" 
+                    alt="India's Food Logo" 
+                    className="w-full h-auto"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Values */}
-      <section className="py-16 bg-gray-50">
+      {/* Mission Statement */}
+      <section className="py-10 md:py-10 bg-gradient-to-br from-gray-50 to-orange-50">
         <div className="container-custom">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground text-center mb-12">
-            Our Values
-          </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                <Heart className="h-6 w-6 text-orange-600" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Made with Love</h3>
-              <p className="text-muted-foreground text-sm">
-                Every sweet is crafted with passion and care, just like homemade.
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="space-y-3">
+              <p className="text-xl md:text-2xl text-gray-600 leading-relaxed">
+                Because to us, this isn't just food.
               </p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                <Award className="h-6 w-6 text-amber-600" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Premium Quality</h3>
-              <p className="text-muted-foreground text-sm">
-                Only the finest ingredients go into our products - no compromises.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <Users className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Customer First</h3>
-              <p className="text-muted-foreground text-sm">
-                Your satisfaction is our priority. We're here to serve you better.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Truck className="h-6 w-6 text-blue-600" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Fast Delivery</h3>
-              <p className="text-muted-foreground text-sm">
-                Fresh sweets delivered to your doorstep quickly and safely.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                <MapPin className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Wide Reach</h3>
-              <p className="text-muted-foreground text-sm">
-                Serving customers across multiple cities with same dedication.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <Clock className="h-6 w-6 text-red-600" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Fresh Daily</h3>
-              <p className="text-muted-foreground text-sm">
-                All our sweets are prepared fresh daily for maximum taste.
-              </p>
+              <h2 className="font-display text-3xl md:text-5xl font-bold text-gradient leading-tight">
+                This is India's food — shared with the world.
+              </h2>
             </div>
           </div>
         </div>
       </section>
 
       {/* Contact CTA */}
-      <section className="py-16 bg-orange-600 text-white">
-        <div className="container-custom text-center">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold mb-4">
+      <section className="py-16 md:py-20 bg-gradient-to-r from-orange-600 to-amber-600 text-white relative overflow-hidden">
+        <div className="absolute inset-0 pattern-dots opacity-10"></div>
+        <div className="container-custom text-center relative z-10">
+          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
             Have Questions?
           </h2>
-          <p className="text-orange-100 mb-6 max-w-xl mx-auto">
-            We'd love to hear from you. Reach out to us for any queries about 
-            our products, bulk orders, or partnerships.
+          <p className="text-orange-100 text-base md:text-lg mb-8 max-w-2xl mx-auto leading-relaxed">
+            We'd love to hear from you. Reach out to us for any queries about our products, bulk orders, or partnerships.
           </p>
           <a 
             href="mailto:contact@indiasfood.com"
-            className="inline-block bg-white text-orange-600 px-6 py-3 rounded-lg font-semibold hover:bg-orange-50 transition-colors"
+            className="inline-block bg-white text-orange-600 px-8 py-4 rounded-xl font-semibold hover:bg-orange-50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 text-base md:text-lg"
           >
             Contact Us
           </a>
@@ -147,4 +135,3 @@ const About = () => {
 };
 
 export default About;
-

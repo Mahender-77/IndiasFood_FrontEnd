@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Product, Category } from '@/types';
+import { Product, Category } from '@/types';  
 import api from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SEO } from '@/components/seo/SEO';
@@ -49,7 +49,7 @@ const Products = () => {
     subcategoriesParam ? subcategoriesParam.split(',').filter(Boolean) : []
   );
   const [sortBy, setSortBy] = useState('featured');
-  const [isSubcategoryOpen, setIsSubcategoryOpen] = useState(true);
+  const [isSubcategoryOpen, setIsSubcategoryOpen] = useState(false);
   const [isMobileSubcategoryOpen, setIsMobileSubcategoryOpen] = useState(false);
 
   // Fetch categories on mount
@@ -121,9 +121,11 @@ const Products = () => {
   const handleCategoryChange = (categoryName: string) => {
     setSelectedCategory(categoryName);
     setSelectedSubcategories([]);
+    setSearch('');
     updateURLParams({ 
       category: categoryName !== 'all' ? categoryName : undefined, 
       subcategories: undefined,
+      search: undefined,
       pageNumber: '1' 
     });
   };
@@ -134,8 +136,10 @@ const Products = () => {
       : [...selectedSubcategories, subcategoryName];
     
     setSelectedSubcategories(newSelected);
+    setSearch('');
     updateURLParams({ 
       subcategories: newSelected.length > 0 ? newSelected.join(',') : undefined,
+      search: undefined,
       pageNumber: '1' 
     });
   };
@@ -195,10 +199,10 @@ const Products = () => {
       </div>
 
       {/* Subcategory Dropdown */}
-      <div className="mb-6">
+      <div className="mb-3">
         <button
           onClick={() => setIsSubcategoryOpen(!isSubcategoryOpen)}
-          className="flex items-center justify-between w-full py-3 text-left font-medium text-gray-900"
+          className="flex items-center justify-between w-full text-left font-medium text-gray-900"
         >
           <span className="text-base">Sub Category</span>
           {isSubcategoryOpen ? (
@@ -246,8 +250,8 @@ const Products = () => {
             className={cn(
               "w-full px-5 py-3.5 rounded-xl text-left font-medium transition-all duration-200",
               selectedCategory === category.name
-                ? "bg-purple-100 text-purple-700 border-2 border-purple-300 shadow-sm"
-                : "bg-white text-gray-700 border-2 border-gray-200 hover:border-purple-200 hover:bg-purple-50"
+                ? "bg-orange-100 text-orange-700 border-2 border-orange-300 shadow-sm"
+                : "bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-200 hover:bg-orange-50"
             )}
           >
             {category.name}
@@ -272,13 +276,13 @@ const Products = () => {
       />
 
       {/* Header */}
-      <section className="bg-gradient-to-b from-purple-50 to-white py-2 sm:py-6 ">
+      <section className="bg-gradient-to-b from-orange-50 to-white py-2 sm:py-6 ">
         <div className="container-custom">
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
             Our Collections
           </h1>
           <p className="text-sm sm:text-base md:text-lg text-gray-600 mt-2">
-            Discover our range of authentic Indian sweets, made fresh daily
+          Discover our range of authentic Indian delicacies, prepared fresh daily with traditional methods.
           </p>
         </div>
       </section>
@@ -290,7 +294,7 @@ const Products = () => {
             {/* Search Bar */}
             <Input
               type="search"
-              placeholder="Search sweets..."
+              placeholder="Search delicacies..."
               value={search}
               onChange={handleSearchChange}
               className="w-full"
@@ -358,7 +362,7 @@ const Products = () => {
                 className={cn(
                   "px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-all",
                   selectedCategory === 'all'
-                    ? "bg-purple-500 text-white"
+                    ? "bg-orange-500 text-white"
                     : "bg-white text-gray-700 border border-gray-200"
                 )}
               >
@@ -371,7 +375,7 @@ const Products = () => {
                   className={cn(
                     "px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-all",
                     selectedCategory === category.name
-                      ? "bg-purple-500 text-white"
+                      ? "bg-orange-500 text-white"
                       : "bg-white text-gray-700 border border-gray-200"
                   )}
                 >
@@ -397,7 +401,7 @@ const Products = () => {
                 <div className="flex-1">
                   <Input
                     type="search"
-                    placeholder="Search sweets..."
+                    placeholder="Search delicacies..."
                     value={search}
                     onChange={handleSearchChange}
                     className="w-full"
@@ -421,7 +425,7 @@ const Products = () => {
               {(selectedSubcategories.length > 0 || selectedCategory !== 'all') && (
                 <div className="mb-4 flex flex-wrap gap-2">
                   {selectedCategory !== 'all' && (
-                    <div className="flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">
+                    <div className="flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm">
                       <span>{selectedCategory}</span>
                       <button onClick={() => handleCategoryChange('all')}>
                         <X className="h-3 w-3" />
@@ -429,7 +433,7 @@ const Products = () => {
                     </div>
                   )}
                   {selectedSubcategories.map((sub) => (
-                    <div key={sub} className="flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">
+                    <div key={sub} className="flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm">
                       <span>{sub}</span>
                       <button onClick={() => handleSubcategoryToggle(sub)}>
                         <X className="h-3 w-3" />

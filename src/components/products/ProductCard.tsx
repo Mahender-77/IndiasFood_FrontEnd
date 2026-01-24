@@ -235,9 +235,9 @@ export function ProductCard({ product }: ProductCardProps) {
           </h3>
         </Link>
 
-        <p className="text-muted-foreground text-[11px] leading-snug mb-2 line-clamp-2">
+        {/* <p className="text-muted-foreground text-[11px] leading-snug mb-2 line-clamp-2">
           {product.description}
-        </p>
+        </p> */}
 
         {hasVariants && product.variants && product.variants.length > 1 && !isEntirelyOutOfStock && (
           <div className="mb-2">
@@ -328,10 +328,10 @@ export function ProductCard({ product }: ProductCardProps) {
             ) : null}
           </div>
         )}
-
+{/* 
         {product.shelfLife && (
           <div className="text-[10px] text-gray-500 mb-2">{product.shelfLife}</div>
-        )}
+        )} */}
 
         <div className="space-y-1.5 mt-auto">
           {!isOutOfStock && (

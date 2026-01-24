@@ -369,26 +369,26 @@ const AdminDashboard = () => {
 
                 {/* Standard Export Buttons */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  <ExportButton
-                    dataFetcher={() => api.get('/admin/export/orders').then(res => res.data)}
-                    fileName="orders_export"
+                <ExportButton
+                  dataFetcher={() => api.get('/admin/export/orders').then(res => res.data)}
+                  fileName="orders_export"
                     label="Export All Orders"
-                  />
-                  <ExportButton
-                    dataFetcher={() => api.get('/admin/export/customers').then(res => res.data)}
-                    fileName="customers_export"
-                    label="Export Customers"
-                  />
-                  <ExportButton
-                    dataFetcher={() => api.get('/admin/export/products').then(res => res.data)}
-                    fileName="products_export"
-                    label="Export Products"
-                  />
-                  <ExportButton
-                    dataFetcher={() => api.get('/admin/export/sales').then(res => res.data)}
-                    fileName="sales_report"
+                />
+                <ExportButton
+                  dataFetcher={() => api.get('/admin/export/customers').then(res => res.data)}
+                  fileName="customers_export"
+                  label="Export Customers"
+                />
+                <ExportButton
+                  dataFetcher={() => api.get('/admin/export/products').then(res => res.data)}
+                  fileName="products_export"
+                  label="Export Products"
+                />
+                <ExportButton
+                  dataFetcher={() => api.get('/admin/export/sales').then(res => res.data)}
+                  fileName="sales_report"
                     label="Export All Sales Data"
-                  />
+                />
                 </div>
               </CardContent>
             </Card>

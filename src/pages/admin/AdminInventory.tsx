@@ -211,7 +211,7 @@ const AdminInventory = () => {
     } catch (error: any) {
       console.error('Failed to fetch products:', error);
       setProducts([]);
-
+      
       if (error.response?.status === 401) {
         toast.error('Please login as admin');
       } else if (error.response?.status === 403) {

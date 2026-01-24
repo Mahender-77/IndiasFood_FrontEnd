@@ -287,64 +287,78 @@ export function Navbar() {
      {/* Mobile Navigation - Single Layer */}
      <div className="lg:hidden">
         <div className="container mx-auto px-2">
-          <div className="flex h-18 items-center justify-between ">
-            {/* Logo */}
-            <Link to="/" className="shrink-0">
-              <img 
-                src="/IndiasFood-.png" 
-                alt="India's Food" 
-                className="h-14 w-auto" 
-              />
-            </Link>
+          <div className="flex h-18 items-center justify-between">
+            {/* Logo and Text Group */}
+            <div className="flex items-center shrink-0">
+              <Link to="/" className="shrink-0">
+                <img 
+                  src="/IndiasFood-.png" 
+                  alt="India's Food" 
+                  className="h-14 w-auto" 
+                />
+              </Link>
 
-            {/* India's Food Text with fade animation */}
-            <div 
-              className={cn(
-                "transition-all duration-300 ease-in-out",
-                isSearchOpen ? "w-0 opacity-0 overflow-hidden" : "opacity-100"
-              )}
-            >
-              <span className="text-lg font-bold text-orange-600 whitespace-nowrap">
-                India's Food
-              </span>
+              {/* India's Food Text with fade animation */}
+              <div 
+                className={cn(
+                  "transition-all duration-300 ease-in-out",
+                  isSearchOpen ? "w-0 opacity-0 overflow-hidden" : "opacity-100"
+                )}
+              >
+                <span className="text-lg font-bold text-orange-600 whitespace-nowrap">
+                  India's Food
+                </span>
+              </div>
             </div>
 
             {/* Search Bar with slide-in animation */}
             <div 
               className={cn(
                 "transition-all duration-300 ease-in-out overflow-hidden",
-                isSearchOpen ? "flex-1 opacity-100" : "w-0 opacity-0"
+                isSearchOpen ? "flex-1 opacity-100 mx-2" : "w-0 opacity-0"
               )}
             >
-              <form onSubmit={handleSearch}>
-                <div className=" w-full relative border border-gray-300 bg-gray-50 flex items-center justify-center rounded-lg w-full mr-4">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                  <Input
-                    type="search"
-                    placeholder="Search..."
-                    className="w-full h-8 pl-6 pr-3 text-[12px] border-none"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    autoFocus={isSearchOpen}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    type="button"
-                    onClick={() => {
-                      setIsSearchOpen(false);
-                      setSearchTerm('');
-                    }}
-                  >
-                    <X className="h-5 w-5 text-gray-700" />
-                  </Button>
-                </div>
-              </form>
+          {/* <form onSubmit={handleSearch}> */}
+  <div
+      onSubmit={handleSearch}
+   className="relative w-full h-9 bg-gray-50 rounded-lg border border-gray-200 flex items-center overflow-hidden"
+  >
+    <Search className="absolute left-1.5 h-4 w-4 text-gray-400 pointer-events-none" />
+
+    <Input
+            type="search"
+            placeholder="Search..."
+            className="w-full h-full pl-6 pr-10 text-sm bg-transparent border-0 outline-none ring-0 shadow-none focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none text-gray-700 placeholder:text-gray-400"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSearch(e);
+              }
+            }}
+            autoFocus={isSearchOpen}
+          />
+
+<Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 h-7 w-7 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors"
+            type="button"
+            onClick={() => {
+              setIsSearchOpen(false);
+              setSearchTerm('');
+            }}
+          >
+            <X className="h-4 w-4 text-gray-500" />
+          </Button>
+  </div>
+{/* </form> */}
+
             </div>
 
             {/* Right Icons */}
-            <div className="flex items-center shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               {/* Search Icon Toggle - Only show when search is closed */}
               {!isSearchOpen && (
                 <Button 

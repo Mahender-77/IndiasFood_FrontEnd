@@ -77,7 +77,7 @@ export const WelcomeHero = () => {
       {/* Main Content */}
       <div className="relative z-10 max-w-4xl mx-auto text-center px-4">
         <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-amber-800 via-yellow-600 to-orange-600 bg-clip-text text-transparent animate-pulse leading-tight">
-          Taste the Originals — From Original Source to Your Door
+          Taste the Originals — From Original Source to Your Door Step
         </h1>
 
         <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-amber-900 mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed px-2">
