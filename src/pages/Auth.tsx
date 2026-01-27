@@ -255,7 +255,7 @@ const [resendLoading, setResendLoading] = useState(false);
                 <p className="text-muted-foreground mt-2">
                   {forgotStep === 'login'
                     ? (isLogin
-                      ? 'Sign in to continue ordering delicious sweets'
+                    ? 'Sign in to continue ordering delicious sweets'
                       : 'Join us for fresh Indian sweets delivered to your door')
                     : 'Reset your password to regain access to your account'}
                 </p>
@@ -429,7 +429,7 @@ const [resendLoading, setResendLoading] = useState(false);
               {/* Login/Register Form */}
               {forgotStep === 'login' && (
                 <>
-                  <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 
                 {!isLogin && (
                   <div className="space-y-2">

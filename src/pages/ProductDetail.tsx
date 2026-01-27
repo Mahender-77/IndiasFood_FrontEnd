@@ -30,6 +30,8 @@ const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+  const [showFullDescription, setShowFullDescription] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { 
@@ -477,9 +479,32 @@ const ProductDetail = () => {
               </div>
 
               {/* Description */}
-              <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3">
-                {product.description}
-              </p>
+              {product.description && (
+  <div className="relative">
+    <p
+      className={cn(
+        "text-muted-foreground text-sm leading-relaxed",
+        !showFullDescription && "line-clamp-2 pr-16"
+      )}
+    >
+      {product.description}
+    </p>
+
+    {/* Read more / Read less */}
+    {product.description.length > 120 && (
+      <button
+        onClick={() => setShowFullDescription(prev => !prev)}
+        className={cn(
+          "absolute bottom-0 right-0 text-xs font-bold text-primary hover:underline",
+          showFullDescription && "static mt-1"
+        )}
+      >
+        {showFullDescription ? "Read less" : "Read more"}
+      </button>
+    )}
+  </div>
+)}
+
 
               {/* Product Details Grid */}
               <div className="grid grid-cols-2 gap-2 bg-muted/30 p-3 rounded-lg">
