@@ -18,6 +18,7 @@ export function Categories() {
       try {
         setLoading(true);
         setError(null);
+        console.log('fetching categories',api.defaults.baseURL);
   
         const { data } = await api.get('/products/categories');
         // ✅ SAFETY CHECK

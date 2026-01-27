@@ -306,3 +306,32 @@ input[type="search"]::-webkit-search-results-button,
 input[type="search"]::-webkit-search-results-decoration {
   display: none;
 }
+
+/* Toast notification - Full width bottom style */
+[data-sonner-toaster][data-y-position="bottom"] {
+  bottom: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+[data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast] {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+}
+
+/* Mobile responsive - centered with padding */
+@media (min-width: 640px) {
+  [data-sonner-toaster][data-y-position="bottom"] {
+    max-width: 600px !important;
+  }
+  
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast] {
+    max-width: 600px !important;
+    border-radius: 0.5rem !important;
+    margin: 0 0 1rem 0 !important;
+  }
+}

@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
-import { DeliveryRegisterPage } from "./pages/DeliveryRegisterPage";
+// import { DeliveryRegisterPage } from "./pages/DeliveryRegisterPage";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -53,7 +53,7 @@ const App = () => {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/delivery/register" element={<DeliveryRegisterPage />} />
+            {/* <Route path="/delivery/register" element={<DeliveryRegisterPage />} /> */}
             {/* New Public Pages */}
             <Route path="/gi-tag-products" element={<GITagProducts />} />
             <Route path="/new-arrivals" element={<NewArrivals />} />

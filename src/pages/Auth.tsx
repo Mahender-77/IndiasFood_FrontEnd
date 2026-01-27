@@ -10,6 +10,8 @@ import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import { SEO } from '@/components/seo/SEO';
 
+type ForgotStep = 'login' | 'email' | 'otp' | 'reset';
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +20,12 @@ const Auth = () => {
   const { toast } = useToast();
   const { login } = useAuth();
   const navigate = useNavigate();
+
+const [forgotStep, setForgotStep] = useState<ForgotStep>('login');
+const [otp, setOtp] = useState('');
+const [newPassword, setNewPassword] = useState('');
+const [confirmNewPassword, setConfirmNewPassword] = useState('');
+const [resendLoading, setResendLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -97,6 +105,135 @@ const Auth = () => {
     setIsLoading(false);
   };
 
+  // Forgot Password Functions
+  const sendOTP = async () => {
+    if (!formData.email) {
+      toast({
+        title: 'Error',
+        description: 'Please enter your email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await api.post('/auth/forgot-password', { email: formData.email });
+      toast({
+        title: 'Success',
+        description: 'OTP sent to your email',
+      });
+      setForgotStep('otp');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to send OTP',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyOTP = async () => {
+    if (!otp) {
+      toast({
+        title: 'Error',
+        description: 'Please enter the OTP',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await api.post('/auth/verify-otp', {
+        email: formData.email,
+        otp,
+      });
+      toast({
+        title: 'Success',
+        description: 'OTP verified successfully',
+      });
+      setForgotStep('reset');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Invalid OTP',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (!newPassword || !confirmNewPassword) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      toast({
+        title: 'Error',
+        description: 'Passwords do not match',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await api.post('/auth/reset-password', {
+        email: formData.email,
+        otp,
+        password: newPassword,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Password reset successfully. You can now login with your new password.',
+      });
+
+      // Reset forgot password state
+      setForgotStep('login');
+      setOtp('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to reset password',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resendOTP = async () => {
+    setResendLoading(true);
+    try {
+      await api.post('/auth/forgot-password', { email: formData.email });
+      toast({
+        title: 'Success',
+        description: 'OTP resent to your email',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to resend OTP',
+        variant: 'destructive',
+      });
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <SEO
@@ -111,17 +248,189 @@ const Auth = () => {
               {/* Header */}
               <div className="text-center mb-8">
                 <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                  {isLogin ? 'Welcome Back' : 'Create Account'}
+                  {forgotStep === 'login' 
+                    ? (isLogin ? 'Welcome Back' : 'Create Account')
+                    : 'Forgot Password'}
                 </h1>
                 <p className="text-muted-foreground mt-2">
-                  {isLogin
-                    ? 'Sign in to continue ordering delicious sweets'
-                    : 'Join us for fresh Indian sweets delivered to your door'}
+                  {forgotStep === 'login'
+                    ? (isLogin
+                      ? 'Sign in to continue ordering delicious sweets'
+                      : 'Join us for fresh Indian sweets delivered to your door')
+                    : 'Reset your password to regain access to your account'}
                 </p>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Forgot Password Flow */}
+              {forgotStep !== 'login' && (
+                <div className="space-y-4">
+                  {/* Step 1: Enter Email */}
+                  {forgotStep === 'email' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="forgot-email">Email Address</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="forgot-email"
+                            type="email"
+                            placeholder="Enter your registered email"
+                            className="pl-10"
+                            value={formData.email}
+                            onChange={(e) =>
+                              setFormData({ ...formData, email: e.target.value })
+                            }
+                            required
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="lg"
+                        variant="hero"
+                        className="w-full"
+                        onClick={sendOTP}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Sending...' : 'Send OTP'}
+                      </Button>
+                    </>
+                  )}
+
+                  {/* Step 2: Verify OTP */}
+                  {forgotStep === 'otp' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="otp">Enter OTP</Label>
+                        <Input
+                          id="otp"
+                          type="text"
+                          placeholder="Enter 6-digit OTP"
+                          maxLength={6}
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value)}
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          OTP has been sent to {formData.email}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="lg"
+                        variant="hero"
+                        className="w-full"
+                        onClick={verifyOTP}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Verifying...' : 'Verify OTP'}
+                      </Button>
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          onClick={resendOTP}
+                          disabled={resendLoading}
+                          className="text-sm text-primary hover:underline disabled:opacity-50"
+                        >
+                          {resendLoading ? 'Resending...' : 'Resend OTP'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Step 3: Reset Password */}
+                  {forgotStep === 'reset' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-password">New Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="new-password"
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Enter new password"
+                            className="pl-10 pr-10"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="confirm-new-password"
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            placeholder="Confirm new password"
+                            className="pl-10 pr-10"
+                            value={confirmNewPassword}
+                            onChange={(e) => setConfirmNewPassword(e.target.value)}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <Button
+                        type="button"
+                        size="lg"
+                        variant="hero"
+                        className="w-full"
+                        onClick={resetPassword}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Resetting...' : 'Reset Password'}
+                      </Button>
+                    </>
+                  )}
+
+                  {/* Back to Login */}
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotStep('login');
+                        setOtp('');
+                        setNewPassword('');
+                        setConfirmNewPassword('');
+                      }}
+                      className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+                    >
+                      ← Back to Login
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Login/Register Form */}
+              {forgotStep === 'login' && (
+                <>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                
                 {!isLogin && (
                   <div className="space-y-2">
                     <Label htmlFor="username">Full Name</Label>
@@ -202,6 +511,17 @@ const Auth = () => {
                       )}
                     </button>
                   </div>
+                  {isLogin && (
+                    <div className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => setForgotStep('email')}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {!isLogin && (
@@ -329,6 +649,7 @@ const Auth = () => {
                 <span className="text-muted-foreground">
                   {isLogin ? "Don't have an account?" : 'Already have an account?'}
                 </span>
+                {' '}
                 <button
                   type="button"
                   onClick={() => setIsLogin(!isLogin)}
@@ -337,6 +658,8 @@ const Auth = () => {
                   {isLogin ? 'Sign Up' : 'Sign In'}
                 </button>
               </div>
+              </>
+            )}
             </div>
           </div>
         </div>

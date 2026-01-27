@@ -24,9 +24,9 @@ const carouselImages = [
 
 // Sample texts for infinite scroll
 const scrollTexts = [
-  "🌟 Fresh Gulab Jamun Daily",
+  
   "🏺 Traditional Recipes",
-  "🚚 Same Day Delivery",
+  "🚚 Instant Delivery",
   "⭐ 100% Pure Ingredients",
   "👨‍🍳 Master Craftsmen",
   "🎁 Perfect for Gifting",

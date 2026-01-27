@@ -1,18 +1,17 @@
-import { Link } from 'react-router-dom';
-import { Heart, ShoppingCart, Plus, Minus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
+  SelectTrigger
 } from '@/components/ui/select';
-import { Product } from '@/types';
-import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
 import { cn } from '@/lib/utils';
-import { useState, useMemo } from 'react';
+import { Product } from '@/types';
+import { Heart, Loader2, Minus, Plus, ShoppingCart } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 interface ProductCardProps {
@@ -22,12 +21,13 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { addToCart, updateCartItemQuantity, removeFromCart, getCartItemQuantity, toggleWishlist, isInWishlist, cartLoading } = useCart();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const inWishlist = isInWishlist(product._id);
   const [isAdding, setIsAdding] = useState(false);
   
   const hasVariants = product.variants && product.variants.length > 0;
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
-  
+
   // Get cart quantity - this will reactively update when cart changes
   const cartQuantity = getCartItemQuantity(
     product._id,
@@ -100,10 +100,31 @@ export function ProductCard({ product }: ProductCardProps) {
       await addToCart(product._id, 1, variantIdx);
 
       const variantInfo = hasVariants && selectedVariant ? ` (${selectedVariant.value})` : '';
-      toast.success(`"${product.name}${variantInfo}" added to cart!`, {
-        description: '1 item added to your cart',
-        duration: 2000,
-      });
+      
+      // Custom toast with View Cart action
+      toast.success(
+        <div className="flex items-center justify-between w-full gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm text-white">Added to cart!</div>
+            <div className="text-xs text-white/90 mt-0.5 truncate">
+              "{product.name}{variantInfo}"
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              navigate('/cart');
+              toast.dismiss();
+            }}
+            className="text-sm font-semibold text-white underline hover:text-white/90 transition-colors whitespace-nowrap flex-shrink-0"
+          >
+            View Cart
+          </button>
+        </div>,
+        {
+          duration: 4000,
+          position: 'bottom-center',
+        }
+      );
     } catch (error) {
       toast.error('Failed to add to cart', {
         description: 'Please try again',
@@ -305,7 +326,24 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         )}
 
-        <div className="text-sm font-semibold mb-1.5 flex flex-wrap items-center gap-1.5">
+        {/* Spacer to push price and buttons to bottom */}
+        <div className="flex-1"></div>
+
+        {/* Stock Warning - Fixed height to maintain consistency across all cards */}
+        <div className="mb-1.5 min-h-[14px]">
+          {hasVariants && !isEntirelyOutOfStock && (
+            <>
+              {selectedVariantStock === 0 ? (
+                <span className="text-[10px] text-red-600 font-semibold">Out of stock for this size</span>
+              ) : selectedVariantStock <= 5 ? (
+                <span className="text-[10px] text-orange-600 font-semibold">Only {selectedVariantStock} left!</span>
+              ) : null}
+            </>
+          )}
+        </div>
+
+        {/* Price - Fixed position above buttons */}
+        <div className="text-sm font-semibold mb-2 flex flex-wrap items-center gap-1.5">
           {currentPrice.hasOffer ? (
             <>
               <span className="text-green-600 font-bold text-[15px]">₹{currentPrice.offerPrice}</span>
@@ -319,21 +357,12 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {hasVariants && !isEntirelyOutOfStock && (
-          <div className="mb-1.5">
-            {selectedVariantStock === 0 ? (
-              <span className="text-[10px] text-red-600 font-semibold">Out of stock for this size</span>
-            ) : selectedVariantStock <= 5 ? (
-              <span className="text-[10px] text-orange-600 font-semibold">Only {selectedVariantStock} left!</span>
-            ) : null}
-          </div>
-        )}
 {/* 
         {product.shelfLife && (
           <div className="text-[10px] text-gray-500 mb-2">{product.shelfLife}</div>
         )} */}
 
-        <div className="space-y-1.5 mt-auto">
+        <div className="space-y-1.5">
           {!isOutOfStock && (
             <>
               {cartQuantity > 0 ? (

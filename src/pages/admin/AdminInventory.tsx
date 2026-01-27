@@ -33,6 +33,7 @@ import {
   Search
 } from 'lucide-react';
 import api from '@/lib/api';
+import axios from 'axios';
 import { Product, ProductVariant, Category } from '@/types';
 import { SEO } from '@/components/seo/SEO';
 import { toast } from 'sonner';
@@ -253,71 +254,46 @@ const AdminInventory = () => {
 
   const handleImageUpload = async (files: FileList) => {
     if (!files || files.length === 0) return [];
-
+  
     setUploadingImages(true);
+  
     try {
       const formData = new FormData();
       Array.from(files).forEach(file => {
         formData.append('images', file);
       });
-
-      // Use fetch directly for FormData to avoid Content-Type conflicts
-      const token = localStorage.getItem('userToken');
-      const response = await fetch('/api/upload/images', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Upload failed');
-      }
-
-      const data = await response.json();
-      return data.urls;
+  
+      const response = await api.post('/upload/images', formData);
+      return response.data.urls || [];
     } catch (error: any) {
       console.error('Failed to upload images:', error);
-      toast.error(`Failed to upload images: ${error.message || 'Unknown error'}`);
+      toast.error('Failed to upload images');
       return [];
     } finally {
       setUploadingImages(false);
     }
   };
+  
 
   // Optimized image upload with better error handling
   const uploadImagesOptimized = async (files: File[]) => {
     if (!files || files.length === 0) return [];
-
+  
     try {
       const formData = new FormData();
       files.forEach(file => {
         formData.append('images', file);
       });
-
-      const token = localStorage.getItem('userToken');
-      const response = await fetch('/api/upload/images', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const data = await response.json();
-      return data.urls || [];
-    } catch (error) {
-      console.error('Image upload failed:', error);
+  
+      const response = await api.post('/upload/images', formData);
+      return response.data.urls || [];
+    } catch (error: any) {
+      console.error('Image upload failed:', error.response?.data || error);
       return [];
     }
   };
-
+  
+  
   // Product Creation
   const handleCreateProduct = async () => {
     if (creatingProduct) return;
