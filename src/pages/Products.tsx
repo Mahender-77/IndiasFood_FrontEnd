@@ -25,6 +25,21 @@ interface Subcategory {
   isActive: boolean;
 }
 
+// Simple cache objects outside component to persist across re-renders
+const categoriesCache = {
+  data: null as Category[] | null,
+  timestamp: null as number | null,
+  CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
+};
+
+const subcategoriesCache: {
+  [key: string]: {
+    data: Subcategory[];
+    timestamp: number;
+  };
+} = {};
+const SUBCATEGORIES_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -35,7 +50,9 @@ const Products = () => {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [subcategoriesLoading, setSubcategoriesLoading] = useState(false);
 
   const keywordParam = searchParams.get('keyword') || '';
   const urlSearchTerm = searchParams.get('search') || '';
@@ -52,34 +69,100 @@ const Products = () => {
   const [isSubcategoryOpen, setIsSubcategoryOpen] = useState(false);
   const [isMobileSubcategoryOpen, setIsMobileSubcategoryOpen] = useState(false);
 
+  // Fetch categories with caching
+  const fetchCategories = async (forceRefresh = false) => {
+    try {
+      setCategoriesLoading(true);
+
+      // Check if we have valid cached data
+      const now = Date.now();
+      const isCacheValid = 
+        categoriesCache.data && 
+        categoriesCache.timestamp && 
+        (now - categoriesCache.timestamp) < categoriesCache.CACHE_DURATION;
+
+      // Use cached data if valid and not forcing refresh
+      if (isCacheValid && !forceRefresh) {
+        setCategories(categoriesCache.data!);
+        setCategoriesLoading(false);
+        return;
+      }
+
+      // Fetch fresh data
+      const { data } = await api.get('/products/categories');
+      
+      // Update cache
+      categoriesCache.data = data;
+      categoriesCache.timestamp = Date.now();
+      setCategories(data);
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+      // Use cached data even if expired on error
+      if (categoriesCache.data) {
+        setCategories(categoriesCache.data);
+      }
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
   // Fetch categories on mount
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data } = await api.get('/products/categories');
-        setCategories(data);
-      } catch (err) {
-        console.error('Failed to fetch categories:', err);
-      }
-    };
     fetchCategories();
   }, []);
 
-  // Fetch subcategories when category changes
-  useEffect(() => {
-    const fetchSubcategories = async () => {
-      try {
-        let endpoint = '/products/all-subcategories';
-        if (selectedCategory && selectedCategory !== 'all') {
-          endpoint = `/products/subcategories/${selectedCategory}`;
-        }
-        const { data } = await api.get(endpoint);
-        setSubcategories(data);
-      } catch (err) {
-        console.error('Failed to fetch subcategories:', err);
-        setSubcategories([]);
+  // Fetch subcategories with caching when category changes
+  const fetchSubcategories = async (forceRefresh = false) => {
+    try {
+      setSubcategoriesLoading(true);
+
+      let endpoint = '/products/all-subcategories';
+      let cacheKey = 'all';
+      
+      if (selectedCategory && selectedCategory !== 'all') {
+        endpoint = `/products/subcategories/${selectedCategory}`;
+        cacheKey = selectedCategory;
       }
-    };
+
+      // Check if we have valid cached data
+      const now = Date.now();
+      const cached = subcategoriesCache[cacheKey];
+      const isCacheValid = 
+        cached && 
+        (now - cached.timestamp) < SUBCATEGORIES_CACHE_DURATION;
+
+      // Use cached data if valid and not forcing refresh
+      if (isCacheValid && !forceRefresh) {
+        setSubcategories(cached.data);
+        setSubcategoriesLoading(false);
+        return;
+      }
+
+      // Fetch fresh data
+      const { data } = await api.get(endpoint);
+      
+      // Update cache
+      subcategoriesCache[cacheKey] = {
+        data: data,
+        timestamp: Date.now()
+      };
+      
+      setSubcategories(data);
+    } catch (err) {
+      console.error('Failed to fetch subcategories:', err);
+      setSubcategories([]);
+      
+      // Use cached data even if expired on error
+      const cacheKey = selectedCategory && selectedCategory !== 'all' ? selectedCategory : 'all';
+      if (subcategoriesCache[cacheKey]) {
+        setSubcategories(subcategoriesCache[cacheKey].data);
+      }
+    } finally {
+      setSubcategoriesLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchSubcategories();
   }, [selectedCategory]);
 
@@ -214,25 +297,29 @@ const Products = () => {
 
         {isSubcategoryOpen && (
           <div className="mt-3 space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
-            {subcategories.map((subcategory) => {
-             
-              return (
-              <label
-                key={subcategory._id || subcategory.name}
-                className="flex items-center space-x-3 cursor-pointer group"
-              >
-                <Checkbox
-                  checked={selectedSubcategories.includes(subcategory.name)}
-                  onCheckedChange={() => handleSubcategoryToggle(subcategory.name)}
-                  className="h-4 w-4"
-                />
-                <span className="text-sm text-gray-700 group-hover:text-gray-900">
-                  {subcategory.name}
-                </span>
-              </label>
-              );
-            })}
-            {subcategories.length === 0 && (
+            {subcategoriesLoading ? (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-6 w-full" />
+                ))}
+              </div>
+            ) : subcategories.length > 0 ? (
+              subcategories.map((subcategory) => (
+                <label
+                  key={subcategory._id || subcategory.name}
+                  className="flex items-center space-x-3 cursor-pointer group"
+                >
+                  <Checkbox
+                    checked={selectedSubcategories.includes(subcategory.name)}
+                    onCheckedChange={() => handleSubcategoryToggle(subcategory.name)}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                    {subcategory.name}
+                  </span>
+                </label>
+              ))
+            ) : (
               <p className="text-sm text-gray-500 italic">No subcategories available</p>
             )}
           </div>
@@ -243,20 +330,28 @@ const Products = () => {
 
       {/* Category Buttons */}
       <div className="space-y-3">
-        {categories.map((category) => (
-          <button
-            key={category._id}
-            onClick={() => handleCategoryChange(category.name)}
-            className={cn(
-              "w-full px-5 py-3.5 rounded-xl text-left font-medium transition-all duration-200",
-              selectedCategory === category.name
-                ? "bg-orange-100 text-orange-700 border-2 border-orange-300 shadow-sm"
-                : "bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-200 hover:bg-orange-50"
-            )}
-          >
-            {category.name}
-          </button>
-        ))}
+        {categoriesLoading ? (
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          categories.map((category) => (
+            <button
+              key={category._id}
+              onClick={() => handleCategoryChange(category.name)}
+              className={cn(
+                "w-full px-5 py-3.5 rounded-xl text-left font-medium transition-all duration-200",
+                selectedCategory === category.name
+                  ? "bg-orange-100 text-orange-700 border-2 border-orange-300 shadow-sm"
+                  : "bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-200 hover:bg-orange-50"
+              )}
+            >
+              {category.name}
+            </button>
+          ))
+        )}
       </div>
 
       {(selectedCategory !== 'all' || selectedSubcategories.length > 0 || search) && (
@@ -318,9 +413,14 @@ const Products = () => {
 
               {isMobileSubcategoryOpen && (
                 <div className="px-3 pb-2 space-y-1.5 max-h-40 overflow-y-auto border-t border-gray-100">
-                  {subcategories.map((subcategory) => {
-              
-                    return (
+                  {subcategoriesLoading ? (
+                    <div className="space-y-1.5 py-2">
+                      {[...Array(3)].map((_, i) => (
+                        <Skeleton key={i} className="h-5 w-full" />
+                      ))}
+                    </div>
+                  ) : subcategories.length > 0 ? (
+                    subcategories.map((subcategory) => (
                       <label
                         key={subcategory._id || subcategory.name}
                         className="flex items-center space-x-2 cursor-pointer py-1"
@@ -332,9 +432,8 @@ const Products = () => {
                         />
                         <span className="text-xs text-gray-700">{subcategory.name}</span>
                       </label>
-                    );
-                  })}
-                  {subcategories.length === 0 && (
+                    ))
+                  ) : (
                     <p className="text-xs text-gray-500 italic py-1.5">No subcategories available</p>
                   )}
                 </div>
@@ -368,20 +467,26 @@ const Products = () => {
               >
                 All
               </button>
-              {categories.map((category) => (
-                <button
-                  key={category._id}
-                  onClick={() => handleCategoryChange(category.name)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-all",
-                    selectedCategory === category.name
-                      ? "bg-orange-500 text-white"
-                      : "bg-white text-gray-700 border border-gray-200"
-                  )}
-                >
-                  {category.name}
-                </button>
-              ))}
+              {categoriesLoading ? (
+                [...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-7 w-20 rounded-full" />
+                ))
+              ) : (
+                categories.map((category) => (
+                  <button
+                    key={category._id}
+                    onClick={() => handleCategoryChange(category.name)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-all",
+                      selectedCategory === category.name
+                        ? "bg-orange-500 text-white"
+                        : "bg-white text-gray-700 border border-gray-200"
+                    )}
+                  >
+                    {category.name}
+                  </button>
+                ))
+              )}
             </div>
           </div>
 

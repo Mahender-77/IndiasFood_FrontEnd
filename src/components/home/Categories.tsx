@@ -5,7 +5,13 @@ import { Category } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Package } from 'lucide-react';
-import { DealOfTheDay } from './DealOfTheDay';
+
+// Simple cache object outside component to persist across re-renders
+const categoriesCache = {
+  data: null as Category[] | null,
+  timestamp: null as number | null,
+  CACHE_DURATION: 5 * 60 * 1000, // 5 minutes in milliseconds
+};
 
 export function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -14,29 +20,45 @@ export function Categories() {
   const [activeDot, setActiveDot] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-   const fetchCategories = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        console.log('fetching categories',api.defaults.baseURL);
-  
-        const { data } = await api.get('/products/categories');
-        // ✅ SAFETY CHECK
-        if (Array.isArray(data)) {
-          setCategories(data);
-        } else {
-          console.error("Unexpected categories response:", data);
-          setCategories([]);
-        }
-  
-      } catch (err: any) {
-        console.error("Fetch categories error:", err);
-        setError(err.response?.data?.message || 'Failed to fetch categories');
-        setCategories([]); // prevent map crash
-      } finally {
+  const fetchCategories = async (forceRefresh = false) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Check if we have valid cached data
+      const now = Date.now();
+      const isCacheValid = 
+        categoriesCache.data && 
+        categoriesCache.timestamp && 
+        (now - categoriesCache.timestamp) < categoriesCache.CACHE_DURATION;
+
+      // Use cached data if valid and not forcing refresh
+      if (isCacheValid && !forceRefresh) {
+        setCategories(categoriesCache.data!);
         setLoading(false);
+        return;
       }
-    };
+
+      // Fetch fresh data
+      const { data } = await api.get('/products/categories');
+      
+      if (Array.isArray(data)) {
+        // Update cache
+        categoriesCache.data = data;
+        categoriesCache.timestamp = Date.now();
+        setCategories(data);
+      } else {
+        console.error("Unexpected categories response:", data);
+        setCategories([]);
+      }
+    } catch (err: any) {
+      console.error("Fetch categories error:", err);
+      setError(err.response?.data?.message || 'Failed to fetch categories');
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -48,11 +70,9 @@ export function Categories() {
       if (scrollContainerRef.current) {
         const container = scrollContainerRef.current;
         const scrollLeft = container.scrollLeft;
-        const containerWidth = container.clientWidth;
         const totalWidth = container.scrollWidth;
 
-        // Calculate which section is currently visible
-        const totalItems = categories.length + 5; // dynamic categories + 5 static ones (including Deal of the Day)
+        const totalItems = categories.length + 5;
         const itemWidth = totalWidth / totalItems;
         const currentIndex = Math.round(scrollLeft / itemWidth);
 
@@ -67,7 +87,6 @@ export function Categories() {
     }
   }, [categories]);
 
-  
   if (loading) {
     return (
       <section className="section-padding bg-muted/50 pt-10">
@@ -92,7 +111,7 @@ export function Categories() {
         <div className="container-custom text-center py-16">
           <h2 className="font-display text-2xl font-bold text-red-500 mb-4">Error</h2>
           <p className="text-red-500 mb-4">{error}</p>
-          <Button onClick={() => fetchCategories()} variant="outline">
+          <Button onClick={() => fetchCategories(true)} variant="outline">
             Try Again
           </Button>
         </div>
@@ -111,7 +130,7 @@ export function Categories() {
           <p className="text-muted-foreground mb-4">
             It looks like there are no product categories available at the moment.
           </p>
-          <Button onClick={() =>fetchCategories()} variant="outline">
+          <Button onClick={() => fetchCategories(true)} variant="outline">
             Refresh Page
           </Button>
         </div>
@@ -148,7 +167,6 @@ export function Categories() {
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div className="relative bg-card rounded-2xl shadow-card card-hover overflow-hidden w-[45vw] sm:w-[280px] md:w-[320px] lg:w-[360px]">
-                    {/* Full width image */}
                     <div className="aspect-[4/3] overflow-hidden">
                       <img
                         src={category.imageUrl || '/images/placeholder.png'}
@@ -157,7 +175,6 @@ export function Categories() {
                       />
                     </div>
 
-                    {/* Content overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-3 sm:p-4 lg:p-6">
                       <h3 className="font-display text-sm sm:text-base lg:text-xl font-bold text-white mb-1 line-clamp-2">
                         {category.name}
@@ -187,8 +204,6 @@ export function Categories() {
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="text-center text-white">
                         <div className="text-4xl sm:text-6xl mb-2">🔥</div>
-                        {/* <div className="text-xl sm:text-2xl font-bold">DEAL</div>
-                        <div className="text-sm sm:text-base font-medium">OF THE DAY</div> */}
                       </div>
                     </div>
                   </div>
@@ -221,7 +236,6 @@ export function Categories() {
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="text-center text-white">
                         <div className="text-4xl sm:text-6xl mb-2">🏛️</div>
-                        {/* <div className="text-xl sm:text-2xl font-bold">GI</div> */}
                       </div>
                     </div>
                   </div>
@@ -254,7 +268,6 @@ export function Categories() {
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="text-center text-white">
                         <div className="text-4xl sm:text-6xl mb-2">✨</div>
-                        {/* <div className="text-xl sm:text-2xl font-bold">NEW</div> */}
                       </div>
                     </div>
                   </div>
@@ -287,7 +300,6 @@ export function Categories() {
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="text-center text-white">
                         <div className="text-4xl sm:text-6xl mb-2">🎁</div>
-                        {/* <div className="text-xl sm:text-2xl font-bold">GIFT</div> */}
                       </div>
                     </div>
                   </div>
@@ -320,7 +332,6 @@ export function Categories() {
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="text-center text-white">
                         <div className="text-4xl sm:text-6xl mb-2">📦</div>
-                        {/* <div className="text-xl sm:text-2xl font-bold">BULK</div> */}
                       </div>
                     </div>
                   </div>
@@ -357,7 +368,7 @@ export function Categories() {
                 onClick={() => {
                   if (scrollContainerRef.current) {
                     const container = scrollContainerRef.current;
-                    const itemWidth = container.scrollWidth / (categories.length + 4);
+                    const itemWidth = container.scrollWidth / (categories.length + 5);
                     container.scrollTo({
                       left: i * itemWidth,
                       behavior: 'smooth'
@@ -370,8 +381,6 @@ export function Categories() {
           </div>
         </div>
       </div>
-
-   
     </section>
   );
 }
