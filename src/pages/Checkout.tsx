@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import LeafletMap from '@/components/maps/LeafletMap';
-import OlaMap from '@/components/maps/OlaMap';
 
 /* ---------------- TYPES ---------------- */
 
@@ -312,7 +311,7 @@ const Checkout = () => {
                     {/* STEP 2: MAP */}
                     <div>
                       <Label className="text-sm font-medium mb-2 block">Select Location on Map *</Label>
-                      <OlaMap 
+                      <LeafletMap 
                         onSelectLocation={handleMapSelect}
                         isLocked={false}
                       />
