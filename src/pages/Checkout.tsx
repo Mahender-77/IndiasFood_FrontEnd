@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import LeafletMap from '@/components/maps/LeafletMap';
+import OlaMap from '@/components/maps/OlaMap';
 
 /* ---------------- TYPES ---------------- */
 
@@ -75,23 +76,6 @@ const Checkout = () => {
     fetchDeliverySettings();
   }, []);
 
-
-  const reverseGeocode = async (lat: number, lng: number) => {
-    try {
-      const res = await api.get('/user/reverse-geocode', {
-        params: { lat, lon: lng }
-      });
-      return res.data;
-    } catch (error) {
-      console.error('Reverse geocode error:', error);
-      return {
-        city: 'Bangalore',
-        postalCode: '',
-        locationName: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-      };
-    }
-  };
-
   /* ---------------- DISTANCE LOGIC ---------------- */
 
   const calculateDistance = (
@@ -147,28 +131,22 @@ const Checkout = () => {
 
   /* ---------------- MAP SELECTION HANDLER ---------------- */
 
-  const handleMapSelect = async (lat: number, lng: number, addressText: string) => {
-    try {
-      const data = await reverseGeocode(lat, lng);
+  const handleMapSelect = (lat: number, lng: number, addressText: string) => {
+    // Extract the first part of the address for Address Line 1
+    const firstPart = addressText.split(',')[0]?.trim() || addressText;
 
-      // Extract the first part of the address for Address Line 1
-      const firstPart = addressText.split(',')[0]?.trim() || addressText;
+    setAddress(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      city: 'Bangalore', // You can extract this from addressText if needed
+      postalCode: '', // You can extract this from addressText if needed
+      locationName: addressText,
+      addressLine1: firstPart // Auto-fill Address Line 1 with first part of address
+    }));
 
-      setAddress(prev => ({
-        ...prev,
-        latitude: lat,
-        longitude: lng,
-        city: data.city || 'Bangalore',
-        postalCode: data.postalCode || '',
-        locationName: addressText,
-        addressLine1: firstPart // Auto-fill Address Line 1 with first part of address
-      }));
-
-      // Clear previous delivery calculation when location changes
-      setDeliveryResult(null);
-    } catch (error) {
-      console.error('Failed to process location:', error);
-    }
+    // Clear previous delivery calculation when location changes
+    setDeliveryResult(null);
   };
 
   /* ---------------- SAVE ADDRESS ---------------- */
@@ -334,7 +312,7 @@ const Checkout = () => {
                     {/* STEP 2: MAP */}
                     <div>
                       <Label className="text-sm font-medium mb-2 block">Select Location on Map *</Label>
-                      <LeafletMap 
+                      <OlaMap 
                         onSelectLocation={handleMapSelect}
                         isLocked={false}
                       />
@@ -370,8 +348,9 @@ const Checkout = () => {
                         <Label className="text-sm font-medium">City *</Label>
                         <Input 
                           value={address.city} 
-                          disabled 
-                          className="mt-1.5 bg-gray-50 cursor-not-allowed" 
+                          onChange={e => setAddress({ ...address, city: e.target.value })}
+                          placeholder="Enter city"
+                          className="mt-1.5" 
                         />
                       </div>
 
@@ -379,8 +358,9 @@ const Checkout = () => {
                         <Label className="text-sm font-medium">Postal Code</Label>
                         <Input 
                           value={address.postalCode} 
-                          disabled 
-                          className="mt-1.5 bg-gray-50 cursor-not-allowed" 
+                          onChange={e => setAddress({ ...address, postalCode: e.target.value })}
+                          placeholder="Enter postal code"
+                          className="mt-1.5" 
                         />
                       </div>
 

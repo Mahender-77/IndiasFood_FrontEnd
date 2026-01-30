@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import api from "@/lib/api";
 
 interface MapProps {
   onSelectLocation: (lat: number, lng: number, address: string) => void;
@@ -9,7 +10,7 @@ interface MapProps {
 
 interface SearchResult {
   lat: string;
-  lon: string;
+  lng: string;
   display_name: string;
 }
 
@@ -53,16 +54,21 @@ const LeafletMap = ({ onSelectLocation, isLocked = false }: MapProps) => {
   /* Reverse geocode */
   const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+      const response = await api.get("/user/reverse-geocode", {
+        params: { lat, lng },
+      });
+  
+      return (
+        response.data.address ||
+        `${lat.toFixed(6)}, ${lng.toFixed(6)}`
       );
-      const data = await response.json();
-      return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     } catch (error) {
       console.error("Reverse geocoding error:", error);
       return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
   };
+  
+  
 
   /* Search locations */
   const handleSearch = async (query: string) => {
@@ -70,20 +76,14 @@ const LeafletMap = ({ onSelectLocation, isLocked = false }: MapProps) => {
       setSearchResults([]);
       return;
     }
-
+  
     setIsSearching(true);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?` +
-        `format=json` +
-        `&q=${encodeURIComponent(query + ", Bangalore, Karnataka, India")}` +
-        `&limit=8` +
-        `&addressdetails=1` +
-        `&bounded=1` +
-        `&viewbox=77.4,13.1,77.8,12.8`
-      );
-      const data = await response.json();
-      setSearchResults(data);
+      const response = await api.get("/user/search-location", {
+        params: { q: query },
+      });
+  
+      setSearchResults(response.data);
       setShowResults(true);
     } catch (error) {
       console.error("Search error:", error);
@@ -91,6 +91,7 @@ const LeafletMap = ({ onSelectLocation, isLocked = false }: MapProps) => {
       setIsSearching(false);
     }
   };
+  
 
   /* Debounced search */
   useEffect(() => {
@@ -145,7 +146,7 @@ const LeafletMap = ({ onSelectLocation, isLocked = false }: MapProps) => {
   /* Select search result */
   const selectResult = (result: SearchResult) => {
     const lat = parseFloat(result.lat);
-    const lng = parseFloat(result.lon);
+    const lng = parseFloat(result.lng);
 
     if (mapRef.current) {
       mapRef.current.setView([lat, lng], 17, { animate: true });

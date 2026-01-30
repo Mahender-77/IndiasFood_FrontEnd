@@ -175,7 +175,7 @@ const Cart = () => {
               </p>
               <Link to="/products">
                 <Button size="lg" variant="hero" className="gap-2">
-                  Browse Sweets
+                  Browse 
                   <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </Link>
