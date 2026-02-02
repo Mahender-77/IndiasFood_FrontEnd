@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ArrowRight, Clock, CheckCircle2, Truck, XCircle, AlertCircle, MapPin, Phone } from 'lucide-react';
+import { Package, ArrowRight, Clock, CheckCircle2, Truck, XCircle, AlertCircle, MapPin, Phone, RefreshCw, Navigation, Eye } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -13,11 +14,24 @@ import { Order } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import api from '@/lib/api';
 
+// U-Engage tracking data interface
+interface TrackingData {
+  taskId: string;
+  vendor_order_id: string;
+  partner_name: string;
+  rider_name: string;
+  rider_contact: string;
+  latitude: string;
+  longitude: string;
+  tracking_url: string;
+  rto_reason?: string;
+}
+
 const getOrderStatus = (order: Order) => {
   if (order.status === 'cancelled') return 'cancelled';
   if (order.isDelivered) return 'delivered';
   if (order.status === 'out_for_delivery') return 'out_for_delivery';
-  if (order.isPaid) return 'confirmed';
+  if (order.isPaid || order.status === 'confirmed') return 'confirmed';
   return 'placed';
 };
 
@@ -28,6 +42,7 @@ const statusConfig = {
     color: 'text-yellow-700',
     bgColor: 'bg-yellow-50',
     borderColor: 'border-yellow-200',
+    description: 'Your order has been received'
   },
   confirmed: {
     label: 'Confirmed',
@@ -35,6 +50,7 @@ const statusConfig = {
     color: 'text-green-700',
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200',
+    description: 'Order confirmed and being prepared'
   },
   out_for_delivery: {
     label: 'Out for Delivery',
@@ -42,6 +58,7 @@ const statusConfig = {
     color: 'text-blue-700',
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-200',
+    description: 'Rider is on the way'
   },
   delivered: {
     label: 'Delivered',
@@ -49,6 +66,7 @@ const statusConfig = {
     color: 'text-pistachio',
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200',
+    description: 'Successfully delivered'
   },
   cancelled: {
     label: 'Cancelled',
@@ -56,7 +74,22 @@ const statusConfig = {
     color: 'text-red-700',
     bgColor: 'bg-red-50',
     borderColor: 'border-red-200',
+    description: 'Order has been cancelled'
   },
+};
+
+// U-Engage status mapping
+const uengageStatusMap: Record<string, { label: string; description: string }> = {
+  ACCEPTED: { label: 'Accepted', description: 'Order accepted by delivery partner' },
+  ALLOTTED: { label: 'Rider Assigned', description: 'Rider has been allotted to pick up your order' },
+  ARRIVED: { label: 'Rider Arrived', description: 'Rider has reached the pickup location' },
+  DISPATCHED: { label: 'Dispatched', description: 'Order picked up and on the way' },
+  ARRIVED_CUSTOMER_DOORSTEP: { label: 'Nearby', description: 'Rider has reached your doorstep' },
+  DELIVERED: { label: 'Delivered', description: 'Order delivered successfully' },
+  CANCELLED: { label: 'Cancelled', description: 'Delivery task cancelled' },
+  RTO_INIT: { label: 'Return Initiated', description: 'Return to origin initiated' },
+  RTO_COMPLETE: { label: 'Returned', description: 'Order returned to store' },
+  SEARCHING_FOR_NEW_RIDER: { label: 'Finding Rider', description: 'Searching for a delivery rider' },
 };
 
 const Orders = () => {
@@ -68,6 +101,9 @@ const Orders = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
+  const [trackingData, setTrackingData] = useState<Record<string, TrackingData>>({});
+  const [isTracking, setIsTracking] = useState<Set<string>>(new Set());
+  const [trackingDialog, setTrackingDialog] = useState<Order | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -93,6 +129,42 @@ const Orders = () => {
     fetchOrders();
   }, [token]);
 
+  // Track order status
+  const trackOrder = async (orderId: string) => {
+    setIsTracking(prev => new Set(prev).add(orderId));
+    
+    try {
+      const { data } = await api.get(`/user/orders/${orderId}/track`);
+      
+      if (data.tracking) {
+        setTrackingData(prev => ({
+          ...prev,
+          [orderId]: data.tracking
+        }));
+        
+        toast({
+          title: 'Tracking Updated',
+          description: `Status: ${uengageStatusMap[data.status]?.label || data.status}`,
+        });
+      }
+      
+      // Refresh orders to get updated status
+      await fetchOrders();
+      
+    } catch (err: any) {
+      toast({
+        title: 'Tracking Error',
+        description: err.response?.data?.message || 'Failed to fetch tracking data',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTracking(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(orderId);
+        return newSet;
+      });
+    }
+  };
 
   const handleCancelOrder = async () => {
     if (!selectedOrder || !cancelReason.trim()) {
@@ -132,6 +204,10 @@ const Orders = () => {
 
   const canCancelOrder = (order: Order) => {
     return !order.isDelivered && order.status !== 'cancelled' && order.status !== 'out_for_delivery';
+  };
+
+  const canTrackOrder = (order: Order) => {
+    return order.uengage?.taskId && !order.isDelivered && order.status !== 'cancelled';
   };
 
   if (loading) {
@@ -216,10 +292,12 @@ const Orders = () => {
 
           {/* Orders List */}
           <div className="space-y-6">
-          {Array.isArray(orders) && orders.map((order) => {
+            {Array.isArray(orders) && orders.map((order) => {
               const currentStatus = getOrderStatus(order);
               const status = statusConfig[currentStatus as keyof typeof statusConfig];
               const StatusIcon = status.icon;
+              const tracking = trackingData[order._id];
+              const uengageStatus = order.uengage?.statusCode;
 
               return (
                 <div
@@ -253,18 +331,46 @@ const Orders = () => {
                       </div>
 
                       {/* Status Badge */}
-                      <div className={cn(
-                        'inline-flex items-center gap-2 px-4 py-2 rounded-full border w-fit',
-                        status.bgColor,
-                        status.borderColor
-                      )}>
-                        <StatusIcon className={cn('h-4 w-4', status.color)} />
-                        <span className={cn('text-sm font-semibold', status.color)}>
-                          {status.label}
-                        </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className={cn(
+                          'inline-flex items-center gap-2 px-4 py-2 rounded-full border',
+                          status.bgColor,
+                          status.borderColor
+                        )}>
+                          <StatusIcon className={cn('h-4 w-4', status.color)} />
+                          <span className={cn('text-sm font-semibold', status.color)}>
+                            {status.label}
+                          </span>
+                        </div>
+                        
+                        {/* U-Engage Status Badge */}
+                        {uengageStatus && uengageStatusMap[uengageStatus] && (
+                          <Badge variant="outline" className="text-xs">
+                            {uengageStatusMap[uengageStatus].label}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
+
+                  {/* U-Engage Status Info */}
+                  {order.uengage?.message && (
+                    <div className="px-4 sm:px-6 py-3 bg-blue-50 border-b border-blue-100">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">
+                            {order.uengage.message}
+                          </p>
+                          {uengageStatus && uengageStatusMap[uengageStatus] && (
+                            <p className="text-xs text-blue-700 mt-0.5">
+                              {uengageStatusMap[uengageStatus].description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Order Items */}
                   <div className="px-4 sm:px-6 py-5 space-y-4">
@@ -333,6 +439,46 @@ const Orders = () => {
                     </div>
                   )}
 
+                  {/* Rider Details - Show when tracking data available */}
+                  {tracking && (
+                    <div className="px-4 sm:px-6 py-4 bg-green-50 border-t border-green-200">
+                      <div className="flex items-start gap-3">
+                        <Truck className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-green-900 mb-2">
+                            Delivery Partner: {tracking.partner_name}
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                            {tracking.rider_name && (
+                              <div className="flex items-center gap-2 text-green-800">
+                                <span className="font-medium">Rider:</span>
+                                <span>{tracking.rider_name}</span>
+                              </div>
+                            )}
+                            {tracking.rider_contact && (
+                              <div className="flex items-center gap-2 text-green-800">
+                                <Phone className="h-4 w-4" />
+                                <span>{tracking.rider_contact}</span>
+                              </div>
+                            )}
+                          </div>
+                          {tracking.tracking_url && (
+                            <a 
+                              href={tracking.tracking_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 mt-3 text-sm text-green-700 hover:text-green-800 font-medium"
+                            >
+                              <Navigation className="h-4 w-4" />
+                              Track on Map
+                              <ArrowRight className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Cancellation Reason */}
                   {order.cancelReason && (
                     <div className="px-4 sm:px-6 py-4 bg-red-50 border-t border-red-200">
@@ -345,6 +491,11 @@ const Orders = () => {
                           <p className="text-sm text-red-700">
                             {order.cancelReason}
                           </p>
+                          {order.cancelledAt && (
+                            <p className="text-xs text-red-600 mt-1">
+                              Cancelled on {new Date(order.cancelledAt).toLocaleString()}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -354,7 +505,7 @@ const Orders = () => {
                   <div className="px-4 sm:px-6 py-4 bg-muted/30 border-t border-border">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       {/* Order Summary & ETA */}
-                      <div>
+                      <div className="w-full sm:w-auto">
                         {/* Price Breakdown */}
                         <div className="space-y-1 mb-3">
                           <div className="flex justify-between text-sm">
@@ -393,74 +544,197 @@ const Orders = () => {
                         )}
                       </div>
 
-                      {/* Cancel Button */}
-                      {canCancelOrder(order) && (
+                      {/* Action Buttons */}
+                      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                        {/* Track Order Button */}
+                        {canTrackOrder(order) && (
+                          <Button
+                            variant="outline"
+                            size="default"
+                            onClick={() => trackOrder(order._id)}
+                            disabled={isTracking.has(order._id)}
+                            className="flex-1 sm:flex-initial"
+                          >
+                            {isTracking.has(order._id) ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                Tracking...
+                              </>
+                            ) : (
+                              <>
+                                <Navigation className="h-4 w-4 mr-2" />
+                                Track Order
+                              </>
+                            )}
+                          </Button>
+                        )}
+
+                        {/* View Details Button */}
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button
-                              variant="destructive"
+                              variant="outline"
                               size="default"
-                              className="w-full sm:w-auto"
-                              onClick={() => setSelectedOrder(order)}
+                              onClick={() => setTrackingDialog(order)}
+                              className="flex-1 sm:flex-initial"
                             >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Cancel Order
+                              <Eye className="h-4 w-4 mr-2" />
+                              Details
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="sm:max-w-lg">
+                          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
-                              <DialogTitle className="text-xl">Cancel Order</DialogTitle>
+                              <DialogTitle>Order Details</DialogTitle>
+                              <DialogDescription>
+                                Order #{order._id.slice(-8).toUpperCase()}
+                              </DialogDescription>
                             </DialogHeader>
-                            <div className="space-y-4 py-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="reason" className="text-sm font-medium">
-                                  Reason for Cancellation *
-                                </Label>
-                                <Textarea
-                                  id="reason"
-                                  placeholder="Please tell us why you want to cancel this order..."
-                                  value={cancelReason}
-                                  onChange={(e) => setCancelReason(e.target.value)}
-                                  rows={4}
-                                  className="resize-none"
-                                />
-                              </div>
-                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                                <div className="flex gap-3">
-                                  <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                                  <p className="text-sm text-yellow-800">
-                                    This action cannot be undone. Your order will be cancelled immediately.
-                                  </p>
+                            <div className="space-y-4">
+                              {/* Status Timeline */}
+                              <div className="bg-muted/50 rounded-lg p-4">
+                                <h4 className="font-semibold mb-3">Order Status</h4>
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium">Order Placed</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {new Date(order.createdAt).toLocaleString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {order.isPaid && (
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium">Payment Confirmed</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {order.paidAt ? new Date(order.paidAt).toLocaleString() : 'Paid'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {order.isDelivered && (
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium">Delivered</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {order.deliveredAt ? new Date(order.deliveredAt).toLocaleString() : 'Delivered'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
+
+                              {/* U-Engage Info */}
+                              {order.uengage?.taskId && (
+                                <div className="bg-blue-50 rounded-lg p-4">
+                                  <h4 className="font-semibold mb-2 text-blue-900">Delivery Tracking</h4>
+                                  <div className="space-y-1 text-sm">
+                                    <p className="text-blue-800">
+                                      <span className="font-medium">Task ID:</span> {order.uengage.taskId}
+                                    </p>
+                                    {order.uengage.statusCode && (
+                                      <p className="text-blue-800">
+                                        <span className="font-medium">Status:</span> {uengageStatusMap[order.uengage.statusCode]?.label || order.uengage.statusCode}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedOrder(null);
-                                  setCancelReason('');
-                                }}
-                                className="w-full sm:w-auto"
-                                size="lg"
-                              >
-                                Keep Order
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={handleCancelOrder}
-                                disabled={isCancelling || !cancelReason.trim()}
-                                className="w-full sm:w-auto"
-                                size="lg"
-                              >
-                                {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
-                              </Button>
-                            </DialogFooter>
                           </DialogContent>
                         </Dialog>
-                      )}
+
+                        {/* Cancel Button */}
+                        {canCancelOrder(order) && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="destructive"
+                                size="default"
+                                className="flex-1 sm:flex-initial"
+                                onClick={() => setSelectedOrder(order)}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancel Order
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-lg">
+                              <DialogHeader>
+                                <DialogTitle className="text-xl">Cancel Order</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="reason" className="text-sm font-medium">
+                                    Reason for Cancellation *
+                                  </Label>
+                                  <Textarea
+                                    id="reason"
+                                    placeholder="Please tell us why you want to cancel this order..."
+                                    value={cancelReason}
+                                    onChange={(e) => setCancelReason(e.target.value)}
+                                    rows={4}
+                                    className="resize-none"
+                                  />
+                                </div>
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                  <div className="flex gap-3">
+                                    <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                      <p className="text-sm text-yellow-800 font-medium mb-1">
+                                        This action cannot be undone
+                                      </p>
+                                      <p className="text-xs text-yellow-700">
+                                        Your order will be cancelled immediately and the delivery will be stopped if already assigned.
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedOrder(null);
+                                    setCancelReason('');
+                                  }}
+                                  className="w-full sm:w-auto"
+                                  size="lg"
+                                >
+                                  Keep Order
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  onClick={handleCancelOrder}
+                                  disabled={isCancelling || !cancelReason.trim()}
+                                  className="w-full sm:w-auto"
+                                  size="lg"
+                                >
+                                  {isCancelling ? (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                      Cancelling...
+                                    </>
+                                  ) : (
+                                    'Confirm Cancellation'
+                                  )}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

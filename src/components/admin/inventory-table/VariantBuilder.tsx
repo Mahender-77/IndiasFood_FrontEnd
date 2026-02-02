@@ -6,29 +6,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, MapPin, X } from 'lucide-react';
 
-interface Location {
-  _id: string;
+interface StoreLocation {
+  storeId: string;
   name: string;
   displayName: string;
 }
 
 interface VariantStockEntry {
-  locationId: string;
+  storeId: string;
   quantity: number;
 }
 
+
 interface VariantBuilderProps {
   variants: ProductVariant[];
+  locations: StoreLocation[];
+  variantStocks: VariantStockEntry[][];
   onAddVariant: () => void;
   onRemoveVariant: (index: number) => void;
-  onUpdateVariant: (index: number, field: keyof ProductVariant, value: any) => void;
-  locations: Location[];
-  variantStocks?: VariantStockEntry[][]; // Array of stock entries for each variant
-  onUpdateVariantStock?: (variantIndex: number, locationId: string, quantity: number) => void;
-  onAddLocationToVariant?: (variantIndex: number, locationId: string) => void;
-  onRemoveLocationFromVariant?: (variantIndex: number, locationId: string) => void;
+  onUpdateVariant: (
+    index: number,
+    field: keyof ProductVariant,
+    value: any
+  ) => void;
+  onAddLocationToVariant: (variantIndex: number, storeId: string) => void;
+  onRemoveLocationFromVariant: (variantIndex: number, storeId: string) => void;
+  onUpdateVariantStock: (
+    variantIndex: number,
+    storeId: string,
+    quantity: number
+  ) => void;
   isEditing?: boolean;
 }
+
 
 export function VariantBuilder({
   variants,
@@ -247,9 +257,9 @@ export function VariantBuilder({
                         </SelectTrigger>
                         <SelectContent>
                           {locations
-                            .filter(loc => !variantStocks[index]?.some(stock => stock.locationId === loc._id))
+                            .filter(loc => !variantStocks[index]?.some(stock => stock.storeId === loc.storeId))
                             .map(location => (
-                              <SelectItem key={location._id} value={location._id}>
+                              <SelectItem key={location.storeId} value={location.storeId}>
                                 {location.displayName}
                               </SelectItem>
                             ))}
@@ -266,9 +276,9 @@ export function VariantBuilder({
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {variantStocks[index].map((stock) => {
-                          const location = locations.find(loc => loc._id === stock.locationId);
+                          const location = locations.find(loc => loc.storeId === stock.storeId);
                           return (
-                            <div key={stock.locationId} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50">
+                            <div key={stock.storeId} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50">
                               <div className="flex-1">
                                 <Label className="text-xs font-medium text-gray-700">
                                   {location?.displayName}
@@ -276,7 +286,7 @@ export function VariantBuilder({
                                 <Input
                                   type="number"
                                   value={stock.quantity}
-                                  onChange={(e) => onUpdateVariantStock?.(index, stock.locationId, Math.max(0, Number(e.target.value)))}
+                                  onChange={(e) => onUpdateVariantStock?.(index, stock.storeId, Math.max(0, Number(e.target.value)))}
                                   placeholder="0"
                                   min="0"
                                   className="mt-1 text-sm h-8"
@@ -286,7 +296,7 @@ export function VariantBuilder({
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => onRemoveLocationFromVariant?.(index, stock.locationId)}
+                                onClick={() => onRemoveLocationFromVariant?.(index, stock.storeId)}
                                 className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
                               >
                                 <X className="h-3 w-3" />

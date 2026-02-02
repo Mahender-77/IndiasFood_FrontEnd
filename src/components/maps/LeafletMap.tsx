@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import api from "@/lib/api";
 
 interface MapProps {
-  onSelectLocation: (lat: number, lng: number, address: string) => void;
+  onSelectLocation: (lat: number, lng: number, address: string, city: string, postalCode: string) => void;
   isLocked?: boolean;
 }
 
@@ -12,6 +12,8 @@ interface SearchResult {
   lat: string;
   lng: string;
   display_name: string;
+  postal_code?: string;  // ✅ NEW
+  city?: string;         // ✅ NEW
 }
 
 /* ---------------- CUSTOM MARKER ICONS ---------------- */
@@ -51,22 +53,31 @@ const LeafletMap = ({ onSelectLocation, isLocked = false }: MapProps) => {
   const [showResults, setShowResults] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
-  /* Reverse geocode */
-  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
-    try {
-      const response = await api.get("/user/reverse-geocode", {
-        params: { lat, lng },
-      });
-  
-      return (
-        response.data.address ||
-        `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-      );
-    } catch (error) {
-      console.error("Reverse geocoding error:", error);
-      return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-    }
-  };
+/* Reverse geocode */
+const reverseGeocode = async (lat: number, lng: number): Promise<{
+  address: string;
+  postalCode: string;
+  city: string;
+}> => {
+  try {
+    const response = await api.get("/user/reverse-geocode", {
+      params: { lat, lng },
+    });
+
+    return {
+      address: response.data.address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+      postalCode: response.data.postal_code || '',
+      city: response.data.city || '',
+    };
+  } catch (error) {
+    console.error("Reverse geocoding error:", error);
+    return {
+      address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+      postalCode: '',
+      city: '',
+    };
+  }
+};
   
   
 
@@ -107,85 +118,114 @@ const LeafletMap = ({ onSelectLocation, isLocked = false }: MapProps) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  /* Add temporary marker */
-  const addTempMarker = async (lat: number, lng: number, addressFromSearch?: string) => {
-    if (isLocked || !mapRef.current) return;
+ /* Add temporary marker */
+const addTempMarker = async (
+  lat: number, 
+  lng: number, 
+  addressFromSearch?: string,
+  cityFromSearch?: string,
+  postalCodeFromSearch?: string
+) => {
+  if (isLocked || !mapRef.current) return;
 
-    if (markerRef.current) {
-      markerRef.current.remove();
-    }
+  if (markerRef.current) {
+    markerRef.current.remove();
+  }
 
-    const address = addressFromSearch || await reverseGeocode(lat, lng);
+  let address = addressFromSearch || '';
+  let city = cityFromSearch || '';
+  let postalCode = postalCodeFromSearch || '';
 
-    markerRef.current = L.marker([lat, lng], {
-      icon: createCustomIcon("#EA4335"),
-    })
-      .addTo(mapRef.current)
-      .bindPopup(
-        `
-        <div style="min-width: 200px; font-family: system-ui, -apple-system, sans-serif;">
-          <div style="font-weight: 600; font-size: 14px; color: #202124; margin-bottom: 8px;">
-            Selected Location
-          </div>
-          <div style="font-size: 12px; color: #5f6368; line-height: 1.4; margin-bottom: 8px;">
-            ${address}
-          </div>
-          <div style="font-size: 11px; color: #80868b; padding-top: 8px; border-top: 1px solid #e8eaed;">
-            ${lat.toFixed(6)}, ${lng.toFixed(6)}
-          </div>
+  // ✅ Only geocode if we don't have the data from search
+  if (!addressFromSearch) {
+    const geoData = await reverseGeocode(lat, lng);
+    address = geoData.address;
+    city = geoData.city;
+    postalCode = geoData.postalCode;
+  }
+
+  markerRef.current = L.marker([lat, lng], {
+    icon: createCustomIcon("#EA4335"),
+  })
+    .addTo(mapRef.current)
+    .bindPopup(
+      `
+      <div style="min-width: 200px; font-family: system-ui, -apple-system, sans-serif;">
+        <div style="font-weight: 600; font-size: 14px; color: #202124; margin-bottom: 8px;">
+          Selected Location
         </div>
-      `,
-        { maxWidth: 300, className: "custom-popup" }
-      )
-      .openPopup();
+        <div style="font-size: 12px; color: #5f6368; line-height: 1.4; margin-bottom: 8px;">
+          ${address}
+        </div>
+        ${city ? `<div style="font-size: 11px; color: #80868b;">City: ${city}</div>` : ''}
+        ${postalCode ? `<div style="font-size: 11px; color: #80868b;">Postal: ${postalCode}</div>` : ''}
+        <div style="font-size: 11px; color: #80868b; padding-top: 8px; border-top: 1px solid #e8eaed;">
+          ${lat.toFixed(6)}, ${lng.toFixed(6)}
+        </div>
+      </div>
+    `,
+      { maxWidth: 300, className: "custom-popup" }
+    )
+    .openPopup();
 
-    setTempLocation({ lat, lng, address });
-    onSelectLocation(lat, lng, address);
-  };
+  setTempLocation({ lat, lng, address });
+  onSelectLocation(lat, lng, address, city, postalCode);
+};
 
-  /* Select search result */
-  const selectResult = (result: SearchResult) => {
-    const lat = parseFloat(result.lat);
-    const lng = parseFloat(result.lng);
+ /* Select search result */
+const selectResult = (result: SearchResult) => {
+  const lat = parseFloat(result.lat);
+  const lng = parseFloat(result.lng);
 
-    if (mapRef.current) {
-      mapRef.current.setView([lat, lng], 17, { animate: true });
-      addTempMarker(lat, lng, result.display_name);
-    }
-
-    setShowResults(false);
-    setSearchQuery("");
-  };
-
-  /* Detect location */
-  const detectLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
-      return;
-    }
-
-    setIsDetectingLocation(true);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-
-        if (mapRef.current) {
-          const address = await reverseGeocode(latitude, longitude);
-          await addTempMarker(latitude, longitude, address);
-          mapRef.current.setView([latitude, longitude], 16, { animate: true });
-        }
-
-        setIsDetectingLocation(false);
-      },
-      (error) => {
-        console.error("Geolocation error:", error);
-        alert("Unable to detect your location. Please check your browser permissions.");
-        setIsDetectingLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  if (mapRef.current) {
+    mapRef.current.setView([lat, lng], 17, { animate: true });
+    addTempMarker(
+      lat, 
+      lng, 
+      result.display_name,
+      result.city || '',
+      result.postal_code || ''
     );
-  };
+  }
+
+  setShowResults(false);
+  setSearchQuery("");
+};
+/* Detect location */
+const detectLocation = () => {
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by your browser");
+    return;
+  }
+
+  setIsDetectingLocation(true);
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const { latitude, longitude } = position.coords;
+
+      if (mapRef.current) {
+        const geoData = await reverseGeocode(latitude, longitude);
+        await addTempMarker(
+          latitude, 
+          longitude, 
+          geoData.address,
+          geoData.city,
+          geoData.postalCode
+        );
+        mapRef.current.setView([latitude, longitude], 16, { animate: true });
+      }
+
+      setIsDetectingLocation(false);
+    },
+    (error) => {
+      console.error("Geolocation error:", error);
+      alert("Unable to detect your location. Please check your browser permissions.");
+      setIsDetectingLocation(false);
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+};
 
   /* Initialize map */
   useEffect(() => {

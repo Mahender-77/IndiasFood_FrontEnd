@@ -6,30 +6,32 @@ import { Badge } from '@/components/ui/badge';
 import { MapPin, Plus, X } from 'lucide-react';
 import { ProductVariant } from '@/types';
 
-interface LocationData {
-  _id: string;
+interface StoreLocation {
+  storeId: string;
   name: string;
   displayName: string;
 }
 
 interface InventoryEntry {
-  locationId?: string;
+  storeId: string;
   locationName: string;
   displayName: string;
-  stock: Array<{
+  stock: {
     variantIndex: number;
     quantity: number;
-  }>;
+  }[];
 }
+
 
 interface LocationInventoryManagerProps {
   inventoryData: InventoryEntry[];
-  locations: LocationData[];
+  locations: StoreLocation[];
   variants: ProductVariant[];
-  onAddLocation: (locationId: string) => void;
-  onRemoveLocation: (locationId: string) => void;
-  onUpdateStock: (locationId: string, variantIndex: number, quantity: number) => void;
+  onAddLocation: (storeId: string) => void;
+  onRemoveLocation: (storeId: string) => void;
+  onUpdateStock: (storeId: string, variantIndex: number, quantity: number) => void;
 }
+
 
 export function LocationInventoryManager({
   inventoryData,
@@ -41,9 +43,11 @@ export function LocationInventoryManager({
 }: LocationInventoryManagerProps) {
   // Get available locations that haven't been added yet
   const availableLocations = locations.filter(
-    loc => !inventoryData.some(inv => inv.locationId === loc._id || inv.locationName === loc.name)
+    loc => !inventoryData.some(
+      inv => inv.storeId === loc.storeId
+    )
   );
-
+  
   return (
     <div className="space-y-4 border-t pt-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -64,7 +68,7 @@ export function LocationInventoryManager({
             </SelectTrigger>
             <SelectContent>
               {availableLocations.map(location => (
-                <SelectItem key={location._id} value={location._id}>
+                <SelectItem key={location.storeId} value={location.storeId}>
                   {location.displayName}
                 </SelectItem>
               ))}
@@ -83,7 +87,7 @@ export function LocationInventoryManager({
         <div className="space-y-4">
           {inventoryData.map((inventoryEntry, locationIndex) => {
             const totalStock = inventoryEntry.stock.reduce((sum, item) => sum + item.quantity, 0);
-            const locationObj = locations.find(loc => loc._id === inventoryEntry.locationId || loc.name === inventoryEntry.locationName);
+            const locationObj = locations.find(loc => loc.storeId === inventoryEntry.storeId || loc.name === inventoryEntry.locationName);
 
             return (
               <div
@@ -110,7 +114,7 @@ export function LocationInventoryManager({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => onRemoveLocation(inventoryEntry.locationId || '')}
+                      onClick={() => onRemoveLocation(inventoryEntry.storeId || '')}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
                     >
                       <X className="h-4 w-4" />
@@ -138,7 +142,7 @@ export function LocationInventoryManager({
                               onChange={(e) => {
                                 const quantity = Math.max(0, Number(e.target.value) || 0);
                                 onUpdateStock(
-                                  inventoryEntry.locationId || inventoryEntry.locationName,
+                                  inventoryEntry.storeId || inventoryEntry.locationName,
                                   stockItem.variantIndex,
                                   quantity
                                 );
@@ -173,7 +177,7 @@ export function LocationInventoryManager({
                         onChange={(e) => {
                           const quantity = Math.max(0, Number(e.target.value) || 0);
                           onUpdateStock(
-                            inventoryEntry.locationId || inventoryEntry.locationName,
+                            inventoryEntry.storeId || inventoryEntry.locationName,
                             0,
                             quantity
                           );

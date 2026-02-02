@@ -13,16 +13,17 @@ import {
 import { Edit, Warehouse, Image as ImageIcon, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
-interface Location {
-  _id: string;
+interface StoreLocation {
+  storeId: string;
   name: string;
   displayName: string;
 }
 
+
 interface InventoryTableProps {
   products: Product[];
   categories: Category[];
-  locations: Location[];
+  locations: StoreLocation[];
   onEditProduct: (product: Product) => void;
   getLocationStock: (product: Product, locationName: string) => number;
   onUpdateStock?: (productId: string, location: string, variantIndex: number, quantity: number) => void;
@@ -196,7 +197,7 @@ export function InventoryTable({
 
   return (
     <div
-      key={location._id}
+      key={location.storeId}
       className="flex items-center justify-between text-sm gap-2"
     >
       <span className="text-gray-600 text-xs font-medium">
@@ -354,7 +355,7 @@ export function InventoryTable({
                         {locations.map(location => {
                           const stock = getLocationStock(product, location.name);
                           return (
-                            <div key={location._id} className="flex items-center justify-between text-sm bg-white p-2 rounded border">
+                            <div key={location.storeId} className="flex items-center justify-between text-sm bg-white p-2 rounded border">
                               <span className="font-medium">{location.displayName}</span>
                               {stock === 0 ? (
                                 <Badge variant="destructive" className="text-xs">Out of Stock</Badge>

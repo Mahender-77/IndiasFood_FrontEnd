@@ -19,11 +19,16 @@ import { Switch } from '@/components/ui/switch';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 interface StoreLocation {
+  storeId?: string;
   name: string;
+  contact_number: string;
+  address: string;
+  city: string;
   latitude: number;
   longitude: number;
   isActive: boolean;
 }
+
 
 export const AdminOrderListPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -56,9 +61,7 @@ export const AdminOrderListPage = () => {
     try {
       const [ordersResponse, deliveryPersonsResponse, settingsResponse] = await Promise.all([
         api.get('/admin/orders'),
-
         api.get('/admin/delivery-persons'),
-        // api.get('/admin/delivery-settings').catch(() => ({ data: null }))
         api.get('/admin/delivery-settings')
       ]);
    
@@ -168,17 +171,66 @@ export const AdminOrderListPage = () => {
       return;
     }
 
-    // Validate all store locations have required fields
-    for (const store of deliverySettings.storeLocations) {
-      if (!store.name || !store.latitude || !store.longitude) {
-        toast({
-          title: 'Error',
-          description: 'All store locations must have name, latitude, and longitude.',
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
+// ✅ CORRECTED VALIDATION - No storeId check!
+
+for (const store of deliverySettings.storeLocations) {
+  // ❌ REMOVED - Don't validate storeId anymore!
+  // if (!store.storeId || !store.storeId.trim()) { ... }
+
+  if (!store.name || !store.name.trim()) {
+    toast({
+      title: 'Error',
+      description: 'Store name is required for all stores',
+      variant: 'destructive'
+    });
+    return;
+  }
+
+  if (!store.contact_number || !store.contact_number.trim()) {
+    toast({
+      title: 'Error',
+      description: 'Contact number is required for all stores',
+      variant: 'destructive'
+    });
+    return;
+  }
+
+  if (!store.address || !store.address.trim()) {
+    toast({
+      title: 'Error',
+      description: 'Address is required for all stores',
+      variant: 'destructive'
+    });
+    return;
+  }
+
+  if (!store.city || !store.city.trim()) {
+    toast({
+      title: 'Error',
+      description: 'City is required for all stores',
+      variant: 'destructive'
+    });
+    return;
+  }
+
+  if (!store.latitude || store.latitude === 0) {
+    toast({
+      title: 'Error',
+      description: 'Valid latitude is required for all stores',
+      variant: 'destructive'
+    });
+    return;
+  }
+
+  if (!store.longitude || store.longitude === 0) {
+    toast({
+      title: 'Error',
+      description: 'Valid longitude is required for all stores',
+      variant: 'destructive'
+    });
+    return;
+  }
+}
 
     setSavingSettings(true);
     try {
@@ -188,6 +240,8 @@ export const AdminOrderListPage = () => {
         description: 'Delivery settings have been updated successfully.',
       });
       setShowSettings(false);
+      // Refresh the data to get updated settings
+      await fetchOrdersAndDeliveryPersons();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -205,7 +259,11 @@ export const AdminOrderListPage = () => {
       storeLocations: [
         ...deliverySettings.storeLocations,
         {
+       
           name: '',
+          contact_number: '',
+          address: '',
+          city: '',
           latitude: 0,
           longitude: 0,
           isActive: true
@@ -233,6 +291,7 @@ export const AdminOrderListPage = () => {
       storeLocations: newLocations
     });
   };
+  
 
   const handleAssignDelivery = async () => {
     if (!selectedOrder || !selectedDeliveryPerson || !eta) {
@@ -366,7 +425,6 @@ export const AdminOrderListPage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Pricing Settings */}
                 <div>
                   <h3 className="font-semibold mb-3">Pricing Rules</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -423,7 +481,6 @@ export const AdminOrderListPage = () => {
                   </div>
                 </div>
 
-                {/* Store Locations */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold">Store Locations</h3>
@@ -485,6 +542,11 @@ export const AdminOrderListPage = () => {
                                   Not Configured
                                 </Badge>
                               )}
+                              {store.storeId && (
+                                <Badge variant="secondary" className="text-xs font-mono">
+                                  ID: {store.storeId.slice(-8)}
+                                </Badge>
+                              )}
                             </div>
                             <Button
                               type="button"
@@ -497,21 +559,64 @@ export const AdminOrderListPage = () => {
                             </Button>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {/* Store Name */}
                             <div className="space-y-2">
                               <Label className="text-xs">
                                 Store Name <span className="text-red-500">*</span>
                               </Label>
                               <Input
-                                placeholder="e.g., Main Store - Hyderad"
+                                placeholder="e.g., Main Store - Hyderabad"
                                 value={store.name}
                                 onChange={(e) =>
                                   updateStoreLocation(index, 'name', e.target.value)
                                 }
-                                className={!store.name ? 'border-amber-300' : ''}
                               />
                             </div>
 
+                            {/* Contact Number */}
+                            <div className="space-y-2">
+                              <Label className="text-xs">
+                                Contact Number <span className="text-red-500">*</span>
+                              </Label>
+                              <Input
+                                placeholder="9999999999"
+                                value={store.contact_number || ''}
+                                onChange={(e) =>
+                                  updateStoreLocation(index, 'contact_number', e.target.value)
+                                }
+                              />
+                            </div>
+
+                            {/* Address */}
+                            <div className="space-y-2 md:col-span-2">
+                              <Label className="text-xs">
+                                Address <span className="text-red-500">*</span>
+                              </Label>
+                              <Input
+                                placeholder="Full store address"
+                                value={store.address || ''}
+                                onChange={(e) =>
+                                  updateStoreLocation(index, 'address', e.target.value)
+                                }
+                              />
+                            </div>
+
+                            {/* City */}
+                            <div className="space-y-2">
+                              <Label className="text-xs">
+                                City <span className="text-red-500">*</span>
+                              </Label>
+                              <Input
+                                placeholder="Hyderabad"
+                                value={store.city || ''}
+                                onChange={(e) =>
+                                  updateStoreLocation(index, 'city', e.target.value)
+                                }
+                              />
+                            </div>
+
+                            {/* Latitude */}
                             <div className="space-y-2">
                               <Label className="text-xs">
                                 Latitude <span className="text-red-500">*</span>
@@ -519,18 +624,15 @@ export const AdminOrderListPage = () => {
                               <Input
                                 type="number"
                                 step="0.000001"
-                                placeholder="17.3850"
+                                placeholder="e.g., 17.385044"
                                 value={store.latitude || ''}
                                 onChange={(e) =>
                                   updateStoreLocation(index, 'latitude', parseFloat(e.target.value) || 0)
                                 }
-                                className={!store.latitude ? 'border-amber-300' : ''}
                               />
-                              <p className="text-xxs text-gray-500">
-                                Range: -90 to 90
-                              </p>
                             </div>
 
+                            {/* Longitude */}
                             <div className="space-y-2">
                               <Label className="text-xs">
                                 Longitude <span className="text-red-500">*</span>
@@ -538,16 +640,12 @@ export const AdminOrderListPage = () => {
                               <Input
                                 type="number"
                                 step="0.000001"
-                                placeholder="78.4867"
+                                placeholder="e.g., 78.486671"
                                 value={store.longitude || ''}
                                 onChange={(e) =>
                                   updateStoreLocation(index, 'longitude', parseFloat(e.target.value) || 0)
                                 }
-                                className={!store.longitude ? 'border-amber-300' : ''}
                               />
-                              <p className="text-xxs text-gray-500">
-                                Range: -180 to 180
-                              </p>
                             </div>
                           </div>
 
@@ -562,7 +660,7 @@ export const AdminOrderListPage = () => {
                               >
                                 Google Maps
                               </a>
-                              , right-click on your store location, and copy the coordinates
+                              , right-click on your store location, and copy the coordinates. Store ID is auto-generated.
                             </p>
                           </div>
                         </div>
@@ -578,7 +676,7 @@ export const AdminOrderListPage = () => {
                     <li>• System automatically finds the <strong>nearest active store</strong> to customer</li>
                     <li>• Delivery charge = <strong>Distance × ₹{deliverySettings.pricePerKm}/km</strong></li>
                     <li>• If distance unknown: Charge = <strong>₹{deliverySettings.baseCharge}</strong> (base charge)</li>
-                    <li>• Must have at least <strong>one active store</strong> for calculations to work</li>
+                    <li>• Store IDs are <strong>auto-generated</strong> when you save</li>
                   </ul>
                 </div>
 
@@ -700,9 +798,9 @@ export const AdminOrderListPage = () => {
                                     <Badge variant="outline" className="text-xs px-1 py-0">
                                       ×{item.qty}
                                     </Badge>
-                                    {item.weight && (
+                                    {item.selectedVariantIndex !== undefined && (
                                       <Badge variant="secondary" className="text-xs px-1 py-0">
-                                        {item.weight}
+                                        {item.selectedVariantIndex ? `Variant ${item.selectedVariantIndex + 1}` : 'No Variant'}
                                       </Badge>
                                     )}
                                     <span className="text-muted-foreground">

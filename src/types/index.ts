@@ -109,39 +109,72 @@ export interface ShippingAddress {
   longitude?: number;
 }
 
-export interface OrderItem {
-  name: string;
-  qty: number;
-  image: string;
-  price: number;
-  product: string; // Product ID
-  weight?: string; // Weight variation (e.g., "500g", "1kg")
-}
+// Add this to your types file (e.g., src/types/index.ts or src/types/order.ts)
 
 export interface Order {
   _id: string;
-  user: string; // User ID
+  user: string;
   orderItems: OrderItem[];
   shippingAddress: ShippingAddress;
   paymentMethod: string;
-  paymentResult: {
+  
+  paymentResult?: {
     id: string;
     status: string;
     update_time: string;
     email_address: string;
   };
+  
   taxPrice: number;
   shippingPrice: number;
   totalPrice: number;
+  
+  distance?: number;
+  nearestStore?: string;
+  
+  // 🔥 ADD THIS FIELD
+  uengage?: {
+    taskId?: string;
+    vendorOrderId?: string;
+    statusCode?: string;
+    message?: string;
+  };
+  
   isPaid: boolean;
-  paidAt: string;
+  paidAt?: string;
+  
   isDelivered: boolean;
-  deliveredAt: string;
+  deliveredAt?: string;
+  
+  deliveryPerson?: string;
+  eta?: string;
+  
+  status: 'placed' | 'confirmed' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  
+  // 🔥 ADD THIS FIELD TOO
+  cancelReason?: string;
+  cancelledAt?: string;
+  
   createdAt: string;
-  deliveryPerson?: string; // Delivery person's ID
-  eta?: Date; // Estimated time of arrival
-  status: 'placed' | 'confirmed' | 'out_for_delivery' | 'delivered' | 'cancelled'; // Order status
-  distance?: number; // Distance for delivery
-  cancelReason?: string; // Reason for cancellation
-  cancelledAt?: Date; // When order was cancelled
+  updatedAt: string;
+}
+
+export interface OrderItem {
+  name: string;
+  qty: number;
+  image: string;
+  price: number;
+  product: string;
+  selectedVariantIndex?: number;
+}
+
+export interface ShippingAddress {
+  fullName?: string;
+  phone?: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  latitude?: number;
+  longitude?: number;
 }

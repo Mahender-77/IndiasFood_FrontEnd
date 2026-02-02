@@ -45,25 +45,27 @@ import { LocationInventoryManager } from '@/components/admin/inventory-table/Loc
 
 
 interface Location {
-  _id: string;
+  storeId: string;        // 🔥 real ID
   name: string;
   displayName: string;
 }
 
+
 interface InventoryEntry {
-  locationId: string;
+  storeId: string;
   locationName: string;
   displayName: string;
-  stock: Array<{
+  stock: {
     variantIndex: number;
     quantity: number;
-  }>;
+  }[];
 }
 
 interface VariantStockEntry {
-  locationId: string;
+  storeId: string;
   quantity: number;
 }
+
 
 const PRODUCTS_PER_PAGE = 15;
 
@@ -78,7 +80,8 @@ const AdminInventory = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -134,6 +137,22 @@ const AdminInventory = () => {
     fetchCategories();
     fetchLocations();
   }, []);
+
+  const stores = useMemo(() => {
+    const map = new Map<string, { _id: string; name: string }>();
+  
+    locations.forEach(loc => {
+      if (!map.has(loc.storeId)) {
+        map.set(loc.storeId, {
+          _id: loc.storeId,
+          name: loc.displayName || loc.name
+        });
+      }
+    });
+  
+    return Array.from(map.values());
+  }, [locations]);
+  
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
@@ -236,19 +255,15 @@ const AdminInventory = () => {
   };
 
   const fetchLocations = async () => {
-    try {
-      const res = await api.get('/admin/delivery-locations');
+    const res = await api.get('/admin/delivery-locations');
   
-      setLocations(
-        res.data.map((loc:any)=>({
-          _id: loc.name,           // use name as id
-          name: loc.name,
-          displayName: loc.displayName || loc.name
-        }))
-      );
-    } catch {
-      toast.error("Failed to load delivery locations");
-    }
+    setLocations(
+      res.data.map((loc: any) => ({
+        storeId: loc.storeId,        // 🔥
+        name: loc.name,
+        displayName: loc.displayName || loc.name
+      }))
+    );
   };
   
 
@@ -282,16 +297,22 @@ const AdminInventory = () => {
     try {
       const formData = new FormData();
       files.forEach(file => {
-        formData.append('images', file);
+        formData.append('images', file); // 🔥 MUST be "images"
       });
   
-      const response = await api.post('/upload/images', formData);
+      const response = await api.post('/upload/images', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+  
       return response.data.urls || [];
     } catch (error: any) {
       console.error('Image upload failed:', error.response?.data || error);
       return [];
     }
   };
+  
   
   
   // Product Creation
@@ -364,7 +385,7 @@ const AdminInventory = () => {
 
         newProduct.variantStocks?.forEach((variantStock, variantIndex) => {
           variantStock?.forEach(stock => {
-            const locationName = locations.find(loc => loc._id === stock.locationId)?.name;
+            const locationName = locations.find( loc => loc.storeId === stock.storeId)?.name;
             if (locationName && stock.quantity > 0) {
               if (!locationMap.has(locationName)) {
                 locationMap.set(locationName, []);
@@ -397,12 +418,19 @@ const AdminInventory = () => {
       const productData = {
         name: newProduct.name.trim(),
         description: newProduct.description?.trim() || '',
+      
+        /** 🔥 THIS IS THE KEY LINE */
+        store: selectedStoreId,   // ← storeId from DeliverySettings
+      
         originalPrice: newProduct.originalPrice,
         offerPrice: newProduct.offerPrice,
         variants: hasVariants ? newProduct.variants : undefined,
         shelfLife: newProduct.shelfLife?.trim() || '',
         category: selectedCategory,
-        subcategory: selectedSubcategory && selectedSubcategory !== 'none' ? selectedSubcategory : undefined,
+        subcategory:
+          selectedSubcategory && selectedSubcategory !== 'none'
+            ? selectedSubcategory
+            : undefined,
         videoUrl: newProduct.videoUrl?.trim() || '',
         images: imageUrls,
         inventory,
@@ -410,6 +438,7 @@ const AdminInventory = () => {
         isNewArrival: newProduct.isNewArrival || false,
         isActive: true
       };
+      
 
       await api.post('/admin/inventory/create-product', productData);
       toast.success('Product created successfully');
@@ -670,20 +699,20 @@ const AdminInventory = () => {
   };
 
 
-  const removeLocation = async (locationId: string, locationName: string) => {
-    if (locations.length <= 1) {
-      toast.error('Cannot remove the last location');
-      return;
-    }
+  // const removeLocation = async (locationId: string, locationName: string) => {
+  //   if (locations.length <= 1) {
+  //     toast.error('Cannot remove the last location');
+  //     return;
+  //   }
 
-    try {
-      await api.delete(`/admin/locations/${locationId}`);
-      setLocations(locations.filter(loc => loc._id !== locationId));
-      toast.success(`Location "${locationName}" removed successfully`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to remove location');
-    }
-  };
+  //   try {
+  //     await api.delete(`/admin/locations/${locationId}`);
+  //     setLocations(locations.filter(loc => loc._id !== locationId));
+  //     toast.success(`Location "${locationName}" removed successfully`);
+  //   } catch (error: any) {
+  //     toast.error(error.response?.data?.message || 'Failed to remove location');
+  //   }
+  // };
 
   const getLocationStock = (product: Product, locationName: string) => {
     const locationInventory = product.inventory?.find(
@@ -704,59 +733,82 @@ const AdminInventory = () => {
   
 
   // Inventory Management for Product Creation
-  const addLocationToInventory = (locationId: string) => {
-    const locationObj = locations.find(loc => loc._id === locationId);
+  const addLocationToInventory = (storeId: string) => {
+    const locationObj = locations.find(l => l.storeId === storeId);
     if (!locationObj) return;
-
-    const existingIndex = newProduct.inventoryData?.findIndex(inv => inv.locationId === locationId);
+  
+    // 🔥 Set store once (product → store relation)
+    if (!selectedStoreId) {
+      setSelectedStoreId(storeId);
+    }
+  
+    const existingIndex = newProduct.inventoryData?.findIndex(
+      inv => inv.storeId === storeId
+    );
+  
     if (existingIndex !== undefined && existingIndex >= 0) {
       toast.error(`Location "${locationObj.displayName}" is already added`);
       return;
     }
-
+  
     const newInventoryEntry: InventoryEntry = {
-      locationId,
+      storeId: storeId,                // ✅ FIXED
       locationName: locationObj.name,
       displayName: locationObj.displayName,
-      stock: newProduct.variants && newProduct.variants.length > 0
-        ? newProduct.variants.map((_, index) => ({ variantIndex: index, quantity: 0 }))
-        : [{ variantIndex: 0, quantity: 0 }]
+      stock:
+        newProduct.variants && newProduct.variants.length > 0
+          ? newProduct.variants.map((_, index) => ({
+              variantIndex: index,
+              quantity: 0
+            }))
+          : [{ variantIndex: 0, quantity: 0 }]
     };
-
+  
     setNewProduct(prev => ({
       ...prev,
       inventoryData: [...(prev.inventoryData || []), newInventoryEntry]
     }));
-
+  
     toast.success(`Added location "${locationObj.displayName}"`);
   };
+  
 
-  const removeLocationFromInventory = (locationId: string) => {
-    const locationObj = locations.find(loc => loc._id === locationId);
+  const removeLocationFromInventory = (storeId: string) => {
+    const locationObj = locations.find(loc => loc.storeId === storeId);
+  
     setNewProduct(prev => ({
       ...prev,
-      inventoryData: prev.inventoryData?.filter(inv => inv.locationId !== locationId) || []
+      inventoryData:
+        prev.inventoryData?.filter(inv => inv.storeId !== storeId) || []
     }));
+  
     toast.success(`Removed location "${locationObj?.displayName}"`);
   };
+  
 
-  const updateCreationStock = (locationId: string, variantIndex: number, quantity: number) => {
+  const updateCreationStock = (
+    storeId: string,
+    variantIndex: number,
+    quantity: number
+  ) => {
     setNewProduct(prev => ({
       ...prev,
-      inventoryData: prev.inventoryData?.map(inv =>
-        inv.locationId === locationId
-          ? {
-              ...inv,
-              stock: inv.stock.map(stock =>
-                stock.variantIndex === variantIndex
-                  ? { ...stock, quantity: Math.max(0, quantity) }
-                  : stock
-              )
-            }
-          : inv
-      ) || []
+      inventoryData:
+        prev.inventoryData?.map(inv =>
+          inv.storeId === storeId
+            ? {
+                ...inv,
+                stock: inv.stock.map(stock =>
+                  stock.variantIndex === variantIndex
+                    ? { ...stock, quantity: Math.max(0, quantity) }
+                    : stock
+                )
+              }
+            : inv
+        ) || []
     }));
   };
+  
 
   // Variant Management
   const addVariant = (isNewProduct: boolean = false) => {
@@ -891,53 +943,61 @@ const AdminInventory = () => {
   };
 
   // Variant Stock Management
-  const addLocationToVariant = (variantIndex: number, locationId: string) => {
-    const locationObj = locations.find(loc => loc._id === locationId);
+  const addLocationToVariant = (variantIndex: number, storeId: string) => {
+    const locationObj = locations.find(loc => loc.storeId === storeId);
     if (!locationObj) return;
-
+  
     setNewProduct(prev => {
       const variantStocks = prev.variantStocks || [];
       const currentStocks = variantStocks[variantIndex] || [];
-
-      // Check if location already exists
-      if (currentStocks.some(stock => stock.locationId === locationId)) {
-        toast.error(`Location "${locationObj.displayName}" is already added to this variant`);
+  
+      // Check if store already exists for this variant
+      if (currentStocks.some(stock => stock.storeId === storeId)) {
+        toast.error(
+          `Location "${locationObj.displayName}" is already added to this variant`
+        );
         return prev;
       }
-
+  
       const updatedVariantStocks = [...variantStocks];
       updatedVariantStocks[variantIndex] = [
         ...currentStocks,
-        { locationId, quantity: 0 }
+        { storeId, quantity: 0 }
       ];
-
+  
       return {
         ...prev,
         variantStocks: updatedVariantStocks
       };
     });
-
+  
     toast.success(`Added location "${locationObj.displayName}" to variant`);
   };
+  
 
-  const removeLocationFromVariant = (variantIndex: number, locationId: string) => {
-    const locationObj = locations.find(loc => loc._id === locationId);
-
+  const removeLocationFromVariant = (variantIndex: number, storeId: string) => {
+    const locationObj = locations.find(loc => loc.storeId === storeId);
+  
     setNewProduct(prev => {
       const variantStocks = prev.variantStocks || [];
       const updatedVariantStocks = [...variantStocks];
-      updatedVariantStocks[variantIndex] = updatedVariantStocks[variantIndex]?.filter(
-        stock => stock.locationId !== locationId
-      ) || [];
-
+  
+      updatedVariantStocks[variantIndex] =
+        updatedVariantStocks[variantIndex]?.filter(
+          stock => stock.storeId !== storeId
+        ) || [];
+  
       return {
         ...prev,
         variantStocks: updatedVariantStocks
       };
     });
-
-    toast.success(`Removed location "${locationObj?.displayName}" from variant`);
+  
+    toast.success(
+      `Removed location "${locationObj?.displayName}" from variant`
+    );
   };
+  
 
   const updateVariantStock = (variantIndex: number, locationId: string, quantity: number) => {
     setNewProduct(prev => {
@@ -945,7 +1005,7 @@ const AdminInventory = () => {
       const updatedVariantStocks = [...variantStocks];
       const variantStock = updatedVariantStocks[variantIndex] || [];
 
-      const stockIndex = variantStock.findIndex(stock => stock.locationId === locationId);
+      const stockIndex = variantStock.findIndex(stock => stock.storeId === locationId);
       if (stockIndex >= 0) {
         updatedVariantStocks[variantIndex] = variantStock.map((stock, index) =>
           index === stockIndex ? { ...stock, quantity: Math.max(0, quantity) } : stock
@@ -960,32 +1020,41 @@ const AdminInventory = () => {
   };
 
   // Inventory Management for Editing
-  const addLocationToEditingProduct = (locationId: string) => {
+  const addLocationToEditingProduct = (storeId: string) => {
     if (!editingProduct) return;
-
-    const locationObj = locations.find(loc => loc._id === locationId);
+  
+    const locationObj = locations.find(loc => loc.storeId === storeId);
     if (!locationObj) return;
-
-    const existingLocation = editingProduct.inventory?.find(inv => inv.location === locationObj.name);
+  
+    const existingLocation = editingProduct.inventory?.find(
+      inv => inv.location === locationObj.name
+    );
+  
     if (existingLocation) {
       toast.error(`Location "${locationObj.displayName}" is already added`);
       return;
     }
-
+  
     const newInventoryEntry = {
       location: locationObj.name,
-      stock: editingProduct.variants && editingProduct.variants.length > 0
-        ? editingProduct.variants.map((_, index) => ({ variantIndex: index, quantity: 0, lowStockThreshold: 5 }))
-        : [{ variantIndex: 0, quantity: 0, lowStockThreshold: 5 }]
+      stock:
+        editingProduct.variants && editingProduct.variants.length > 0
+          ? editingProduct.variants.map((_, index) => ({
+              variantIndex: index,
+              quantity: 0,
+              lowStockThreshold: 5
+            }))
+          : [{ variantIndex: 0, quantity: 0, lowStockThreshold: 5 }]
     };
-
+  
     setEditingProduct({
       ...editingProduct,
       inventory: [...(editingProduct.inventory || []), newInventoryEntry]
     });
-
+  
     toast.success(`Added location "${locationObj.displayName}"`);
   };
+  
 
   const removeLocationFromEditingProduct = (locationName: string) => {
     if (!editingProduct) return;
@@ -1046,7 +1115,7 @@ const AdminInventory = () => {
                 <SelectContent>
                   <SelectItem value="all">All Locations</SelectItem>
                   {locations.map(location => (
-                    <SelectItem key={location._id} value={location.name}>
+                    <SelectItem key={location.storeId} value={location.name}>
                       {location.displayName}
                     </SelectItem>
                   ))}
@@ -1161,16 +1230,19 @@ const AdminInventory = () => {
 
                     {/* Variants Section */}
                     <VariantBuilder
-                      variants={newProduct.variants || []}
-                      onAddVariant={() => addVariant(true)}
-                      onRemoveVariant={(index) => removeVariant(index, true)}
-                      onUpdateVariant={(index, field, value) => updateVariant(index, field, value, true)}
-                      locations={locations}
-                      variantStocks={newProduct.variantStocks || []}
-                      onAddLocationToVariant={addLocationToVariant}
-                      onRemoveLocationFromVariant={removeLocationFromVariant}
-                      onUpdateVariantStock={updateVariantStock}
-                    />
+  variants={newProduct.variants || []}
+  onAddVariant={() => addVariant(true)}
+  onRemoveVariant={(index) => removeVariant(index, true)}
+  onUpdateVariant={(index, field, value) =>
+    updateVariant(index, field, value, true)
+  }
+  locations={locations}
+  variantStocks={newProduct.variantStocks || []}
+  onAddLocationToVariant={addLocationToVariant}
+  onRemoveLocationFromVariant={removeLocationFromVariant}
+  onUpdateVariantStock={updateVariantStock}
+/>
+
 
                     {/* Pricing Section */}
                     {(!newProduct.variants || newProduct.variants.length === 0) ? (
@@ -1794,7 +1866,7 @@ const AdminInventory = () => {
                             {locations
                               .filter(loc => !editingProduct.inventory?.some(inv => inv.location === loc.name))
                               .map(location => (
-                                <SelectItem key={location._id} value={location._id}>
+                                <SelectItem key={location.storeId} value={location.storeId}>
                                   {location.displayName}
                                 </SelectItem>
                               ))}
