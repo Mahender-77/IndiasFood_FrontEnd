@@ -28,7 +28,6 @@ const Checkout = () => {
   const { toast } = useToast();
 
   const [storeLocations, setStoreLocations] = useState<StoreLocation[]>([]);
-  // ✅ CHANGED: Removed deliveryResult state - no longer needed
   const [isAddressSaved, setIsAddressSaved] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
@@ -37,12 +36,11 @@ const Checkout = () => {
 
   /* ---------------- U-ENGAGE DELIVERY PRICES ---------------- */
 
-const deliveryPrice = serviceabilityResult?.payouts?.price ?? 0;
-const deliveryTax = serviceabilityResult?.payouts?.tax ?? 0;
-const deliveryTotal = serviceabilityResult?.payouts?.total ?? 0;
+  const deliveryPrice = serviceabilityResult?.payouts?.price ?? 0;
+  const deliveryTax = serviceabilityResult?.payouts?.tax ?? 0;
+  const deliveryTotal = serviceabilityResult?.payouts?.total ?? 0;
 
-
-  // ✅ NEW: Payment method state
+  // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'Online' | ''>('');
 
   const [deliverySettings, setDeliverySettings] = useState({
@@ -89,86 +87,38 @@ const deliveryTotal = serviceabilityResult?.payouts?.total ?? 0;
     fetchDeliverySettings();
   }, []);
 
-  /* ---------------- DISTANCE LOGIC ---------------- */
+  /* ---------------- MAP SELECTION HANDLER ---------------- */
 
-  // const calculateDistance = (
-  //   lat1: number,
-  //   lon1: number,
-  //   lat2: number,
-  //   lon2: number
-  // ) => {
-  //   const R = 6371;
-  //   const dLat = (lat2 - lat1) * Math.PI / 180;
-  //   const dLon = (lon2 - lon1) * Math.PI / 180;
+  const handleMapSelect = (
+    lat: number, 
+    lng: number, 
+    addressText: string,
+    city: string,
+    postalCode: string
+  ) => {
+    // Extract the first part of the address for Address Line 1
+    const firstPart = addressText.split(',')[0]?.trim() || addressText;
 
-  //   const a =
-  //     Math.sin(dLat / 2) ** 2 +
-  //     Math.cos(lat1 * Math.PI / 180) *
-  //     Math.cos(lat2 * Math.PI / 180) *
-  //     Math.sin(dLon / 2) ** 2;
+    console.log('Map selected:', { lat, lng, addressText, city, postalCode });
 
-  //   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-  // };
+    setAddress(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      // ✅ Use city and postal code from API, or keep existing values
+      city: city || prev.city || 'Bangalore',
+      postalCode: postalCode || prev.postalCode || '',
+      locationName: addressText,
+      addressLine1: firstPart
+    }));
 
-  // ✅ CHANGED: Simplified delivery charge calculation for single store
-  // const calculateDeliveryCharge = (userLat: number, userLng: number) => {
-  //   // Only one store location now
-  //   const store = storeLocations.find(s => s.isActive);
-    
-  //   if (!store) {
-  //     return null;
-  //   }
-
-  //   // const km = calculateDistance(
-  //   //   userLat,
-  //   //   userLng,
-  //   //   store.latitude,
-  //   //   store.longitude
-  //   // );
-
-  //   // ✅ NEW: Apply free delivery threshold
-  //   let charge = 0;
-  //   if (cartTotal < deliverySettings.freeDeliveryThreshold) {
-  //     charge = deliverySettings.baseCharge + (km * deliverySettings.pricePerKm);
-  //   }
-
-  //   return {
-  //     storeName: store.name,
-  //     distance: km,
-  //     charge
-  //   };
-  // };
-
-/* ---------------- MAP SELECTION HANDLER ---------------- */
-
-const handleMapSelect = (
-  lat: number, 
-  lng: number, 
-  addressText: string,
-  city: string,
-  postalCode: string
-) => {
-  // Extract the first part of the address for Address Line 1
-  const firstPart = addressText.split(',')[0]?.trim() || addressText;
-
-  setAddress(prev => ({
-    ...prev,
-    latitude: lat,
-    longitude: lng,
-    // ✅ Use city and postal code from API
-    city: city || 'Bangalore',
-    postalCode: postalCode,
-    locationName: addressText,
-    addressLine1: firstPart
-  }));
-
-  // Clear serviceability when location changes
-  setServiceabilityResult(null);
-  setIsServiceAvailable(false);
-};
+    // Clear serviceability when location changes
+    setServiceabilityResult(null);
+    setIsServiceAvailable(false);
+  };
 
   /* ---------------- SAVE ADDRESS ---------------- */
-  // ✅ CHANGED: U-Engage serviceability check only
+
   const checkServiceability = async (userLat: number, userLng: number) => {
     console.log('Axios Base URL:', api.defaults.baseURL);
     if (!storeLocations.length) {
@@ -190,6 +140,7 @@ const handleMapSelect = (
   
     return response.data;
   };
+
   const handleSaveAddress = async () => {
     if (!isFormComplete) {
       toast({
@@ -201,7 +152,7 @@ const handleMapSelect = (
     }
   
     try {
-      setIsSavingAddress(true); // ✅ start loading
+      setIsSavingAddress(true);
   
       const serviceability = await checkServiceability(
         address.latitude!,
@@ -231,25 +182,22 @@ const handleMapSelect = (
         variant: 'destructive'
       });
     } finally {
-      setIsSavingAddress(false); // ✅ stop loading
+      setIsSavingAddress(false);
     }
   };
-  
 
   /* ---------------- EDIT ADDRESS ---------------- */
 
   const handleEditAddress = () => {
     setIsAddressSaved(false);
-    // ✅ CHANGED: Clear serviceability when editing
     setServiceabilityResult(null);
     setIsServiceAvailable(false);
-    setPaymentMethod(''); // ✅ NEW: Clear payment method
+    setPaymentMethod('');
   };
 
   /* ---------------- PLACE ORDER ---------------- */
 
   const placeOrder = async () => {
-    // ✅ Validation
     if (!isAddressSaved || !isServiceAvailable || !paymentMethod) {
       toast({
         title: 'Cannot place order',
@@ -260,28 +208,6 @@ const handleMapSelect = (
       });
       return;
     }
-  
-    /* --------------------------------------------------
-       ❌ OLD LOCAL DELIVERY CALCULATION (COMMENTED)
-       -------------------------------------------------- */
-  
-    // const deliveryInfo = calculateDeliveryCharge(
-    //   address.latitude!,
-    //   address.longitude!
-    // );
-  
-    // if (!deliveryInfo) {
-    //   toast({
-    //     title: 'Error',
-    //     description: 'Unable to calculate delivery charges',
-    //     variant: 'destructive'
-    //   });
-    //   return;
-    // }
-  
-    /* --------------------------------------------------
-       ✅ NEW: U-ENGAGE DELIVERY PRICES (SOURCE OF TRUTH)
-       -------------------------------------------------- */
   
     const deliveryPrice = serviceabilityResult?.payouts?.price ?? 0;
     const deliveryTax = serviceabilityResult?.payouts?.tax ?? 0;
@@ -316,23 +242,10 @@ const handleMapSelect = (
           longitude: address.longitude
         },
   
-        // ✅ Payment method
         paymentMethod:
           paymentMethod === 'COD'
             ? 'Cash On Delivery'
             : 'Online Payment',
-  
-        /* --------------------------------------------------
-           ❌ OLD DELIVERY FIELDS (COMMENTED)
-           -------------------------------------------------- */
-  
-        // shippingPrice: deliveryInfo.charge,
-        // distance: deliveryInfo.distance,
-        // nearestStore: deliveryInfo.storeName,
-  
-        /* --------------------------------------------------
-           ✅ U-ENGAGE DELIVERY FIELDS
-           -------------------------------------------------- */
   
         shippingPrice: deliveryTotal,
         deliveryPrice,
@@ -360,12 +273,6 @@ const handleMapSelect = (
       });
     }
   };
-  
-
-  // ✅ NEW: Calculate delivery info for display
-  // const deliveryInfo = isAddressSaved && address.latitude && address.longitude
-  //   ? calculateDeliveryCharge(address.latitude, address.longitude)
-  //   : null;
 
   /* ---------------- UI ---------------- */
 
@@ -454,59 +361,101 @@ const handleMapSelect = (
                     </div>
 
                     {/* STEP 4: CITY, POSTAL, COUNTRY */}
-                   {/* STEP 4: CITY, POSTAL, COUNTRY */}
+                {/* STEP 4: CITY, POSTAL, COUNTRY */}
 <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-  <div>
-    <Label className="text-sm font-medium">City *</Label>
-    <Input 
-      value={address.city} 
-      // ✅ CHANGED: Disabled - auto-filled from map
-      disabled
+
+{/* CITY */}
+<div>
+  <Label className="text-sm font-medium">City *</Label>
+
+  <div className="relative group">
+    <Input
+      value={address.city}
+      readOnly
       placeholder="Select location on map"
-      className="mt-1.5 bg-gray-50 cursor-not-allowed" 
+      className="mt-1.5 bg-gray-50 cursor-not-allowed pr-10"
     />
-    <p className="text-xs text-gray-500 mt-1">Auto-filled from map selection</p>
+
+    {/* Block icon */}
+    <div className="absolute inset-y-0 right-3 flex items-center opacity-0 group-hover:opacity-100 transition">
+      <svg
+        className="h-4 w-4 text-red-500"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        viewBox="0 0 24 24"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <line x1="5" y1="19" x2="19" y2="5" />
+      </svg>
+    </div>
   </div>
 
-  <div>
-    <Label className="text-sm font-medium">Postal Code</Label>
-    <Input 
-      value={address.postalCode} 
-      // ✅ CHANGED: Disabled - auto-filled from map
-      // disabled
-      onChange={e => setAddress({ ...address, postalCode: e.target.value })}
-      placeholder="Select location on map"
-      className="mt-1.5 bg-gray-50 cursor-not-allowed" 
-    />
-    <p className="text-xs text-gray-500 mt-1">Auto-filled from map selection</p>
-  </div>
-
-  <div className="sm:col-span-2">
-    <Label className="text-sm font-medium">Country</Label>
-    <Input 
-      value={address.country} 
-      disabled 
-      className="mt-1.5 bg-gray-50 cursor-not-allowed" 
-    />
-  </div>
+  <p className="text-xs text-gray-500 mt-1">
+    Auto-filled from map and cannot be edited
+  </p>
 </div>
+
+{/* POSTAL CODE */}
+<div>
+  <Label className="text-sm font-medium">Postal Code</Label>
+
+  <div className="relative group">
+    <Input
+      value={address.postalCode}
+      readOnly
+      placeholder="Postal code"
+      className="mt-1.5 bg-gray-50 cursor-not-allowed pr-10"
+    />
+
+    {/* Block icon */}
+    <div className="absolute inset-y-0 right-3 flex items-center opacity-0 group-hover:opacity-100 transition">
+      <svg
+        className="h-4 w-4 text-red-500"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        viewBox="0 0 24 24"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <line x1="5" y1="19" x2="19" y2="5" />
+      </svg>
+    </div>
+  </div>
+
+  <p className="text-xs text-gray-500 mt-1">
+    Auto-filled from map and cannot be edited
+  </p>
+</div>
+
+{/* COUNTRY */}
+<div className="sm:col-span-2">
+  <Label className="text-sm font-medium">Country</Label>
+  <Input
+    value={address.country}
+    disabled
+    className="mt-1.5 bg-gray-50 cursor-not-allowed"
+  />
+</div>
+
+</div>
+
 
                     {/* SAVE BUTTON */}
                     <Button
-  onClick={handleSaveAddress}
-  disabled={!isFormComplete || isSavingAddress}
-  className="w-full mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
->
-  {isSavingAddress ? (
-    <>Checking serviceability...</>
-  ) : (
-    <>
-      <Check className="h-4 w-4 mr-2" />
-      Save Address
-    </>
-  )}
-</Button>
-
+                      onClick={handleSaveAddress}
+                      disabled={!isFormComplete || isSavingAddress}
+                      className="w-full mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSavingAddress ? (
+                        <>Checking serviceability...</>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          Save Address
+                        </>
+                      )}
+                    </Button>
 
                     {!isFormComplete && (
                       <p className="text-xs text-center text-gray-500 mt-2">
@@ -528,7 +477,6 @@ const handleMapSelect = (
                       <Edit2 className="h-3.5 w-3.5" />
                       Edit
                     </button>
-                  
                   </div>
               
                   <div className="space-y-3">
@@ -602,46 +550,47 @@ const handleMapSelect = (
                       </div>
                     )}
                   </div>
+
+                  {/* PAYMENT METHOD SELECTION */}
                   {isAddressSaved && isServiceAvailable && (
-  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm mt-4">
-    <h3 className="font-semibold text-base mb-3">
-      Select Payment Method
-    </h3>
+                    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm mt-4">
+                      <h3 className="font-semibold text-base mb-3">
+                        Select Payment Method
+                      </h3>
 
-    <div className="space-y-2">
-      <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-        <input
-          type="radio"
-          name="payment"
-          value="COD"
-          checked={paymentMethod === 'COD'}
-          onChange={(e) => setPaymentMethod(e.target.value as 'COD')}
-          className="w-4 h-4 text-green-600"
-        />
-        <div className="flex-1">
-          <p className="text-sm font-medium">Cash on Delivery</p>
-          <p className="text-xs text-gray-500">Pay when you receive</p>
-        </div>
-      </label>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                          <input
+                            type="radio"
+                            name="payment"
+                            value="COD"
+                            checked={paymentMethod === 'COD'}
+                            onChange={(e) => setPaymentMethod(e.target.value as 'COD')}
+                            className="w-4 h-4 text-green-600"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">Cash on Delivery</p>
+                            <p className="text-xs text-gray-500">Pay when you receive</p>
+                          </div>
+                        </label>
 
-      <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-        <input
-          type="radio"
-          name="payment"
-          value="Online"
-          checked={paymentMethod === 'Online'}
-          onChange={(e) => setPaymentMethod(e.target.value as 'Online')}
-          className="w-4 h-4 text-green-600"
-        />
-        <div className="flex-1">
-          <p className="text-sm font-medium">Online Payment</p>
-          <p className="text-xs text-gray-500">UPI, Card, NetBanking</p>
-        </div>
-      </label>
-    </div>
-  </div>
-)}
-
+                        <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                          <input
+                            type="radio"
+                            name="payment"
+                            value="Online"
+                            checked={paymentMethod === 'Online'}
+                            onChange={(e) => setPaymentMethod(e.target.value as 'Online')}
+                            className="w-4 h-4 text-green-600"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">Online Payment</p>
+                            <p className="text-xs text-gray-500">UPI, Card, NetBanking</p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -682,74 +631,44 @@ const handleMapSelect = (
                   })}
                 </div>
 
-                {/* ✅ CHANGED: Show delivery info only if service is available */}
-                {/* {deliveryInfo && isServiceAvailable && (
+                {/* DELIVERY INFO */}
+                {serviceabilityResult && isServiceAvailable && (
                   <div className="border-t pt-3 space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Delivery Distance</span>
-                      <span className="font-medium">{deliveryInfo.distance.toFixed(2)} km</span>
+                      <span className="text-gray-600">Delivery Charge</span>
+                      <span className="font-medium">₹{deliveryPrice.toFixed(2)}</span>
                     </div>
+
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Delivery Charges</span>
-                      <span className="font-semibold text-green-600">
-                        {deliveryInfo.charge === 0 ? 'FREE' : `₹${deliveryInfo.charge.toFixed(2)}`}
-                      </span>
+                      <span className="text-gray-600">Delivery Tax</span>
+                      <span className="font-medium">₹{deliveryTax.toFixed(2)}</span>
                     </div>
-                 
-                    {deliveryInfo.charge === 0 && cartTotal >= deliverySettings.freeDeliveryThreshold && (
-                      <p className="text-xs text-green-600">
-                        🎉 Free delivery on orders above ₹{deliverySettings.freeDeliveryThreshold}
-                      </p>
-                    )}
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>Store</span>
-                      <span>{deliveryInfo.storeName}</span>
+
+                    <div className="flex justify-between font-semibold text-green-700">
+                      <span>Total Delivery Fee</span>
+                      <span>₹{deliveryTotal.toFixed(2)}</span>
                     </div>
                   </div>
-                )} */}
-
-{serviceabilityResult && isServiceAvailable && (
-  <div className="border-t pt-3 space-y-2 text-sm">
-    <div className="flex justify-between">
-      <span className="text-gray-600">Delivery Charge</span>
-      <span className="font-medium">₹{deliveryPrice.toFixed(2)}</span>
-    </div>
-
-    <div className="flex justify-between">
-      <span className="text-gray-600">Delivery Tax</span>
-      <span className="font-medium">₹{deliveryTax.toFixed(2)}</span>
-    </div>
-
-    <div className="flex justify-between font-semibold text-green-700">
-      <span>Total Delivery Fee</span>
-      <span>₹{deliveryTotal.toFixed(2)}</span>
-    </div>
-  </div>
-)}
-
+                )}
 
                 {/* TOTAL */}
-             {/* TOTAL */}
-<div className="border-t pt-3 mt-3 space-y-2">
-  <div className="flex justify-between text-sm">
-    <span className="text-gray-600">Subtotal</span>
-    <span className="font-medium">₹{cartTotal.toFixed(2)}</span>
-  </div>
+                <div className="border-t pt-3 mt-3 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="font-medium">₹{cartTotal.toFixed(2)}</span>
+                  </div>
 
-  {/* ✅ Show total only if service is available */}
-  {isServiceAvailable && (
-    <div className="flex justify-between text-base sm:text-lg font-bold">
-      <span>Total Payable</span>
-      <span className="text-green-600">
-        ₹{(cartTotal + deliveryTotal).toFixed(2)}
-      </span>
-    </div>
-  )}
-</div>
+                  {isServiceAvailable && (
+                    <div className="flex justify-between text-base sm:text-lg font-bold">
+                      <span>Total Payable</span>
+                      <span className="text-green-600">
+                        ₹{(cartTotal + deliveryTotal).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
-
-
-                {/* ✅ CHANGED: Updated Place Order button */}
+                {/* PLACE ORDER BUTTON */}
                 <Button
                   disabled={!isAddressSaved || !isServiceAvailable || !paymentMethod}
                   className="w-full mt-4 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
@@ -759,7 +678,6 @@ const handleMapSelect = (
                   {paymentMethod === 'COD' ? 'Place Order (COD)' : 'Proceed to Payment'}
                 </Button>
 
-                {/* ✅ CHANGED: Updated error messages */}
                 {isAddressSaved && !isServiceAvailable && (
                   <p className="text-xs text-center text-red-500 mt-2">
                     Delivery service is not available for the selected address
