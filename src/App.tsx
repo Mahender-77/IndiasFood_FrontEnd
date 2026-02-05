@@ -1,9 +1,5 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route } from "react-router-dom";
-import { CartProvider } from "@/context/CartContext";
 // import { DeliveryRegisterPage } from "./pages/DeliveryRegisterPage";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
@@ -34,6 +30,10 @@ import About from "./pages/About";
 import Gifting from "./pages/Gifting";
 import BulkOrders from "./pages/BulkOrders";
 import Help from "./pages/Help";
+import { Toaster } from "./components/ui/toaster";
+import { TooltipProvider } from "@radix-ui/react-tooltip";
+import { CartProvider } from "./contexts/CartContext";
+
 
 const queryClient = new QueryClient();
 
@@ -43,7 +43,6 @@ const App = () => {
       <TooltipProvider>
         <CartProvider>
           <Toaster />
-          <Sonner />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/products" element={<Products />} />

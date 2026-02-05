@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCart } from '@/context/CartContext';
+import { useCart } from '@/contexts/CartContext';
 import { Product } from '@/types';
 import { SEO } from '@/components/seo/SEO';
 import { toast } from 'sonner';

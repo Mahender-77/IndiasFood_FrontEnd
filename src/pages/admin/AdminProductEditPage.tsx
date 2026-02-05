@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import ImageUploader from '@/components/common/ImageUploader'; // Import ImageUploader
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/api';
 import { Product, Category } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';

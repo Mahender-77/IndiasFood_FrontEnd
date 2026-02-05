@@ -18,7 +18,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { useCart } from '@/context/CartContext';
+import { useCart } from '@/contexts/CartContext';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { Product } from '@/types';

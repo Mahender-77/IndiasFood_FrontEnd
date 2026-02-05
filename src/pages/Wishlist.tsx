@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Heart, ArrowRight } from 'lucide-react';
-import { Layout } from '@/components/layout/Layout';
+
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/ProductCard';
-import { useCart } from '@/context/CartContext';
+import { useCart } from '@/contexts/CartContext';
 import { Product } from '@/types';
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Layout } from '@/components/layout/Layout';
 
 const Wishlist = () => {
   const { state } = useCart();

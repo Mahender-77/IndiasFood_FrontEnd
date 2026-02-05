@@ -5,8 +5,8 @@ import {
   SelectItem,
   SelectTrigger
 } from '@/components/ui/select';
-import { useAuth } from '@/context/AuthContext';
-import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 import { cn } from '@/lib/utils';
 import { Product } from '@/types';
 import { Heart, Loader2, Minus, Plus, ShoppingCart } from 'lucide-react';
