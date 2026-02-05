@@ -12,6 +12,7 @@ export function Footer() {
           <Link to="/" className="shrink-0">
           <img src="/IndiasFood-.png" alt="Indiasfood Logo" className="h-20 w-auto" />
             </Link>
+            <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">A unit of Maha foods</p>
             <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
               Bringing the authentic taste of India to your doorstep. Handcrafted sweets made with love and tradition.
             </p>

@@ -10,9 +10,10 @@ import { WelcomeHero } from '@/components/home/WelcomeHero';
 import { InfiniteScrollText } from '@/components/ui/infinite-scroll-text';
 import { AutoCarousel } from '@/components/ui/auto-carousel';
 
-import image1 from '@/assets/image1.avif';
+import image1 from '@/assets/indiasFood (2).jpeg';
 import image2 from '@/assets/image2.webp';
 import image3 from '@/assets/image3.avif';
+
 
 // Sample images for the carousel - replace with your actual images
 const carouselImages = [

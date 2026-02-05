@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, Edit2, MapPin, Phone, User } from 'lucide-react';
+import { ArrowLeft, Check, Edit2, MapPin, Phone, User, Plus, Trash2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,21 @@ interface StoreLocation {
   isActive: boolean;
 }
 
+interface SavedAddress {
+  _id?: string;
+  fullName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  locationName?: string;
+  isDefault?: boolean;
+}
+
 /* ---------------- COMPONENT ---------------- */
 
 const Checkout = () => {
@@ -28,8 +43,11 @@ const Checkout = () => {
   const { toast } = useToast();
 
   const [storeLocations, setStoreLocations] = useState<StoreLocation[]>([]);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [showAddressForm, setShowAddressForm] = useState(false);
   const [isAddressSaved, setIsAddressSaved] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null);
 
   const [serviceabilityResult, setServiceabilityResult] = useState<any>(null);
   const [isServiceAvailable, setIsServiceAvailable] = useState<boolean>(false);
@@ -62,14 +80,14 @@ const Checkout = () => {
     locationName: ''
   });
 
-  // Check if all fields are filled
+  // ✅ FIXED: Check if all required fields are filled (addressLine2 is optional)
   const isFormComplete =
-    address.fullName.trim() !== '' &&
-    address.phone.trim() !== '' &&
+    address.fullName?.trim() !== '' &&
+    address.phone?.trim() !== '' &&
     address.latitude !== null &&
     address.longitude !== null &&
-    address.addressLine1.trim() !== '' &&
-    address.city.trim() !== '';
+    address.addressLine1?.trim() !== '' &&
+    address.city?.trim() !== '';
 
   /* ---------------- API HELPERS ---------------- */
 
@@ -83,8 +101,26 @@ const Checkout = () => {
     }
   };
 
+  const fetchSavedAddresses = async () => {
+    try {
+      const res = await api.get('/user/addresses');
+      setSavedAddresses(res.data.addresses || []);
+      
+      // If user has addresses, don't show form by default
+      if (res.data.addresses && res.data.addresses.length > 0) {
+        setShowAddressForm(false);
+      } else {
+        setShowAddressForm(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch saved addresses:', error);
+      setShowAddressForm(true);
+    }
+  };
+
   useEffect(() => {
     fetchDeliverySettings();
+    fetchSavedAddresses();
   }, []);
 
   /* ---------------- MAP SELECTION HANDLER ---------------- */
@@ -96,7 +132,6 @@ const Checkout = () => {
     city: string,
     postalCode: string
   ) => {
-    // Extract the first part of the address for Address Line 1
     const firstPart = addressText.split(',')[0]?.trim() || addressText;
 
     console.log('Map selected:', { lat, lng, addressText, city, postalCode });
@@ -105,22 +140,97 @@ const Checkout = () => {
       ...prev,
       latitude: lat,
       longitude: lng,
-      // ✅ Use city and postal code from API, or keep existing values
       city: city || prev.city || 'Bangalore',
       postalCode: postalCode || prev.postalCode || '',
       locationName: addressText,
       addressLine1: firstPart
     }));
 
-    // Clear serviceability when location changes
     setServiceabilityResult(null);
     setIsServiceAvailable(false);
+  };
+
+  /* ---------------- SAVED ADDRESS SELECTION ---------------- */
+
+  const handleSelectSavedAddress = async (savedAddr: SavedAddress) => {
+    setSelectedSavedAddressId(savedAddr._id || null);
+    
+    // ✅ FIXED: Ensure all fields have default values
+    setAddress({
+      fullName: savedAddr.fullName || '',
+      phone: savedAddr.phone || '',
+      addressLine1: savedAddr.addressLine1 || '',
+      addressLine2: savedAddr.addressLine2 || '', // ← Default to empty string
+      city: savedAddr.city || '',
+      postalCode: savedAddr.postalCode || '',
+      country: savedAddr.country || 'India',
+      latitude: savedAddr.latitude,
+      longitude: savedAddr.longitude,
+      locationName: savedAddr.locationName || ''
+    });
+
+    // Check serviceability for saved address
+    try {
+      setIsSavingAddress(true);
+      const serviceability = await checkServiceability(
+        savedAddr.latitude,
+        savedAddr.longitude
+      );
+
+      setServiceabilityResult(serviceability);
+      const available = serviceability?.serviceability?.locationServiceAble === true;
+      setIsServiceAvailable(available);
+      setIsAddressSaved(true);
+
+      toast({
+        title: 'Address selected',
+        description: available
+          ? 'Delivery available for this location'
+          : 'Delivery not available for this location',
+        variant: available ? 'default' : 'destructive'
+      });
+    } catch (error) {
+      toast({
+        title: 'Service check failed',
+        description: 'Unable to check delivery availability',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
+
+  /* ---------------- DELETE SAVED ADDRESS ---------------- */
+
+  const handleDeleteAddress = async (addressId: string) => {
+    try {
+      await api.delete(`/user/addresses/${addressId}`);
+      
+      // Refresh addresses
+      await fetchSavedAddresses();
+      
+      // Reset if deleted address was selected
+      if (selectedSavedAddressId === addressId) {
+        handleEditAddress();
+      }
+
+      toast({
+        title: 'Address deleted',
+        description: 'Address removed successfully'
+      });
+    } catch (error) {
+      toast({
+        title: 'Failed to delete',
+        description: 'Could not delete address',
+        variant: 'destructive'
+      });
+    }
   };
 
   /* ---------------- SAVE ADDRESS ---------------- */
 
   const checkServiceability = async (userLat: number, userLng: number) => {
-    console.log('Axios Base URL:', api.defaults.baseURL);
+    
     if (!storeLocations.length) {
       console.error('No store locations available');
       return;
@@ -193,6 +303,7 @@ const Checkout = () => {
     setServiceabilityResult(null);
     setIsServiceAvailable(false);
     setPaymentMethod('');
+    setSelectedSavedAddressId(null);
   };
 
   /* ---------------- PLACE ORDER ---------------- */
@@ -251,7 +362,22 @@ const Checkout = () => {
         deliveryPrice,
         deliveryTax,
   
-        totalPrice: cartTotal + deliveryTotal
+        totalPrice: cartTotal + deliveryTotal,
+
+        // Flag to save address if it's new (not from saved addresses)
+        saveAddress: !selectedSavedAddressId,
+        addressData: !selectedSavedAddressId ? {
+          fullName: address.fullName,
+          phone: address.phone,
+          addressLine1: address.addressLine1,
+          addressLine2: address.addressLine2 || '', // ← Ensure empty string instead of undefined
+          city: address.city,
+          postalCode: address.postalCode,
+          country: address.country,
+          latitude: address.latitude,
+          longitude: address.longitude,
+          locationName: address.locationName || ''
+        } : undefined
       });
   
       clearCart();
@@ -295,12 +421,87 @@ const Checkout = () => {
           <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
 
             {/* LEFT - ADDRESS SECTION */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-4">
 
-              {!isAddressSaved ? (
-                /* ADDRESS FORM */
+              {/* SAVED ADDRESSES SECTION */}
+              {!isAddressSaved && savedAddresses.length > 0 && !showAddressForm && (
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-                  <h2 className="font-semibold text-base sm:text-lg mb-4">Delivery Address</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-semibold text-base sm:text-lg">Select Delivery Address</h2>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddressForm(true)}
+                      className="flex items-center gap-1.5"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add New
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {savedAddresses.map((addr) => (
+                      <div
+                        key={addr._id}
+                        className="border rounded-lg p-4 hover:border-green-500 transition-colors cursor-pointer group relative"
+                        onClick={() => handleSelectSavedAddress(addr)}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="bg-blue-50 p-2 rounded-lg">
+                            <MapPin className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{addr.fullName}</p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {addr.addressLine1}
+                              {addr.addressLine2 && `, ${addr.addressLine2}`}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {addr.city}, {addr.postalCode}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {addr.phone}
+                            </p>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteAddress(addr._id!);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </button>
+                        </div>
+                        {addr.isDefault && (
+                          <span className="absolute top-2 right-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ADDRESS FORM */}
+              {!isAddressSaved && showAddressForm && (
+                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-semibold text-base sm:text-lg">
+                      {savedAddresses.length > 0 ? 'Add New Address' : 'Delivery Address'}
+                    </h2>
+                    {savedAddresses.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAddressForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
 
                   <div className="space-y-4">
                     
@@ -361,85 +562,83 @@ const Checkout = () => {
                     </div>
 
                     {/* STEP 4: CITY, POSTAL, COUNTRY */}
-                {/* STEP 4: CITY, POSTAL, COUNTRY */}
-<div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
 
-{/* CITY */}
-<div>
-  <Label className="text-sm font-medium">City *</Label>
+                      {/* CITY */}
+                      <div>
+                        <Label className="text-sm font-medium">City *</Label>
 
-  <div className="relative group">
-    <Input
-      value={address.city}
-      readOnly
-      placeholder="Select location on map"
-      className="mt-1.5 bg-gray-50 cursor-not-allowed pr-10"
-    />
+                        <div className="relative group">
+                          <Input
+                            value={address.city}
+                            readOnly
+                            placeholder="Select location on map"
+                            className="mt-1.5 bg-gray-50 cursor-not-allowed pr-10"
+                          />
 
-    {/* Block icon */}
-    <div className="absolute inset-y-0 right-3 flex items-center opacity-0 group-hover:opacity-100 transition">
-      <svg
-        className="h-4 w-4 text-red-500"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        viewBox="0 0 24 24"
-      >
-        <circle cx="12" cy="12" r="9" />
-        <line x1="5" y1="19" x2="19" y2="5" />
-      </svg>
-    </div>
-  </div>
+                          {/* Block icon */}
+                          <div className="absolute inset-y-0 right-3 flex items-center opacity-0 group-hover:opacity-100 transition">
+                            <svg
+                              className="h-4 w-4 text-red-500"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              viewBox="0 0 24 24"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <line x1="5" y1="19" x2="19" y2="5" />
+                            </svg>
+                          </div>
+                        </div>
 
-  <p className="text-xs text-gray-500 mt-1">
-    Auto-filled from map and cannot be edited
-  </p>
-</div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Auto-filled from map and cannot be edited
+                        </p>
+                      </div>
 
-{/* POSTAL CODE */}
-<div>
-  <Label className="text-sm font-medium">Postal Code</Label>
+                      {/* POSTAL CODE */}
+                      <div>
+                        <Label className="text-sm font-medium">Postal Code</Label>
 
-  <div className="relative group">
-    <Input
-      value={address.postalCode}
-      readOnly
-      placeholder="Postal code"
-      className="mt-1.5 bg-gray-50 cursor-not-allowed pr-10"
-    />
+                        <div className="relative group">
+                          <Input
+                            value={address.postalCode}
+                            readOnly
+                            placeholder="Postal code"
+                            className="mt-1.5 bg-gray-50 cursor-not-allowed pr-10"
+                          />
 
-    {/* Block icon */}
-    <div className="absolute inset-y-0 right-3 flex items-center opacity-0 group-hover:opacity-100 transition">
-      <svg
-        className="h-4 w-4 text-red-500"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        viewBox="0 0 24 24"
-      >
-        <circle cx="12" cy="12" r="9" />
-        <line x1="5" y1="19" x2="19" y2="5" />
-      </svg>
-    </div>
-  </div>
+                          {/* Block icon */}
+                          <div className="absolute inset-y-0 right-3 flex items-center opacity-0 group-hover:opacity-100 transition">
+                            <svg
+                              className="h-4 w-4 text-red-500"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              viewBox="0 0 24 24"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <line x1="5" y1="19" x2="19" y2="5" />
+                            </svg>
+                          </div>
+                        </div>
 
-  <p className="text-xs text-gray-500 mt-1">
-    Auto-filled from map and cannot be edited
-  </p>
-</div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Auto-filled from map and cannot be edited
+                        </p>
+                      </div>
 
-{/* COUNTRY */}
-<div className="sm:col-span-2">
-  <Label className="text-sm font-medium">Country</Label>
-  <Input
-    value={address.country}
-    disabled
-    className="mt-1.5 bg-gray-50 cursor-not-allowed"
-  />
-</div>
+                      {/* COUNTRY */}
+                      <div className="sm:col-span-2">
+                        <Label className="text-sm font-medium">Country</Label>
+                        <Input
+                          value={address.country}
+                          disabled
+                          className="mt-1.5 bg-gray-50 cursor-not-allowed"
+                        />
+                      </div>
 
-</div>
-
+                    </div>
 
                     {/* SAVE BUTTON */}
                     <Button
@@ -464,9 +663,10 @@ const Checkout = () => {
                     )}
                   </div>
                 </div>
+              )}
 
-              ) : (
-                /* SAVED ADDRESS CARD */
+              {/* SAVED ADDRESS CARD */}
+              {isAddressSaved && (
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
                   <div className="flex items-start justify-between mb-4">
                     <h2 className="font-semibold text-base sm:text-lg">Delivery Address</h2>

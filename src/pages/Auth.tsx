@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, Home, MapPin, Globe } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
+import { SEO } from '@/components/seo/SEO';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import { SEO } from '@/components/seo/SEO';
+import { Eye, EyeOff, Globe, Home, Lock, Mail, MapPin, User } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 type ForgotStep = 'login' | 'email' | 'otp' | 'reset';
 
@@ -33,11 +33,33 @@ const [resendLoading, setResendLoading] = useState(false);
     password: '',
     confirmPassword: '',
     phone: '',
-    address: '',
-    city: '',
-    postalCode: '',
-    country: '',
+    // address: '',
+    // city: '',
+    // postalCode: '',
+    // country: '',
   });
+
+  const mergeGuestCart = async () => {
+    const localCart = JSON.parse(localStorage.getItem('cartItems') || '[]');
+  
+    if (!Array.isArray(localCart) || localCart.length === 0) return;
+  
+    try {
+      await api.post('/user/cart/merge', {
+        items: localCart.map((item: any) => ({
+          productId: item.product?._id || item.product,
+          qty: item.qty,
+          selectedVariantIndex: item.selectedVariantIndex ?? 0,
+        })),
+      });
+  
+      localStorage.removeItem('cartItems');
+    } catch (err) {
+      console.error('Cart merge failed:', err);
+    }
+  };
+  
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +73,7 @@ const [resendLoading, setResendLoading] = useState(false);
           password: formData.password,
         });
         login(res.data.token);
+        await mergeGuestCart();
         toast({
           title: 'Welcome back!',
           description: 'You have successfully logged in.',
@@ -72,16 +95,10 @@ const [resendLoading, setResendLoading] = useState(false);
           email: formData.email,
           password: formData.password,
           phone: formData.phone,
-          addresses: [
-            {
-              address: formData.address,
-              city: formData.city,
-              postalCode: formData.postalCode,
-              country: formData.country,
-            },
-          ],
         });
+        
         login(res.data.token);
+        await mergeGuestCart();
         toast({
           title: 'Account created!',
           description: 'You have successfully registered and logged in.',
@@ -555,7 +572,7 @@ const [resendLoading, setResendLoading] = useState(false);
                   </div>
                 )}
 
-                {!isLogin && (
+                {/* {!isLogin && (
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="address">Address</Label>
@@ -631,7 +648,7 @@ const [resendLoading, setResendLoading] = useState(false);
                       </div>
                     </div>
                   </div>
-                )}
+                )} */}
 
                 <Button
                   type="submit"
