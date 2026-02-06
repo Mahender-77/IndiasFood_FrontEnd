@@ -93,9 +93,10 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-primary/10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-2 sm:gap-4">
-            <p className="text-primary/50 text-xs sm:text-sm">
-              © {new Date().getFullYear()} Indiasfood. All rights reserved by maha foods.
-            </p>
+          <p className="text-primary text-xs sm:text-sm">
+  © {new Date().getFullYear()} Indiasfood. All rights reserved by maha foods.
+</p>
+
             <div className="flex gap-4 sm:gap-6">
               <Link to="/privacy" className="text-primary/50 hover:text-primary/70 text-xs sm:text-sm transition-colors">
                 Privacy Policy
