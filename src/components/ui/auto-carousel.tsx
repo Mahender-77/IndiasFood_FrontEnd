@@ -61,6 +61,7 @@ export function AutoCarousel({
                     w-full h-full
                     object-cover
                     object-top
+                    object-fill
                     sm:object-center
                     transition-transform
                     duration-500
