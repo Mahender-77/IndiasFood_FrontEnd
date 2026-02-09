@@ -12,6 +12,7 @@ interface MapProps {
     postalCode: string
   ) => void;
   isLocked?: boolean;
+  mapId: string;
 }
 
 interface SearchResult {
@@ -38,7 +39,7 @@ const createCustomIcon = (color: string) =>
 
 /* ---------------- COMPONENT ---------------- */
 
-const LeafletMap = ({ onSelectLocation, isLocked = false }: MapProps) => {
+const LeafletMap = ({ onSelectLocation, isLocked = false , mapId }: MapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const isLockedRef = useRef(isLocked);
@@ -189,13 +190,13 @@ const selectResult = async (result: SearchResult) => {
 
   useEffect(() => {
     if (mapRef.current) return;
-
-    const map = L.map("leaflet-map", {
+  
+    const map = L.map(mapId, {
       center: [12.9716, 77.5946],
       zoom: 13,
       zoomControl: false,
     });
-
+  
     mapRef.current = map;
 
     L.control.zoom({ position: "bottomright" }).addTo(map);
@@ -252,33 +253,33 @@ const selectResult = async (result: SearchResult) => {
   return (
     <div className="relative w-full z-0 isolate">
       {/* Search UI */}
-      <div className="absolute top-3 left-3 right-3 z-20">
+      <div className="absolute top-2 left-2 right-2 z-20">
         <div className="flex gap-2">
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search location..."
-            className="flex-1 px-3 py-2 rounded-lg shadow bg-white text-sm"
+            className="flex-1 px-3 py-2 rounded-md shadow-sm bg-white text-xs sm:text-sm"
           />
           <button
             onClick={detectLocation}
             disabled={isDetectingLocation}
-            className="px-3 py-2 bg-white rounded-lg shadow"
+            className="px-3 py-2 bg-white rounded-md shadow-sm flex items-center justify-center text-xs sm:text-sm"
           >
             📍
           </button>
         </div>
 
         {showResults && searchResults.length > 0 && (
-          <div className="mt-2 bg-white rounded-lg shadow max-h-64 overflow-y-auto">
+          <div className="mt-2 bg-white rounded-md shadow-sm max-h-40 sm:max-h-64 overflow-y-auto">
             {searchResults.map((r, i) => (
               <button
                 key={i}
                 onClick={() => selectResult(r)}
                 className="w-full px-3 py-2 text-left hover:bg-gray-50"
               >
-                <div className="text-sm font-medium">{r.title}</div>
-                <div className="text-xs text-gray-500">{r.description}</div>
+                <div className="text-xs sm:text-sm font-medium">{r.title}</div>
+                <div className="text-[10px] sm:text-xs text-gray-500">{r.description}</div>
               </button>
             ))}
           </div>
@@ -291,10 +292,10 @@ const selectResult = async (result: SearchResult) => {
         </div>
       )}
 
-      <div
-        id="leaflet-map"
-        className="w-full h-[400px] rounded-lg  z-0"
-      />
+<div
+      id={mapId}
+      className="w-full h-64 sm:h-80 md:h-[400px] rounded-lg z-0"
+    />
     </div>
   );
 };

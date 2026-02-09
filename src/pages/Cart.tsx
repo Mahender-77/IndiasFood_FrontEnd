@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowRight, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -14,9 +14,22 @@ import { Product } from '@/types';
 import { SEO } from '@/components/seo/SEO';
 import { toast } from 'sonner';
 import { useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Cart = () => {
   const { state, updateQuantity, removeFromCart, updateCartItemVariant, cartLoading } = useCart();
+  const { user } = useAuth(); // Get user from AuthContext
+  const navigate = useNavigate(); // Initialize useNavigate
+
+  const handleCheckoutClick = () => {
+    if (!user) {
+      // If user is not logged in, redirect to login page with a "from" state
+      navigate('/auth', { state: { from: '/cart' } });
+    } else {
+      // If user is logged in, proceed to checkout
+      navigate('/checkout');
+    }
+  };
 
   const getVariantStock = (product: Product, variantIndex?: number) => {
     if (!product.inventory || product.inventory.length === 0) return 0;
@@ -500,12 +513,16 @@ const Cart = () => {
                 )}
 
                 <div className="space-y-3 mt-6">
-                  <Link to="/checkout" className="block">
-                    <Button size="lg" variant="hero" className="w-full gap-2">
+                    <Button 
+                      size="lg" 
+                      variant="hero" 
+                      className="w-full gap-2"
+                      onClick={handleCheckoutClick} // Use the new handler
+                      disabled={cartLoading || availableItemsCount === 0}
+                    >
                       Proceed to Checkout
                       <ArrowRight className="h-5 w-5" />
                     </Button>
-                  </Link>
 
                   <Link to="/products" className="block">
                     <Button variant="outline" className="w-full">

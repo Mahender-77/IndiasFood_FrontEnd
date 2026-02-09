@@ -121,7 +121,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       if (localCart) {
         try {
-          dispatch({ type: 'SET_CART', payload: JSON.parse(localCart) });
+          const parsedLocalCart = JSON.parse(localCart);
+          console.log('Parsed local cart from localStorage:', parsedLocalCart);
+          dispatch({ type: 'SET_CART', payload: parsedLocalCart });
         } catch (e) {
           console.error('Failed to parse cart from localStorage:', e);
           localStorage.removeItem('cartItems');
@@ -145,10 +147,37 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_ERROR', payload: null });
     
     try {
+      const localCart = localStorage.getItem('cartItems');
+      let mergedCartData = [];
+      
+      if (localCart) {
+        const guestCartItems: CartItem[] = JSON.parse(localCart);
+        console.log('Detected guest cart items after login:', guestCartItems);
+        if (guestCartItems.length > 0) {
+          const itemsToMerge = guestCartItems.map(item => ({
+            productId: (item.product as Product)._id,
+            qty: item.qty,
+            selectedVariantIndex: item.selectedVariantIndex
+          }));
+          console.log('Items to merge sent to API:', itemsToMerge);
+          
+          const { data } = await api.post('/user/cart/merge', { items: itemsToMerge });
+          console.log('Response from merge API:', data);
+          mergedCartData = data; // This will be the combined cart
+          localStorage.removeItem('cartItems');
+          console.log('Guest cart cleared from localStorage.');
+        }
+      }
+
       const { data: cartData } = await api.get('/user/cart');
+      console.log('Fetched authenticated cart data:', cartData);
+      // If there was a guest cart merged, use its result, otherwise use fetched cart
+      const finalCartData = mergedCartData.length > 0 ? mergedCartData : cartData;
+      console.log('Final cart data for dispatch:', finalCartData);
+
       const { data: wishlistData } = await api.get('/user/wishlist');
 
-      dispatch({ type: 'SET_CART', payload: Array.isArray(cartData) ? cartData : [] });
+      dispatch({ type: 'SET_CART', payload: Array.isArray(finalCartData) ? finalCartData : [] });
       dispatch({ type: 'SET_WISHLIST', payload: Array.isArray(wishlistData) ? wishlistData.map((item: Product) => item._id) : [] });
     } catch (error: any) {
       console.error('Failed to fetch cart or wishlist', error);
@@ -189,6 +218,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       } else {
         try {
           const { data: productData } = await api.get(`/products/${productId}`);
+          console.log('Fetched productData for guest cart:', productData);
           existingCartItems.push({
             product: productData,
             qty: quantity,
@@ -199,7 +229,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           return;
         }
       }
-      
+      console.log('Guest cart items before setting:', existingCartItems);
       dispatch({ type: 'SET_CART', payload: existingCartItems });
       return;
     }
@@ -458,4 +488,4 @@ export function useCart() {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
-}
+} 

@@ -129,6 +129,25 @@ const Orders = () => {
     fetchOrders();
   }, [token]);
 
+  // Polling for active orders
+  useEffect(() => {
+    const activeOrderIds = orders
+      .filter(order =>
+        (order.status === 'out_for_delivery' || order.status === 'confirmed') &&
+        !order.isDelivered &&
+        order.uengage?.taskId
+      )
+      .map(order => order._id);
+
+    if (activeOrderIds.length > 0) {
+      const interval = setInterval(() => {
+        activeOrderIds.forEach(orderId => trackOrder(orderId));
+      }, 30000); // Poll every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [orders]);
+
   // Track order status
   const trackOrder = async (orderId: string) => {
     setIsTracking(prev => new Set(prev).add(orderId));
@@ -305,20 +324,20 @@ const Orders = () => {
                   className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden hover:shadow-md transition-shadow"
                 >
                   {/* Header Section */}
-                  <div className="bg-muted/30 px-4 sm:px-6 py-4 border-b border-border">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="bg-muted/30 px-4 sm:px-6 py-3 border-b border-border">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       {/* Order Info */}
-                      <div className="flex items-center gap-3">
-                        <div className="hidden sm:flex w-12 h-12 rounded-full bg-primary/10 items-center justify-center flex-shrink-0">
-                          <Package className="h-6 w-6 text-primary" />
+                      <div className="flex items-center gap-2">
+                        <div className="hidden sm:flex w-10 h-10 rounded-full bg-primary/10 items-center justify-center flex-shrink-0">
+                          <Package className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-sm text-foreground">
                               Order #{order._id.slice(-8).toUpperCase()}
                             </span>
                           </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {new Date(order.createdAt).toLocaleDateString('en-IN', {
                               day: 'numeric',
                               month: 'long',
@@ -331,55 +350,48 @@ const Orders = () => {
                       </div>
 
                       {/* Status Badge */}
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <div className={cn(
-                          'inline-flex items-center gap-2 px-4 py-2 rounded-full border',
+                          'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border',
                           status.bgColor,
                           status.borderColor
                         )}>
-                          <StatusIcon className={cn('h-4 w-4', status.color)} />
-                          <span className={cn('text-sm font-semibold', status.color)}>
-                            {status.label}
-                          </span>
-                        </div>
-                        
-                        {/* U-Engage Status Badge */}
-                        {uengageStatus && uengageStatusMap[uengageStatus] && (
-                          <Badge variant="outline" className="text-xs">
-                            {uengageStatusMap[uengageStatus].label}
-                          </Badge>
-                        )}
+                          <StatusIcon className={cn('h-3.5 w-3.5', status.color)} />
+                            <span className={cn('text-xs font-semibold', status.color)}>
+                              {status.label === 'Order Placed' ? 'Placed' : status.label}
+                            </span>
+                          </div>
+                          
+                          {/* U-Engage Status Badge */}
+                          {order.paymentMethod !== 'Cash On Delivery' && order.shippingAddress && uengageStatus && uengageStatusMap[uengageStatus] && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {uengageStatusMap[uengageStatus].label}
+                            </Badge>
+                          )}
                       </div>
                     </div>
                   </div>
 
                   {/* U-Engage Status Info */}
                   {order.uengage?.message && (
-                    <div className="px-4 sm:px-6 py-3 bg-blue-50 border-b border-blue-100">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium text-blue-900">
-                            {order.uengage.message}
-                          </p>
-                          {uengageStatus && uengageStatusMap[uengageStatus] && (
-                            <p className="text-xs text-blue-700 mt-0.5">
-                              {uengageStatusMap[uengageStatus].description}
-                            </p>
-                          )}
-                        </div>
+                    <div className="px-4 sm:px-6 py-2 bg-blue-50 border-b border-blue-100">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                        <p className="text-xs text-blue-900 line-clamp-1">
+                          <span className="font-medium">{uengageStatusMap[uengageStatus]?.label || order.uengage.statusCode}:</span> {order.uengage.message}
+                        </p>
                       </div>
                     </div>
                   )}
 
                   {/* Order Items */}
-                  <div className="px-4 sm:px-6 py-5 space-y-4">
+                  <div className="px-4 sm:px-6 py-4 space-y-3">
                     {order.orderItems.map((item, index) => (
                       <div
                         key={`${item.product}-${index}`}
-                        className="flex items-center gap-4 pb-4 border-b border-border last:border-0 last:pb-0"
+                        className="flex items-center gap-3 pb-3 border-b border-border last:border-0 last:pb-0"
                       >
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                           <img
                             src={item.image || '/images/placeholder.png'}
                             alt={item.name}
@@ -387,18 +399,18 @@ const Orders = () => {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-foreground mb-1 line-clamp-2">
+                          <h3 className="font-semibold text-sm text-foreground mb-0.5 line-clamp-2">
                             {item.name}
                           </h3>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>Quantity: {item.qty}</span>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <span>Qty: {item.qty}</span>
                             <span>•</span>
                             <span>₹{item.price} each</span>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className="font-bold text-lg text-foreground">
-                            ₹{item.price * item.qty}
+                          <p className="font-bold text-base text-foreground">
+                            ₹{(item.price * item.qty).toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -407,29 +419,29 @@ const Orders = () => {
 
                   {/* Delivery Address Section */}
                   {order.shippingAddress && (
-                    <div className="px-4 sm:px-6 py-4 bg-muted/20 border-t border-border">
-                      <div className="flex items-start gap-3">
-                        <MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="px-4 sm:px-6 py-3 bg-muted/20 border-t border-border">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="text-xs font-medium text-muted-foreground mb-1">
+                          <p className="text-xs font-medium text-muted-foreground mb-0.5">
                             Delivery Address
                           </p>
-                          <p className="text-sm text-foreground font-medium">
+                          <p className="text-sm text-foreground font-medium line-clamp-1">
                             {order.shippingAddress.fullName}
                           </p>
-                          <p className="text-sm text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                             {order.shippingAddress.address}, {order.shippingAddress.city}, {order.shippingAddress.postalCode}
                           </p>
-                          <div className="flex flex-wrap gap-3 mt-2">
+                          <div className="flex flex-wrap gap-2 mt-1.5">
                             {order.shippingAddress.phone && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Phone className="h-3.5 w-3.5" />
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Phone className="h-3 w-3" />
                                 <span>{order.shippingAddress.phone}</span>
                               </div>
                             )}
-                            {order.distance && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <MapPin className="h-3.5 w-3.5" />
+                            {order.distance && (order.shippingAddress.latitude && order.shippingAddress.longitude) && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <MapPin className="h-3 w-3" />
                                 <span>{order.distance} km away</span>
                               </div>
                             )}
@@ -441,23 +453,23 @@ const Orders = () => {
 
                   {/* Rider Details - Show when tracking data available */}
                   {tracking && (
-                    <div className="px-4 sm:px-6 py-4 bg-green-50 border-t border-green-200">
-                      <div className="flex items-start gap-3">
-                        <Truck className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="px-4 sm:px-6 py-3 bg-green-50 border-t border-green-200">
+                      <div className="flex items-start gap-2">
+                        <Truck className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-green-900 mb-2">
+                          <p className="text-xs font-semibold text-green-900 mb-1">
                             Delivery Partner: {tracking.partner_name}
                           </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
                             {tracking.rider_name && (
-                              <div className="flex items-center gap-2 text-green-800">
+                              <div className="flex items-center gap-1.5 text-green-800">
                                 <span className="font-medium">Rider:</span>
                                 <span>{tracking.rider_name}</span>
                               </div>
                             )}
                             {tracking.rider_contact && (
-                              <div className="flex items-center gap-2 text-green-800">
-                                <Phone className="h-4 w-4" />
+                              <div className="flex items-center gap-1.5 text-green-800">
+                                <Phone className="h-3 w-3" />
                                 <span>{tracking.rider_contact}</span>
                               </div>
                             )}
@@ -467,9 +479,9 @@ const Orders = () => {
                               href={tracking.tracking_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 mt-3 text-sm text-green-700 hover:text-green-800 font-medium"
+                              className="inline-flex items-center gap-1.5 mt-2 text-xs text-green-700 hover:text-green-800 font-medium"
                             >
-                              <Navigation className="h-4 w-4" />
+                              <Navigation className="h-3.5 w-3.5" />
                               Track on Map
                               <ArrowRight className="h-3 w-3" />
                             </a>
@@ -481,18 +493,18 @@ const Orders = () => {
 
                   {/* Cancellation Reason */}
                   {order.cancelReason && (
-                    <div className="px-4 sm:px-6 py-4 bg-red-50 border-t border-red-200">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div className="px-4 sm:px-6 py-3 bg-red-50 border-t border-red-200">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-red-900 mb-1">
+                          <p className="text-xs font-semibold text-red-900 mb-0.5">
                             Order Cancelled
                           </p>
-                          <p className="text-sm text-red-700">
+                          <p className="text-xs text-red-700 line-clamp-2">
                             {order.cancelReason}
                           </p>
                           {order.cancelledAt && (
-                            <p className="text-xs text-red-600 mt-1">
+                            <p className="text-[10px] text-red-600 mt-1">
                               Cancelled on {new Date(order.cancelledAt).toLocaleString()}
                             </p>
                           )}
@@ -502,17 +514,17 @@ const Orders = () => {
                   )}
 
                   {/* Footer Section */}
-                  <div className="px-4 sm:px-6 py-4 bg-muted/30 border-t border-border">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="px-4 sm:px-6 py-3 bg-muted/30 border-t border-border">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       {/* Order Summary & ETA */}
                       <div className="w-full sm:w-auto">
                         {/* Price Breakdown */}
-                        <div className="space-y-1 mb-3">
-                          <div className="flex justify-between text-sm">
+                        <div className="space-y-1 mb-2">
+                          <div className="flex justify-between text-xs">
                             <span className="text-muted-foreground">Subtotal</span>
                             <span className="font-medium">₹{order.orderItems.reduce((total, item) => total + (item.price * item.qty), 0).toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-xs">
                             <span className="text-muted-foreground">
                               Delivery {order.distance ? `(${order.distance} km)` : ''}
                             </span>
@@ -525,44 +537,44 @@ const Orders = () => {
                             </span>
                           </div>
                           {order.taxPrice > 0 && (
-                            <div className="flex justify-between text-sm">
+                            <div className="flex justify-between text-xs">
                               <span className="text-muted-foreground">Tax</span>
                               <span className="font-medium">₹{order.taxPrice.toFixed(2)}</span>
                             </div>
                           )}
                           <div className="flex justify-between pt-1 border-t border-border">
-                            <span className="font-semibold">Total</span>
-                            <span className="font-display text-lg sm:text-xl font-bold text-primary">₹{order.totalPrice.toFixed(2)}</span>
+                            <span className="font-semibold text-sm">Total</span>
+                            <span className="font-display text-base sm:text-lg font-bold text-primary">₹{order.totalPrice.toFixed(2)}</span>
                           </div>
                         </div>
 
                         {order.eta && !order.isDelivered && order.status !== 'cancelled' && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
                             ETA: {new Date(order.eta).toLocaleString()}
                           </p>
                         )}
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                      <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
                         {/* Track Order Button */}
                         {canTrackOrder(order) && (
                           <Button
                             variant="outline"
-                            size="default"
+                            size="sm"
                             onClick={() => trackOrder(order._id)}
                             disabled={isTracking.has(order._id)}
-                            className="flex-1 sm:flex-initial"
+                            className="flex-1 sm:flex-initial text-xs h-8"
                           >
                             {isTracking.has(order._id) ? (
                               <>
-                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                                 Tracking...
                               </>
                             ) : (
                               <>
-                                <Navigation className="h-4 w-4 mr-2" />
+                                <Navigation className="h-3.5 w-3.5 mr-1.5" />
                                 Track Order
                               </>
                             )}
@@ -574,83 +586,83 @@ const Orders = () => {
                           <DialogTrigger asChild>
                             <Button
                               variant="outline"
-                              size="default"
+                              size="sm"
                               onClick={() => setTrackingDialog(order)}
-                              className="flex-1 sm:flex-initial"
+                              className="flex-1 sm:flex-initial text-xs h-8"
                             >
-                              <Eye className="h-4 w-4 mr-2" />
+                              <Eye className="h-3.5 w-3.5 mr-1.5" />
                               Details
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Order Details</DialogTitle>
-                              <DialogDescription>
-                                Order #{order._id.slice(-8).toUpperCase()}
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              {/* Status Timeline */}
-                              <div className="bg-muted/50 rounded-lg p-4">
-                                <h4 className="font-semibold mb-3">Order Status</h4>
-                                <div className="space-y-3">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-medium">Order Placed</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {new Date(order.createdAt).toLocaleString()}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  {order.isPaid && (
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle className="text-lg">Order Details</DialogTitle>
+                                <DialogDescription className="text-xs">
+                                  Order #{order._id.slice(-8).toUpperCase()}
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-3 py-2">
+                                {/* Status Timeline */}
+                                <div className="bg-muted/50 rounded-lg p-3">
+                                  <h4 className="font-semibold text-sm mb-2">Order Status</h4>
+                                  <div className="space-y-2">
+                                    <div className="flex items-start gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                                       </div>
                                       <div>
-                                        <p className="text-sm font-medium">Payment Confirmed</p>
+                                        <p className="text-sm font-medium">Order Placed</p>
                                         <p className="text-xs text-muted-foreground">
-                                          {order.paidAt ? new Date(order.paidAt).toLocaleString() : 'Paid'}
+                                          {new Date(order.createdAt).toLocaleString()}
                                         </p>
                                       </div>
                                     </div>
-                                  )}
-                                  {order.isDelivered && (
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                    {order.isPaid && (
+                                      <div className="flex items-start gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                                        </div>
+                                        <div>
+                                          <p className="text-sm font-medium">Payment Confirmed</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {order.paidAt ? new Date(order.paidAt).toLocaleString() : 'Paid'}
+                                          </p>
+                                        </div>
                                       </div>
-                                      <div>
-                                        <p className="text-sm font-medium">Delivered</p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {order.deliveredAt ? new Date(order.deliveredAt).toLocaleString() : 'Delivered'}
-                                        </p>
+                                    )}
+                                    {order.isDelivered && (
+                                      <div className="flex items-start gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                                        </div>
+                                        <div>
+                                          <p className="text-sm font-medium">Delivered</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {order.deliveredAt ? new Date(order.deliveredAt).toLocaleString() : 'Delivered'}
+                                          </p>
+                                        </div>
                                       </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* U-Engage Info */}
-                              {order.uengage?.taskId && (
-                                <div className="bg-blue-50 rounded-lg p-4">
-                                  <h4 className="font-semibold mb-2 text-blue-900">Delivery Tracking</h4>
-                                  <div className="space-y-1 text-sm">
-                                    <p className="text-blue-800">
-                                      <span className="font-medium">Task ID:</span> {order.uengage.taskId}
-                                    </p>
-                                    {order.uengage.statusCode && (
-                                      <p className="text-blue-800">
-                                        <span className="font-medium">Status:</span> {uengageStatusMap[order.uengage.statusCode]?.label || order.uengage.statusCode}
-                                      </p>
                                     )}
                                   </div>
                                 </div>
-                              )}
-                            </div>
+
+                                {/* U-Engage Info */}
+                                {order.uengage?.taskId && (
+                                  <div className="bg-blue-50 rounded-lg p-3">
+                                    <h4 className="font-semibold mb-1.5 text-sm text-blue-900">Delivery Tracking</h4>
+                                    <div className="space-y-1 text-xs">
+                                      <p className="text-blue-800">
+                                        <span className="font-medium">Task ID:</span> {order.uengage.taskId}
+                                      </p>
+                                      {order.uengage.statusCode && (
+                                        <p className="text-blue-800">
+                                          <span className="font-medium">Status:</span> {uengageStatusMap[order.uengage.statusCode]?.label || order.uengage.statusCode}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                           </DialogContent>
                         </Dialog>
 
@@ -660,11 +672,11 @@ const Orders = () => {
                             <DialogTrigger asChild>
                               <Button
                                 variant="destructive"
-                                size="default"
-                                className="flex-1 sm:flex-initial"
+                                size="sm"
+                                className="flex-1 sm:flex-initial text-xs h-8"
                                 onClick={() => setSelectedOrder(order)}
                               >
-                                <XCircle className="h-4 w-4 mr-2" />
+                                <XCircle className="h-3.5 w-3.5 mr-1.5" />
                                 Cancel Order
                               </Button>
                             </DialogTrigger>
