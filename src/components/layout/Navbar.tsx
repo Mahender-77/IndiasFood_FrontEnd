@@ -58,9 +58,10 @@ export function Navbar() {
     { href: '/gi-tag-products', label: 'GI Tag Products' },
     { href: '/new-arrivals', label: 'New Arrivals' },
     // { href: '/orders', label: 'Orders' },
-    { href: '/about', label: 'About Us' },
+   
     { href: '/gifting', label: 'Gifting' },
     { href: '/bulk-orders', label: 'Bulk Orders' },
+    { href: '/about', label: 'About Us' },
     { href: '/help', label: 'Help' },
   ];
 
