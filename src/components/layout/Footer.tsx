@@ -1,8 +1,42 @@
+import { Facebook, Instagram, Mail, MapPin, Phone, Twitter } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { MapPin, Phone, Mail, Instagram, Facebook, Twitter } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
+import api from '@/lib/api'; // Assuming you have an axios instance configured here
+
+interface Category {
+  _id: string;
+  name: string;
+}
+
+const quickLinks = [
+  { label: 'About Us', href: '/about' },
+  { label: 'Products', href: '/products' },
+  { label: 'Contact', href: '/help' },
+  { label: 'FAQ', href: '/help' },
+  { label: 'Gifting', href: '/gifting' },
+  { label: 'Bulk Orders', href: '/bulk-orders' },
+  { label: 'Become Delivery Partner', href: '/delivery/register' },
+]
 
 export function Footer() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/products/categories');
+        setCategories(response.data);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   return (
     <footer className="bg-background/95 text-primary">
       <div className="container-custom section-padding px-4 sm:px-6 lg:px-8">
@@ -33,13 +67,13 @@ export function Footer() {
           <div>
             <h3 className="font-display text-base sm:text-lg font-semibold mb-3 sm:mb-4">Quick Links</h3>
             <ul className="space-y-2 sm:space-y-3">
-              {['About Us', 'Products', 'Contact', 'FAQ', 'Become Delivery Partner'].map((item) => (
-                <li key={item}>
+              {quickLinks.map((item) => (
+                <li key={item.label}>
                   <Link
-                    to={item === 'Become Delivery Partner' ? '/delivery/register' : `/${item.toLowerCase().replace(' ', '-')}`}
+                    to={item.href}
                     className="text-muted-foreground hover:text-primary text-xs sm:text-sm transition-colors"
                   >
-                    {item}
+                    {item.label}
                   </Link>
                 </li>
               ))}
@@ -50,16 +84,21 @@ export function Footer() {
           <div>
             <h3 className="font-display text-base sm:text-lg font-semibold mb-3 sm:mb-4">Categories</h3>
             <ul className="space-y-2 sm:space-y-3">
-              {['Sweets', 'Dry Sweets', 'Ladoo', 'Halwa', 'Gift Boxes'].map((item) => (
-                <li key={item}>
-                  <Link
-                    to="/products"
-                    className="text-muted-foreground hover:text-primary text-xs sm:text-sm transition-colors"
-                  >
-                    {item}
-                  </Link>
-                </li>
-              ))}
+              {loadingCategories ? (
+                // You can add a skeleton loader here if desired
+                <li><span className="text-muted-foreground text-xs sm:text-sm">Loading categories...</span></li>
+              ) : (
+                categories.map((category) => (
+                  <li key={category._id}>
+                    <Link
+                      to={`/products?category=${category.name}`}
+                      className="text-muted-foreground hover:text-primary text-xs sm:text-sm transition-colors"
+                    >
+                      {category.name}
+                    </Link>
+                  </li>
+                ))
+              )}
             </ul>
           </div>
 

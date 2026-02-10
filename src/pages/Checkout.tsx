@@ -38,7 +38,7 @@ interface SavedAddress {
   country: string;
   latitude: number;
   longitude: number;
-  locationName?: string;
+  locationName: string;
   isDefault?: boolean;
 }
 
@@ -58,12 +58,6 @@ const Checkout = () => {
 
   const [serviceabilityResult, setServiceabilityResult] = useState<any>(null);
   const [isServiceAvailable, setIsServiceAvailable] = useState<boolean>(false);
-
-  /* ---------------- U-ENGAGE DELIVERY PRICES ---------------- */
-
-  const deliveryPrice = serviceabilityResult?.payouts?.price ?? 0;
-  const deliveryTax = serviceabilityResult?.payouts?.tax ?? 0;
-  const deliveryTotal = serviceabilityResult?.payouts?.total ?? 0;
 
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'Online' | ''>('');
@@ -96,7 +90,34 @@ const Checkout = () => {
     address.latitude !== null &&
     address.longitude !== null &&
     address.addressLine1?.trim() !== '' &&
-    address.city?.trim() !== '';
+    address.city?.trim() !== '' &&
+    address.locationName?.trim() !== '';
+
+  /* ---------------- FREE DELIVERY CALCULATION ---------------- */
+
+  // 🔥 NEW: Calculate if order qualifies for free delivery
+  const qualifiesForFreeDelivery = 
+    deliveryMode === 'delivery' && 
+    cartTotal >= deliverySettings.freeDeliveryThreshold && 
+    deliverySettings.freeDeliveryThreshold > 0;
+
+  // 🔥 NEW: Get actual delivery charges (0 if free delivery applies)
+  const actualDeliveryPrice = qualifiesForFreeDelivery 
+    ? 0 
+    : (serviceabilityResult?.payouts?.price ?? 0);
+  
+  const actualDeliveryTax = qualifiesForFreeDelivery 
+    ? 0 
+    : (serviceabilityResult?.payouts?.tax ?? 0);
+  
+  const actualDeliveryTotal = qualifiesForFreeDelivery 
+    ? 0 
+    : (serviceabilityResult?.payouts?.total ?? 0);
+
+  // Original delivery charges from U-engage (for display purposes)
+  const originalDeliveryPrice = serviceabilityResult?.payouts?.price ?? 0;
+  const originalDeliveryTax = serviceabilityResult?.payouts?.tax ?? 0;
+  const originalDeliveryTotal = serviceabilityResult?.payouts?.total ?? 0;
 
   /* ---------------- API HELPERS ---------------- */
 
@@ -115,15 +136,9 @@ const Checkout = () => {
       const res = await api.get('/user/addresses');
       setSavedAddresses(res.data.addresses || []);
       
-      // ✅ IMPROVED: Always show address selection view if addresses exist
       if (res.data.addresses && res.data.addresses.length > 0) {
         setShowAddressForm(false);
-        setIsAddressSaved(false); // Don't auto-select, let user choose
-        // Optionally pre-select default address
-        // const defaultAddress = res.data.addresses.find((addr: SavedAddress) => addr.isDefault);
-        // if (defaultAddress) {
-        //   handleSelectSavedAddress(defaultAddress);
-        // }
+        setIsAddressSaved(false);
       } else {
         setShowAddressForm(true);
         setIsAddressSaved(false);
@@ -151,7 +166,6 @@ const Checkout = () => {
     const addressParts = addressText.split(',').map(part => part.trim());
     let fullAddressLine1 = '';
 
-    // Include parts until the city or postal code is encountered
     for (const part of addressParts) {
       if (part === city || part === postalCode) {
         break;
@@ -163,7 +177,7 @@ const Checkout = () => {
     }
 
     if (!fullAddressLine1) {
-      fullAddressLine1 = addressText; // Fallback to full text if parsing fails
+      fullAddressLine1 = addressText;
     }
 
     console.log('Map selected:', { lat, lng, addressText, city, postalCode });
@@ -174,7 +188,6 @@ const Checkout = () => {
       longitude: lng,
       city: city || prev.city || 'Bangalore',
       postalCode: postalCode || prev.postalCode || '',
-      locationName: addressText,
       addressLine1: fullAddressLine1
     }));
 
@@ -187,12 +200,11 @@ const Checkout = () => {
   const handleSelectSavedAddress = async (savedAddr: SavedAddress) => {
     setSelectedSavedAddressId(savedAddr._id || null);
     
-    // ✅ FIXED: Ensure all fields have default values
     setAddress({
       fullName: savedAddr.fullName || '',
       phone: savedAddr.phone || '',
       addressLine1: savedAddr.addressLine1 || '',
-      addressLine2: savedAddr.addressLine2 || '', // ← Default to empty string
+      addressLine2: savedAddr.addressLine2 || '',
       city: savedAddr.city || '',
       postalCode: savedAddr.postalCode || '',
       country: savedAddr.country || 'India',
@@ -201,7 +213,6 @@ const Checkout = () => {
       locationName: savedAddr.locationName || ''
     });
 
-    // Check serviceability for saved address
     try {
       setIsSavingAddress(true);
       const serviceability = await checkServiceability(
@@ -237,11 +248,8 @@ const Checkout = () => {
   const handleDeleteAddress = async (addressId: string) => {
     try {
       await api.delete(`/user/addresses/${addressId}`);
-      
-      // Refresh addresses
       await fetchSavedAddresses();
       
-      // Reset if deleted address was selected
       if (selectedSavedAddressId === addressId) {
         handleEditAddress();
       }
@@ -262,7 +270,6 @@ const Checkout = () => {
   /* ---------------- SAVE ADDRESS ---------------- */
 
   const checkServiceability = async (userLat: number, userLng: number) => {
-    
     if (!storeLocations.length) {
       console.error('No store locations available');
       return;
@@ -277,9 +284,6 @@ const Checkout = () => {
         longitude: userLng
       }
     });
-
-    console.log("front end ", response);
-  
     return response.data;
   };
 
@@ -296,7 +300,6 @@ const Checkout = () => {
     try {
       setIsSavingAddress(true);
   
-      // First, save the address to the database
       const saveAddressRes = await api.post('/user/addresses', {
         fullName: address.fullName,
         phone: address.phone,
@@ -312,11 +315,9 @@ const Checkout = () => {
 
       const newAddress = saveAddressRes.data.address;
 
-      // Update saved addresses state and select the new address
       setSavedAddresses(prev => [...prev, newAddress]);
       setSelectedSavedAddressId(newAddress._id);
       
-      // Then, check serviceability for the newly saved address
       const serviceability = await checkServiceability(
         newAddress.latitude,
         newAddress.longitude
@@ -329,7 +330,7 @@ const Checkout = () => {
   
       setIsServiceAvailable(available);
       setIsAddressSaved(true);
-      setShowAddressForm(false); // Hide the form after saving and checking serviceability
+      setShowAddressForm(false);
   
       toast({
         title: 'Address saved',
@@ -386,9 +387,10 @@ const Checkout = () => {
       return;
     }
   
-    const deliveryPrice = deliveryMode === 'delivery' ? (serviceabilityResult?.payouts?.price ?? 0) : 0;
-    const deliveryTax = deliveryMode === 'delivery' ? (serviceabilityResult?.payouts?.tax ?? 0) : 0;
-    const deliveryTotal = deliveryMode === 'delivery' ? (serviceabilityResult?.payouts?.total ?? 0) : 0;
+    // 🔥 UPDATED: Use actual delivery charges (0 if free delivery applies)
+    const deliveryPrice = deliveryMode === 'delivery' ? actualDeliveryPrice : 0;
+    const deliveryTax = deliveryMode === 'delivery' ? actualDeliveryTax : 0;
+    const deliveryTotal = deliveryMode === 'delivery' ? actualDeliveryTotal : 0;
 
     const shippingAddress = deliveryMode === 'delivery' ? {
       fullName: address.fullName,
@@ -514,13 +516,24 @@ const Checkout = () => {
                 })}
               </div>
 
-              {/* DELIVERY INFO - Mobile (Compact) */}
+              {/* 🔥 UPDATED: DELIVERY INFO - Mobile (Compact) */}
               {deliveryMode === 'delivery' && serviceabilityResult && isServiceAvailable && (
                 <div className="border-t border-orange-200 pt-1.5 space-y-1 text-[10px] mb-1.5">
-                  <div className="flex justify-between">
-                    <span className="text-gray-700">Delivery</span>
-                    <span className="font-medium">₹{deliveryTotal.toFixed(2)}</span>
-                  </div>
+                  {qualifiesForFreeDelivery ? (
+                    <div className="bg-green-50 border border-green-200 rounded p-1.5 mb-1">
+                      <p className="text-green-700 font-semibold text-[10px]">
+                        🎉 FREE Delivery Applied!
+                      </p>
+                      <p className="text-green-600 text-[9px]">
+                        Orders above ₹{deliverySettings.freeDeliveryThreshold}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">Delivery</span>
+                      <span className="font-medium">₹{actualDeliveryTotal.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -535,7 +548,7 @@ const Checkout = () => {
                   <div className="flex justify-between text-xs font-bold">
                     <span>Total</span>
                     <span className="text-orange-600">
-                      ₹{(cartTotal + deliveryTotal).toFixed(2)}
+                      ₹{(cartTotal + actualDeliveryTotal).toFixed(2)}
                     </span>
                   </div>
                 )}
@@ -598,7 +611,7 @@ const Checkout = () => {
           <div className="lg:hidden space-y-3 mb-20">
             {deliveryMode === 'delivery' && (
               <>
-                {/* ✅ IMPROVED: Show all saved addresses if they exist and no address is selected */}
+                {/* Show all saved addresses if they exist and no address is selected */}
                 {!isAddressSaved && savedAddresses.length > 0 && !showAddressForm && (
                   <div className="bg-white p-3 rounded-lg shadow-sm">
                     <div className="flex items-center justify-between mb-3">
@@ -626,7 +639,7 @@ const Checkout = () => {
                               <MapPin className="h-3 w-3 text-blue-600" />
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium text-xs text-gray-900">{addr.fullName}</p>
+                              <p className="font-medium text-xs text-gray-900">{addr.locationName}</p>
                               <p className="text-[10px] text-gray-600 mt-0.5">
                                 {addr.addressLine1}
                                 {addr.addressLine2 && `, ${addr.addressLine2}`}
@@ -747,6 +760,17 @@ const Checkout = () => {
                         </div>
                       </div>
 
+                      {/* ADDRESS NAME */}
+                      <div>
+                        <Label className="text-xs font-medium">Address Name *</Label>
+                        <Input
+                          placeholder="e.g., Home, Work, Office"
+                          value={address.locationName}
+                          onChange={e => setAddress({ ...address, locationName: e.target.value })}
+                          className="mt-1 h-8 text-xs"
+                        />
+                      </div>
+
                       {/* SAVE BUTTON */}
                       <Button
                         onClick={handleSaveAddress}
@@ -813,9 +837,54 @@ const Checkout = () => {
                           {isServiceAvailable ? '✅ Delivery Available' : '❌ Not Available'}
                         </div>
                       )}
+
+                      {/* 🔥 NEW: Free Delivery Badge - Mobile */}
+                      {qualifiesForFreeDelivery && isServiceAvailable && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+                          <p className="text-green-700 font-semibold text-[10px]">
+                            🎉 FREE Delivery Applied!
+                          </p>
+                          <p className="text-green-600 text-[9px] mt-0.5">
+                            You saved ₹{originalDeliveryTotal.toFixed(2)}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
-                    {/* PAYMENT METHOD - Mobile - ✅ FIXED */}
+                    {/* CHECK SERVICEABILITY BUTTON - Mobile */}
+                    {isAddressSaved && (!serviceabilityResult || !isServiceAvailable) && address.latitude && address.longitude && (
+                      <Button
+                        onClick={async () => {
+                          setIsSavingAddress(true);
+                          try {
+                            const serviceability = await checkServiceability(address.latitude!, address.longitude!);
+                            setServiceabilityResult(serviceability);
+                            setIsServiceAvailable(serviceability?.serviceability?.locationServiceAble === true);
+                            toast({
+                              title: 'Serviceability check complete',
+                              description: serviceability?.serviceability?.locationServiceAble === true
+                                ? 'Delivery available for this location'
+                                : 'Delivery not available for this location',
+                              variant: serviceability?.serviceability?.locationServiceAble === true ? 'default' : 'destructive'
+                            });
+                          } catch (error) {
+                            toast({
+                              title: 'Service check failed',
+                              description: 'Unable to check delivery availability',
+                              variant: 'destructive'
+                            });
+                          } finally {
+                            setIsSavingAddress(false);
+                          }
+                        }}
+                        disabled={isSavingAddress}
+                        className="w-full h-8 text-xs mt-3"
+                      >
+                        {isSavingAddress ? 'Checking...' : 'Check Serviceability'}
+                      </Button>
+                    )}
+
+                    {/* PAYMENT METHOD - Mobile */}
                     {isAddressSaved && isServiceAvailable && (
                       <div className="mt-3 pt-3 border-t">
                         <h3 className="font-semibold text-xs mb-2">Payment Method</h3>
@@ -867,7 +936,7 @@ const Checkout = () => {
               <div className="space-y-3">
                 {/* SELECT CITY - Mobile */}
                 <div className="bg-white p-3 rounded-lg shadow-sm">
-                  <h2 className="font-semibold text-sm mb-2">Select City</h2>
+                  <h2 className="font-semibold text-sm mb-2">Select Store</h2>
                   <Select onValueChange={(value) => {
                     const selected = storeLocations.find(store => store.name === value);
                     setSelectedPickupStore(selected || null);
@@ -885,7 +954,7 @@ const Checkout = () => {
                   </Select>
                 </div>
 
-                {/* PAYMENT METHOD - Pickup Mobile - ✅ FIXED */}
+                {/* PAYMENT METHOD - Pickup Mobile */}
                 <div className="bg-white p-3 rounded-lg shadow-sm">
                   <h3 className="font-semibold text-xs mb-2">Payment Method</h3>
                   <div className="space-y-1.5">
@@ -978,7 +1047,7 @@ const Checkout = () => {
 
               {deliveryMode === 'delivery' && (
                 <>
-                  {/* ✅ IMPROVED: Show all saved addresses if they exist and no address is selected */}
+                  {/* Show all saved addresses if they exist and no address is selected */}
                   {!isAddressSaved && savedAddresses.length > 0 && !showAddressForm && (
                     <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
                       <div className="flex items-center justify-between mb-4">
@@ -1006,7 +1075,7 @@ const Checkout = () => {
                                 <MapPin className="h-4 w-4 text-blue-600" />
                               </div>
                               <div className="flex-1">
-                                <p className="font-medium text-gray-900">{addr.fullName}</p>
+                                <p className="font-medium text-gray-900">{addr.locationName}</p>
                                 <p className="text-sm text-gray-600 mt-1">
                                   {addr.addressLine1}
                                   {addr.addressLine2 && `, ${addr.addressLine2}`}
@@ -1198,6 +1267,17 @@ const Checkout = () => {
 
                         </div>
 
+                        {/* ADDRESS NAME */}
+                        <div>
+                          <Label className="text-sm font-medium">Address Name *</Label>
+                          <Input
+                            placeholder="e.g., Home, Work, Office"
+                            value={address.locationName}
+                            onChange={e => setAddress({ ...address, locationName: e.target.value })}
+                            className="mt-1.5"
+                          />
+                        </div>
+
                         {/* SAVE BUTTON */}
                         <Button
                           onClick={handleSaveAddress}
@@ -1306,9 +1386,57 @@ const Checkout = () => {
                             )}
                           </div>
                         )}
+
+                        {/* 🔥 NEW: Free Delivery Badge - Desktop */}
+                        {qualifiesForFreeDelivery && isServiceAvailable && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <p className="text-green-700 font-semibold text-sm flex items-center gap-2">
+                              🎉 FREE Delivery Applied!
+                            </p>
+                            <p className="text-green-600 text-xs mt-1">
+                              You saved ₹{originalDeliveryTotal.toFixed(2)} on delivery charges
+                            </p>
+                            <p className="text-green-600 text-xs">
+                              Orders above ₹{deliverySettings.freeDeliveryThreshold} qualify for free delivery
+                            </p>
+                          </div>
+                        )}
                       </div>
 
-                      {/* PAYMENT METHOD SELECTION - Desktop - ✅ FIXED */}
+                      {/* CHECK SERVICEABILITY BUTTON - Desktop */}
+                      {isAddressSaved && (!serviceabilityResult || !isServiceAvailable) && address.latitude && address.longitude && (
+                        <Button
+                          onClick={async () => {
+                            setIsSavingAddress(true);
+                            try {
+                              const serviceability = await checkServiceability(address.latitude!, address.longitude!);
+                              setServiceabilityResult(serviceability);
+                              setIsServiceAvailable(serviceability?.serviceability?.locationServiceAble === true);
+                              toast({
+                                title: 'Serviceability check complete',
+                                description: serviceability?.serviceability?.locationServiceAble === true
+                                  ? 'Delivery available for this location'
+                                  : 'Delivery not available for this location',
+                                variant: serviceability?.serviceability?.locationServiceAble === true ? 'default' : 'destructive'
+                              });
+                            } catch (error) {
+                              toast({
+                                title: 'Service check failed',
+                                description: 'Unable to check delivery availability',
+                                variant: 'destructive'
+                              });
+                            } finally {
+                              setIsSavingAddress(false);
+                            }
+                          }}
+                          disabled={isSavingAddress}
+                          className="w-full mt-3"
+                        >
+                          {isSavingAddress ? 'Checking serviceability...' : 'Check Serviceability'}
+                        </Button>
+                      )}
+
+                      {/* PAYMENT METHOD SELECTION - Desktop */}
                       {isAddressSaved && isServiceAvailable && (
                         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm mt-4">
                           <h3 className="font-semibold text-base mb-3">
@@ -1365,7 +1493,7 @@ const Checkout = () => {
                 <div className="space-y-4">
                   {/* SELECT CITY */}
                   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-                    <h2 className="font-semibold text-base sm:text-lg mb-3">Select City</h2>
+                    <h2 className="font-semibold text-base sm:text-lg mb-3">Select Store</h2>
                     <Select onValueChange={(value) => {
                       const selected = storeLocations.find(store => store.name === value);
                       setSelectedPickupStore(selected || null);
@@ -1388,7 +1516,7 @@ const Checkout = () => {
                     <p className="text-sm font-medium">Please select store for pickup.</p>
                   </div>
 
-                  {/* PAYMENT METHOD SELECTION (for pickup) - Desktop - ✅ FIXED */}
+                  {/* PAYMENT METHOD SELECTION (for pickup) - Desktop */}
                   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm mt-4">
                     <h3 className="font-semibold text-base mb-3">
                       Select Payment Method
@@ -1475,23 +1603,39 @@ const Checkout = () => {
                     })}
                   </div>
 
-                  {/* DELIVERY INFO */}
+                  {/* 🔥 UPDATED: DELIVERY INFO */}
                   {deliveryMode === 'delivery' && serviceabilityResult && isServiceAvailable && (
                     <div className="border-t pt-3 space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-700">Delivery Charge</span>
-                        <span className="font-medium">₹{deliveryPrice.toFixed(2)}</span>
-                      </div>
+                      {qualifiesForFreeDelivery ? (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-2">
+                          <p className="text-green-700 font-semibold text-sm">
+                            🎉 FREE Delivery Applied!
+                          </p>
+                          <p className="text-green-600 text-xs mt-1">
+                            Orders above ₹{deliverySettings.freeDeliveryThreshold}
+                          </p>
+                          <p className="text-green-600 text-xs line-through">
+                            Original: ₹{originalDeliveryTotal.toFixed(2)}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-gray-700">Delivery Charge</span>
+                            <span className="font-medium">₹{actualDeliveryPrice.toFixed(2)}</span>
+                          </div>
 
-                      <div className="flex justify-between">
-                        <span className="text-gray-700">Delivery Tax</span>
-                        <span className="font-medium">₹{deliveryTax.toFixed(2)}</span>
-                      </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-700">Delivery Tax</span>
+                            <span className="font-medium">₹{actualDeliveryTax.toFixed(2)}</span>
+                          </div>
 
-                      <div className="flex justify-between font-semibold text-orange-700">
-                        <span>Total Delivery Fee</span>
-                        <span>₹{deliveryTotal.toFixed(2)}</span>
-                      </div>
+                          <div className="flex justify-between font-semibold text-orange-700">
+                            <span>Total Delivery Fee</span>
+                            <span>₹{actualDeliveryTotal.toFixed(2)}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -1506,7 +1650,7 @@ const Checkout = () => {
                       <div className="flex justify-between text-base sm:text-lg font-bold">
                         <span>Total Payable</span>
                         <span className="text-orange-600">
-                          ₹{(cartTotal + deliveryTotal).toFixed(2)}
+                          ₹{(cartTotal + actualDeliveryTotal).toFixed(2)}
                         </span>
                       </div>
                     )}
