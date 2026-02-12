@@ -10,38 +10,33 @@
  * - Real-time stock updates
  */
 
-import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { Card, CardContent } from '@/components/ui/card';
+import { SEO } from '@/components/seo/SEO';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Plus,
-  Edit,
-  MapPin,
-  Save,
-  X,
-  Warehouse,
-  Trash2,
-  Image as ImageIcon,
-  Search
-} from 'lucide-react';
 import api from '@/lib/api';
-import axios from 'axios';
-import { Product, ProductVariant, Category } from '@/types';
-import { SEO } from '@/components/seo/SEO';
+import { Category, Product, ProductVariant } from '@/types';
+import {
+  MapPin,
+  Plus,
+  Save,
+  Search,
+  Trash2,
+  X
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 // Import modular components
 import { InventoryTable } from '@/components/admin/inventory-table/InventoryTable';
-import { VariantBuilder } from '@/components/admin/inventory-table/VariantBuilder';
 import { LocationInventoryManager } from '@/components/admin/inventory-table/LocationInventoryManager';
+import { VariantBuilder } from '@/components/admin/inventory-table/VariantBuilder';
 
 
 interface Location {
@@ -154,41 +149,58 @@ const AdminInventory = () => {
   }, [locations]);
   
 
-  // Filtered Products
-  const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      // Search filter
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      if (!matchesSearch) return false;
+ // Filtered Products
+const filteredProducts = useMemo(() => {
+  return (products || []).filter((product) => {
+    if (!product) return false; // 🔥 protect against undefined items
 
-      // Location filter
-      if (selectedLocationFilter !== 'all') {
-        const hasLocation = product.inventory?.some(
-          inv =>
-            inv.location.toLowerCase() ===
-            selectedLocationFilter.toLowerCase()
-        );
-      
-        if (!hasLocation) return false;
-      }
-      
+    // 🔥 Safe name + description access
+    const name = product?.name?.toLowerCase() || "";
+    const description = product?.description?.toLowerCase() || "";
+    const search = searchTerm.toLowerCase();
 
-      // Category filter
-      if (selectedCategoryFilter !== 'all') {
-        const categoryId = (product.category as any)?._id || product.category;
-        if (categoryId !== selectedCategoryFilter) return false;
-      }
+    const matchesSearch =
+      name.includes(search) || description.includes(search);
 
-      // Status filter
-      if (selectedStatusFilter !== 'all') {
-        if (selectedStatusFilter === 'active' && !product.isActive) return false;
-        if (selectedStatusFilter === 'inactive' && product.isActive) return false;
-      }
+    if (!matchesSearch) return false;
 
-      return true;
-    });
-  }, [products, searchTerm, selectedLocationFilter, selectedCategoryFilter, selectedStatusFilter]);
+    // Location filter
+    if (selectedLocationFilter !== "all") {
+      const hasLocation = product.inventory?.some((inv) =>
+        inv?.location?.toLowerCase() ===
+        selectedLocationFilter.toLowerCase()
+      );
+
+      if (!hasLocation) return false;
+    }
+
+    // Category filter
+    if (selectedCategoryFilter !== "all") {
+      const categoryId =
+        (product.category as any)?._id || product.category;
+
+      if (categoryId !== selectedCategoryFilter) return false;
+    }
+
+    // Status filter
+    if (selectedStatusFilter !== "all") {
+      if (selectedStatusFilter === "active" && !product.isActive)
+        return false;
+
+      if (selectedStatusFilter === "inactive" && product.isActive)
+        return false;
+    }
+
+    return true;
+  });
+}, [
+  products,
+  searchTerm,
+  selectedLocationFilter,
+  selectedCategoryFilter,
+  selectedStatusFilter,
+]);
+
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -318,140 +330,235 @@ const AdminInventory = () => {
   // Product Creation
   const handleCreateProduct = async () => {
     if (creatingProduct) return;
-
-    // Validation
+  
+    // ---------------- VALIDATION ----------------
+  
     if (!newProduct.name?.trim()) {
       toast.error('Product name is required');
       return;
     }
-
+  
     if (!selectedCategory) {
       toast.error('Please select a category');
       return;
     }
-
-    // Fast validation
-    const hasVariants = newProduct.variants && newProduct.variants.length > 0;
-
+  
+    const hasVariants =
+      newProduct.variants && newProduct.variants.length > 0;
+  
     if (hasVariants) {
-      if (!newProduct.variantStocks?.length || !newProduct.variantStocks.some(vs => vs?.some(s => s.quantity > 0))) {
+      if (
+        !newProduct.variantStocks?.length ||
+        !newProduct.variantStocks.some(vs =>
+          vs?.some(s => s.quantity > 0)
+        )
+      ) {
         toast.error('Add stock for variants');
         return;
       }
-      const invalidVariants = newProduct.variants.filter(v => !v.value?.trim() || v.originalPrice <= 0);
+  
+      const invalidVariants = newProduct.variants.filter(
+        v => !v.value?.trim() || v.originalPrice <= 0
+      );
+  
       if (invalidVariants.length > 0) {
-        toast.error(`${invalidVariants.length} variant(s) incomplete`);
+        toast.error(
+          `${invalidVariants.length} variant(s) incomplete`
+        );
         return;
       }
     } else {
-      if (!newProduct.inventoryData?.length || !newProduct.inventoryData.some(inv => inv.stock.some(s => s.quantity > 0))) {
+      if (
+        !newProduct.inventoryData?.length ||
+        !newProduct.inventoryData.some(inv =>
+          inv.stock.some(s => s.quantity > 0)
+        )
+      ) {
         toast.error('Add at least one location with stock');
         return;
       }
-      if (newProduct.originalPrice === undefined || newProduct.originalPrice <= 0) {
+  
+      if (
+        newProduct.originalPrice === undefined ||
+        newProduct.originalPrice <= 0
+      ) {
         toast.error('Valid price required');
         return;
       }
-      if (newProduct.offerPrice !== undefined && (newProduct.offerPrice <= 0 || newProduct.offerPrice >= newProduct.originalPrice)) {
+  
+      if (
+        newProduct.offerPrice !== undefined &&
+        (newProduct.offerPrice <= 0 ||
+          newProduct.offerPrice >= newProduct.originalPrice)
+      ) {
         toast.error('Invalid offer price');
         return;
       }
     }
-
+  
     setCreatingProduct(true);
-
+  
     try {
-      // Parallel image upload for speed
-      const imageUrls = newProduct.imageFiles?.length
-        ? await uploadImagesOptimized(newProduct.imageFiles)
-        : [];
-
-      // Optimized inventory preparation
-      let inventory: Array<{
-        location: string;
-        stock: Array<{
-          variantIndex: number;
-          quantity: number;
-          lowStockThreshold: number;
-        }>;
-      }> = [];
-
+      // ---------------- PREPARE INVENTORY ----------------
+  
+      let inventory: any[] = [];
+  
       if (hasVariants) {
-        const locationMap = new Map<string, Array<{
-          variantIndex: number;
-          quantity: number;
-          lowStockThreshold: number;
-        }>>();
-
-        newProduct.variantStocks?.forEach((variantStock, variantIndex) => {
-          variantStock?.forEach(stock => {
-            const locationName = locations.find( loc => loc.storeId === stock.storeId)?.name;
-            if (locationName && stock.quantity > 0) {
-              if (!locationMap.has(locationName)) {
-                locationMap.set(locationName, []);
+        const locationMap = new Map();
+  
+        newProduct.variantStocks?.forEach(
+          (variantStock, variantIndex) => {
+            variantStock?.forEach(stock => {
+              const locationName = locations.find(
+                loc => loc.storeId === stock.storeId
+              )?.name;
+  
+              if (locationName && stock.quantity > 0) {
+                if (!locationMap.has(locationName)) {
+                  locationMap.set(locationName, []);
+                }
+  
+                locationMap.get(locationName).push({
+                  variantIndex,
+                  quantity: stock.quantity,
+                  lowStockThreshold: 5
+                });
               }
-              locationMap.get(locationName)!.push({
-                variantIndex,
-                quantity: stock.quantity,
-                lowStockThreshold: 5
-              });
-            }
-          });
-        });
-
-        inventory = Array.from(locationMap.entries()).map(([location, stock]) => ({
-          location,
-          stock
-        }));
+            });
+          }
+        );
+  
+        inventory = Array.from(locationMap.entries()).map(
+          ([location, stock]) => ({
+            location,
+            stock
+          })
+        );
       } else {
-        inventory = newProduct.inventoryData?.map(inventoryEntry => ({
-          location: inventoryEntry.locationName,
-          stock: inventoryEntry.stock.filter(s => s.quantity > 0).map(stockItem => ({
-            variantIndex: stockItem.variantIndex,
-            quantity: stockItem.quantity,
-            lowStockThreshold: 5
-          }))
-        })).filter(inv => inv.stock.length > 0) || [];
+        inventory =
+          newProduct.inventoryData
+            ?.map(inv => ({
+              location: inv.locationName,
+              stock: inv.stock
+                .filter(s => s.quantity > 0)
+                .map(s => ({
+                  variantIndex: s.variantIndex,
+                  quantity: s.quantity,
+                  lowStockThreshold: 5
+                }))
+            }))
+            .filter(inv => inv.stock.length > 0) || [];
       }
-
-      // Streamlined product data
+  
+      // ---------------- FIX STORE ID ----------------
+  
+      let finalStoreId = selectedStoreId;
+  
+      if (!finalStoreId) {
+        if (newProduct.variantStocks?.length) {
+          for (const variantStock of newProduct.variantStocks) {
+            if (variantStock?.length) {
+              finalStoreId = variantStock[0].storeId;
+              break;
+            }
+          }
+        }
+  
+        if (!finalStoreId && newProduct.inventoryData?.length) {
+          finalStoreId = newProduct.inventoryData[0].storeId;
+        }
+      }
+  
+      if (!finalStoreId) {
+        toast.error(
+          'Store is required. Please add at least one location.'
+        );
+        setCreatingProduct(false);
+        return;
+      }
+  
+      // ---------------- CREATE PRODUCT FIRST (FAST) ----------------
+  
       const productData = {
         name: newProduct.name.trim(),
         description: newProduct.description?.trim() || '',
-      
-        /** 🔥 THIS IS THE KEY LINE */
-        store: selectedStoreId,   // ← storeId from DeliverySettings
-      
+        store: finalStoreId,
         originalPrice: newProduct.originalPrice,
         offerPrice: newProduct.offerPrice,
         variants: hasVariants ? newProduct.variants : undefined,
         shelfLife: newProduct.shelfLife?.trim() || '',
         category: selectedCategory,
         subcategory:
-          selectedSubcategory && selectedSubcategory !== 'none'
+          selectedSubcategory &&
+          selectedSubcategory !== 'none'
             ? selectedSubcategory
             : undefined,
         videoUrl: newProduct.videoUrl?.trim() || '',
-        images: imageUrls,
+        images: [], // 🔥 create first without images
         inventory,
         isGITagged: newProduct.isGITagged || false,
         isNewArrival: newProduct.isNewArrival || false,
         isActive: true
       };
+  
+      const response = await api.post(
+        '/admin/inventory/create-product',
+        productData
+      );
+  
+      console.log("FULL RESPONSE:", response);
+      console.log("DATA:", response.data);
       
+      
+      const createdProduct = response.data;
 
-      await api.post('/admin/inventory/create-product', productData);
+      console.log("RESPONSE:", response.data);
+
+  
+      // 🔥 Instant UI update (NO refetch)
+      setProducts(prev => [createdProduct, ...(prev || [])]);
+
+  
+      // ---------------- UPLOAD IMAGES AFTER (BACKGROUND) ----------------
+  
+      if (newProduct.imageFiles?.length) {
+        const uploadedImages =
+          await uploadImagesOptimized(
+            newProduct.imageFiles
+          );
+          console.log("UPLOADED IMAGES:", uploadedImages);
+  
+        if (uploadedImages.length > 0) {
+          const updateRes = await api.put(
+            `/admin/inventory/products/${createdProduct._id}`,
+            { images: uploadedImages }
+          );
+          
+          const updatedProduct = updateRes.data;
+          
+          setProducts(prev =>
+            prev.map(p =>
+              p._id === updatedProduct._id
+                ? updatedProduct
+                : p
+            )
+          );
+        }
+      }
+  
       toast.success('Product created successfully');
-
-      // Fast UI update - don't await fetchProducts to keep UI responsive
+  
       setIsCreateDialogOpen(false);
       resetNewProductForm();
-      fetchProducts();
+  
     } catch (error: any) {
       console.error('Product creation failed:', error);
-
+  
       if (error.response?.status === 400) {
-        toast.error(error.response?.data?.message || 'Invalid product data');
+        toast.error(
+          error.response?.data?.message ||
+            'Invalid product data'
+        );
       } else if (error.response?.status === 403) {
         toast.error('Permission denied');
       } else {
@@ -461,6 +568,7 @@ const AdminInventory = () => {
       setCreatingProduct(false);
     }
   };
+  
 
   const resetNewProductForm = () => {
     setNewProduct({
