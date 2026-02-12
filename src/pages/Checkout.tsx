@@ -22,6 +22,7 @@ import LeafletMap from '@/components/maps/LeafletMap';
 
 interface StoreLocation {
   name: string;
+  contact_number: string;
   latitude: number;
   longitude: number;
   isActive: boolean;
@@ -403,7 +404,7 @@ const Checkout = () => {
       longitude: address.longitude
     } : {
       fullName: 'Pickup Customer',
-      phone: 'N/A',
+      phone: selectedPickupStore?.contact_number || 'N/A',
       address: selectedPickupStore?.name || 'Pickup Store',
       city: selectedPickupStore?.name || 'Pickup City',
       postalCode: 'N/A',
@@ -414,35 +415,25 @@ const Checkout = () => {
   
     try {
       await api.post('/user/checkout', {
-        orderItems: state.items.map(item => {
-          const product = item.product as Product;
-          const price =
-            product.offerPrice ??
-            product.originalPrice ??
-            0;
-  
-          return {
-            product: product._id,
-            name: product.name,
-            image: product.images?.[0],
-            qty: item.qty,
-            price
-          };
-        }),
-  
-        shippingAddress: shippingAddress,
-  
+        orderItems: state.items.map(item => ({
+          product: item.product._id,
+          qty: item.qty,
+          selectedVariantIndex: item.selectedVariantIndex ?? null
+        })),
+      
+        shippingAddress,
+      
         paymentMethod:
           paymentMethod === 'COD'
             ? 'Cash On Delivery'
             : 'Online Payment',
-  
+      
         shippingPrice: deliveryMode === 'delivery' ? deliveryTotal : 0,
-        deliveryPrice: deliveryMode === 'delivery' ? deliveryPrice : 0,
-        deliveryTax: deliveryMode === 'delivery' ? deliveryTax : 0,
-  
-        totalPrice: cartTotal + (deliveryMode === 'delivery' ? deliveryTotal : 0),
+        taxPrice: 0, // or actual tax if you want
+      
+        deliveryMode
       });
+      
   
       clearCart();
   

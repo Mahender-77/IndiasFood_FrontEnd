@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ArrowRight, Clock, CheckCircle2, Truck, XCircle, AlertCircle, MapPin, Phone, RefreshCw, Navigation, Eye } from 'lucide-react';
+import { Package, ArrowRight, Clock, CheckCircle2, Truck, XCircle, AlertCircle, MapPin, Phone, RefreshCw, Navigation, Eye, Store, ShoppingBag } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -103,7 +103,8 @@ const Orders = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [trackingData, setTrackingData] = useState<Record<string, TrackingData>>({});
   const [isTracking, setIsTracking] = useState<Set<string>>(new Set());
-  const [trackingDialog, setTrackingDialog] = useState<Order | null>(null);
+  const [trackingDialogId, setTrackingDialogId] = useState<string | null>(null);
+
 
   const fetchOrders = async () => {
     try {
@@ -129,13 +130,18 @@ const Orders = () => {
     fetchOrders();
   }, [token]);
 
-  // Polling for active orders
+  const trackingDialogOrder = orders.find(
+    (o) => o._id === trackingDialogId
+  );
+
+  // Polling for active delivery orders only
   useEffect(() => {
     const activeOrderIds = orders
       .filter(order =>
         (order.status === 'out_for_delivery' || order.status === 'confirmed') &&
         !order.isDelivered &&
-        order.uengage?.taskId
+        order.uengage?.taskId &&
+        order.deliveryMode === 'delivery' // Only poll delivery orders
       )
       .map(order => order._id);
 
@@ -148,7 +154,9 @@ const Orders = () => {
     }
   }, [orders]);
 
-  // Track order status
+  console.log("orders", orders);
+
+  // Track order status (only for delivery orders)
   const trackOrder = async (orderId: string) => {
     setIsTracking(prev => new Set(prev).add(orderId));
     
@@ -222,11 +230,27 @@ const Orders = () => {
   };
 
   const canCancelOrder = (order: Order) => {
-    return !order.isDelivered && order.status !== 'cancelled' && order.status !== 'out_for_delivery';
+    // Cannot cancel if already delivered or cancelled
+    if (order.isDelivered || order.status === 'cancelled') {
+      return false;
+    }
+    
+    // For DELIVERY orders: cannot cancel if out for delivery
+    if (order.deliveryMode === 'delivery' && order.status === 'out_for_delivery') {
+      return false;
+    }
+    
+    // For PICKUP orders: can cancel anytime before delivery/pickup
+    // For DELIVERY orders: can cancel if not yet out for delivery
+    return true;
   };
 
   const canTrackOrder = (order: Order) => {
-    return order.uengage?.taskId && !order.isDelivered && order.status !== 'cancelled';
+    return order.deliveryMode === 'delivery' && order.uengage?.taskId && !order.isDelivered && order.status !== 'cancelled';
+  };
+
+  const isPickupOrder = (order: Order) => {
+    return order.deliveryMode === 'pickup';
   };
 
   if (loading) {
@@ -257,7 +281,7 @@ const Orders = () => {
               </div>
               <h1 className="font-display text-2xl font-bold text-foreground mb-2">Error Loading Orders</h1>
               <p className="text-red-600 mb-6">{error}</p>
-              <Button onClick={() => window.location.reload()} variant="outline" size="lg">
+              <Button onClick={() => fetchOrders()} variant="outline" size="lg">
                 Try Again
               </Button>
             </div>
@@ -317,6 +341,7 @@ const Orders = () => {
               const StatusIcon = status.icon;
               const tracking = trackingData[order._id];
               const uengageStatus = order.uengage?.statusCode;
+              const isPickup = isPickupOrder(order);
 
               return (
                 <div
@@ -329,13 +354,26 @@ const Orders = () => {
                       {/* Order Info */}
                       <div className="flex items-center gap-2">
                         <div className="hidden sm:flex w-10 h-10 rounded-full bg-primary/10 items-center justify-center flex-shrink-0">
-                          <Package className="h-5 w-5 text-primary" />
+                          {isPickup ? (
+                            <ShoppingBag className="h-5 w-5 text-primary" />
+                          ) : (
+                            <Truck className="h-5 w-5 text-primary" />
+                          )}
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
                             <span className="font-semibold text-sm text-foreground">
                               Order #{order._id.slice(-8).toUpperCase()}
                             </span>
+                            <Badge 
+                              variant={isPickup ? "secondary" : "default"} 
+                              className={cn(
+                                "text-[10px] capitalize",
+                                isPickup ? "bg-purple-100 text-purple-700 border-purple-200" : "bg-blue-100 text-blue-700 border-blue-200"
+                              )}
+                            >
+                              {isPickup ? "🏪 Pickup" : "🚚 Delivery"}
+                            </Badge>
                           </div>
                           <p className="text-xs text-muted-foreground">
                             {new Date(order.createdAt).toLocaleDateString('en-IN', {
@@ -357,23 +395,23 @@ const Orders = () => {
                           status.borderColor
                         )}>
                           <StatusIcon className={cn('h-3.5 w-3.5', status.color)} />
-                            <span className={cn('text-xs font-semibold', status.color)}>
-                              {status.label === 'Order Placed' ? 'Placed' : status.label}
-                            </span>
-                          </div>
-                          
-                          {/* U-Engage Status Badge */}
-                          {order.paymentMethod !== 'Cash On Delivery' && order.shippingAddress && uengageStatus && uengageStatusMap[uengageStatus] && (
-                            <Badge variant="outline" className="text-[10px]">
-                              {uengageStatusMap[uengageStatus].label}
-                            </Badge>
-                          )}
+                          <span className={cn('text-xs font-semibold', status.color)}>
+                            {status.label === 'Order Placed' ? 'Placed' : status.label}
+                          </span>
+                        </div>
+                        
+                        {/* U-Engage Status Badge for Delivery Orders Only */}
+                        {!isPickup && order.uengage?.statusCode && uengageStatusMap[uengageStatus] && (
+                          <Badge variant="outline" className="text-[10px]">
+                            {uengageStatusMap[uengageStatus].label}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* U-Engage Status Info */}
-                  {order.uengage?.message && (
+                  {/* U-Engage Status Info - Only for Delivery */}
+                  {!isPickup && order.uengage?.message && (
                     <div className="px-4 sm:px-6 py-2 bg-blue-50 border-b border-blue-100">
                       <div className="flex items-center gap-2">
                         <AlertCircle className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
@@ -405,7 +443,7 @@ const Orders = () => {
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <span>Qty: {item.qty}</span>
                             <span>•</span>
-                            <span>₹{item.price} each</span>
+                            <span>₹{item.price.toFixed(2)} each</span>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
@@ -417,42 +455,68 @@ const Orders = () => {
                     ))}
                   </div>
 
-                  {/* Delivery Address Section */}
+                  {/* Store/Delivery Address Section */}
                   {order.shippingAddress && (
-                    <div className="px-4 sm:px-6 py-3 bg-muted/20 border-t border-border">
+                    <div className={cn(
+                      "px-4 sm:px-6 py-3 border-t border-border",
+                      isPickup ? "bg-purple-50/50" : "bg-muted/20"
+                    )}>
                       <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        {isPickup ? (
+                          <Store className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        )}
                         <div className="flex-1">
                           <p className="text-xs font-medium text-muted-foreground mb-0.5">
-                            Delivery Address
+                            {isPickup ? '🏪 Pickup From Store' : '📍 Delivery Address'}
                           </p>
-                          <p className="text-sm text-foreground font-medium line-clamp-1">
-                            {order.shippingAddress.fullName}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                            {order.shippingAddress.address}, {order.shippingAddress.city}, {order.shippingAddress.postalCode}
-                          </p>
-                          <div className="flex flex-wrap gap-2 mt-1.5">
-                            {order.shippingAddress.phone && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Phone className="h-3 w-3" />
-                                <span>{order.shippingAddress.phone}</span>
+                          {isPickup ? (
+                            <>
+                              <p className="text-sm text-foreground font-medium">
+                                {order.shippingAddress.city || 'Store Location'}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Please collect your order from the selected store
+                              </p>
+                              {order.shippingAddress.phone && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{order.shippingAddress.phone}</span>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-foreground font-medium line-clamp-1">
+                                {order.shippingAddress.fullName}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                {order.shippingAddress.address}, {order.shippingAddress.city}, {order.shippingAddress.postalCode}
+                              </p>
+                              <div className="flex flex-wrap gap-2 mt-1.5">
+                                {order.shippingAddress.phone && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Phone className="h-3 w-3" />
+                                    <span>{order.shippingAddress.phone}</span>
+                                  </div>
+                                )}
+                                {order.distance && (order.shippingAddress.latitude && order.shippingAddress.longitude) && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{order.distance} km away</span>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            {order.distance && (order.shippingAddress.latitude && order.shippingAddress.longitude) && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <MapPin className="h-3 w-3" />
-                                <span>{order.distance} km away</span>
-                              </div>
-                            )}
-                          </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Rider Details - Show when tracking data available */}
-                  {tracking && (
+                  {/* Rider Details - Show only for delivery orders when tracking data available */}
+                  {!isPickup && tracking && (
                     <div className="px-4 sm:px-6 py-3 bg-green-50 border-t border-green-200">
                       <div className="flex items-start gap-2">
                         <Truck className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
@@ -524,18 +588,20 @@ const Orders = () => {
                             <span className="text-muted-foreground">Subtotal</span>
                             <span className="font-medium">₹{order.orderItems.reduce((total, item) => total + (item.price * item.qty), 0).toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">
-                              Delivery {order.distance ? `(${order.distance} km)` : ''}
-                            </span>
-                            <span className="font-medium">
-                              {order.shippingPrice === 0 ? (
-                                <span className="text-green-600">FREE</span>
-                              ) : (
-                                `₹${order.shippingPrice.toFixed(2)}`
-                              )}
-                            </span>
-                          </div>
+                          {!isPickup && (
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">
+                                Delivery {order.distance ? `(${order.distance} km)` : ''}
+                              </span>
+                              <span className="font-medium">
+                                {order.shippingPrice === 0 ? (
+                                  <span className="text-green-600">FREE</span>
+                                ) : (
+                                  `₹${order.shippingPrice.toFixed(2)}`
+                                )}
+                              </span>
+                            </div>
+                          )}
                           {order.taxPrice > 0 && (
                             <div className="flex justify-between text-xs">
                               <span className="text-muted-foreground">Tax</span>
@@ -558,7 +624,7 @@ const Orders = () => {
 
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
-                        {/* Track Order Button */}
+                        {/* Track Order Button - Only for delivery orders */}
                         {canTrackOrder(order) && (
                           <Button
                             variant="outline"
@@ -581,90 +647,134 @@ const Orders = () => {
                           </Button>
                         )}
 
-                        {/* View Details Button */}
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setTrackingDialog(order)}
-                              className="flex-1 sm:flex-initial text-xs h-8"
-                            >
-                              <Eye className="h-3.5 w-3.5 mr-1.5" />
-                              Details
-                            </Button>
-                          </DialogTrigger>
-                            <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle className="text-lg">Order Details</DialogTitle>
-                                <DialogDescription className="text-xs">
-                                  Order #{order._id.slice(-8).toUpperCase()}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-3 py-2">
-                                {/* Status Timeline */}
-                                <div className="bg-muted/50 rounded-lg p-3">
-                                  <h4 className="font-semibold text-sm mb-2">Order Status</h4>
-                                  <div className="space-y-2">
-                                    <div className="flex items-start gap-2">
-                                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                        <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium">Order Placed</p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {new Date(order.createdAt).toLocaleString()}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    {order.isPaid && (
-                                      <div className="flex items-start gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                                        </div>
-                                        <div>
-                                          <p className="text-sm font-medium">Payment Confirmed</p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {order.paidAt ? new Date(order.paidAt).toLocaleString() : 'Paid'}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    )}
-                                    {order.isDelivered && (
-                                      <div className="flex items-start gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                                        </div>
-                                        <div>
-                                          <p className="text-sm font-medium">Delivered</p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {order.deliveredAt ? new Date(order.deliveredAt).toLocaleString() : 'Delivered'}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                       {/* View Details Button */}
+<Dialog
+  open={trackingDialogId === order._id}
+  onOpenChange={(open) => {
+    if (!open) setTrackingDialogId(null);
+  }}
+>
+  <DialogTrigger asChild>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => setTrackingDialogId(order._id)}
+      className="flex-1 sm:flex-initial text-xs h-8"
+    >
+      <Eye className="h-3.5 w-3.5 mr-1.5" />
+      Details
+    </Button>
+  </DialogTrigger>
 
-                                {/* U-Engage Info */}
-                                {order.uengage?.taskId && (
-                                  <div className="bg-blue-50 rounded-lg p-3">
-                                    <h4 className="font-semibold mb-1.5 text-sm text-blue-900">Delivery Tracking</h4>
-                                    <div className="space-y-1 text-xs">
-                                      <p className="text-blue-800">
-                                        <span className="font-medium">Task ID:</span> {order.uengage.taskId}
-                                      </p>
-                                      {order.uengage.statusCode && (
-                                        <p className="text-blue-800">
-                                          <span className="font-medium">Status:</span> {uengageStatusMap[order.uengage.statusCode]?.label || order.uengage.statusCode}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                          </DialogContent>
-                        </Dialog>
+  <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle className="text-lg">Order Details</DialogTitle>
+      <DialogDescription className="text-xs">
+        Order #{trackingDialogOrder?._id?.slice(-8).toUpperCase()}
+      </DialogDescription>
+    </DialogHeader>
+
+    {trackingDialogOrder && (
+      <div className="space-y-3 py-2">
+
+        {/* Order Type */}
+        <div className="bg-muted/50 rounded-lg p-3">
+          <h4 className="font-semibold text-sm mb-2">Order Type</h4>
+          <Badge
+            variant={trackingDialogOrder.deliveryMode === 'pickup' ? "secondary" : "default"}
+            className={cn(
+              "text-xs",
+              trackingDialogOrder.deliveryMode === 'pickup'
+                ? "bg-purple-100 text-purple-700"
+                : "bg-blue-100 text-blue-700"
+            )}
+          >
+            {trackingDialogOrder.deliveryMode === 'pickup'
+              ? "🏪 Store Pickup"
+              : "🚚 Home Delivery"}
+          </Badge>
+        </div>
+
+        {/* Status Timeline */}
+        <div className="bg-muted/50 rounded-lg p-3">
+          <h4 className="font-semibold text-sm mb-2">Order Status</h4>
+
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Order Placed</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(trackingDialogOrder.createdAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            {trackingDialogOrder.isPaid && (
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Payment Confirmed</p>
+                </div>
+              </div>
+            )}
+
+            {trackingDialogOrder.status === 'cancelled' && (
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                  <XCircle className="h-3.5 w-3.5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-red-700">
+                    Order Cancelled
+                  </p>
+                  {trackingDialogOrder.cancelReason && (
+                    <p className="text-xs text-red-600">
+                      {trackingDialogOrder.cancelReason}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {trackingDialogOrder.isDelivered && (
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">
+                    {trackingDialogOrder.deliveryMode === 'pickup'
+                      ? 'Picked Up'
+                      : 'Delivered'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* U-Engage Info (Delivery Only) */}
+        {trackingDialogOrder.deliveryMode === 'delivery' &&
+          trackingDialogOrder.uengage?.taskId && (
+            <div className="bg-blue-50 rounded-lg p-3">
+              <h4 className="font-semibold text-sm text-blue-900 mb-1">
+                Delivery Tracking
+              </h4>
+              <p className="text-xs text-blue-800">
+                Task ID: {trackingDialogOrder.uengage.taskId}
+              </p>
+            </div>
+          )}
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
+
 
                         {/* Cancel Button */}
                         {canCancelOrder(order) && (
@@ -706,7 +816,7 @@ const Orders = () => {
                                         This action cannot be undone
                                       </p>
                                       <p className="text-xs text-yellow-700">
-                                        Your order will be cancelled immediately and the delivery will be stopped if already assigned.
+                                        Your order will be cancelled immediately{!isPickup && ' and the delivery will be stopped if already assigned'}.
                                       </p>
                                     </div>
                                   </div>

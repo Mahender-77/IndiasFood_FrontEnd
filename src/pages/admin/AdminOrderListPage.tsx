@@ -52,6 +52,13 @@ export const AdminOrderListPage = () => {
   const [deliveryModeFilter, setDeliveryModeFilter] = useState<'all' | 'delivery' | 'pickup'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'delivered' | 'cancelled'>('all');
 
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelDeliveryMode, setCancelDeliveryMode] = useState<'delivery' | 'pickup'>('delivery');
+  
+
+
   const itemsPerPage = 10;
   
   const { toast } = useToast();
@@ -66,7 +73,14 @@ export const AdminOrderListPage = () => {
         api.get('/admin/delivery-settings')
       ]);
    
-      setOrders(ordersResponse.data);
+      setOrders(
+        ordersResponse.data.sort(
+          (a: Order, b: Order) =>
+            new Date(b.createdAt).getTime() -
+            new Date(a.createdAt).getTime()
+        )
+      );
+      
       setDeliveryPersons(deliveryPersonsResponse.data);
  
       if (settingsResponse.data) {
@@ -93,10 +107,6 @@ export const AdminOrderListPage = () => {
     fetchOrdersAndDeliveryPersons();
   }, []);
 
-  const sortedOrders = [...orders].sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-
   const uniqueLocations = deliverySettings.storeLocations
     .filter(store => store.isActive && store.name && store.name.trim() !== '')
     .map(store => store.name)
@@ -116,7 +126,7 @@ export const AdminOrderListPage = () => {
     return firstActiveStore ? firstActiveStore.name : 'N/A';
   };
 
-  const filteredOrders = sortedOrders.filter(order => {
+  const filteredOrders = orders.filter(order => {
     const isPickupOrder = order.shippingAddress?.fullName === 'Pickup Customer' || order.shippingAddress?.address.includes('Pickup Store');
 
     const matchesLocation = locationFilter === 'all' || getResponsibleStore(order) === locationFilter;
@@ -146,25 +156,46 @@ export const AdminOrderListPage = () => {
     setCurrentPage(1);
   }, [orders.length, locationFilter, deliveryModeFilter, statusFilter]);
 
-  const updateOrderStatus = async (orderId: string, status: string) => {
+  const updateOrderStatus = async (
+    orderId: string,
+    status: string,
+    deliveryMode: 'delivery' | 'pickup',
+    reason?: string
+  ) => {
     setUpdatingStatus(orderId);
+  
     try {
-      await api.put(`/admin/orders/${orderId}/delivery-status`, { status });
+      const response = await api.put(
+        `/admin/orders/${orderId}/delivery-status`,
+        { status, deliveryMode, reason }
+      );
+  
+      const updatedOrder = response.data;
+  
+      // ✅ Update only that order locally (no full reload)
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order._id === orderId ? updatedOrder : order
+        )
+      );
+  
       toast({
         title: 'Order Status Updated',
         description: `Order status updated to ${status}.`,
       });
-      fetchOrdersAndDeliveryPersons();
+  
     } catch (err: any) {
       toast({
         title: 'Error',
-        description: err.response?.data?.message || 'Failed to update order status.',
+        description:
+          err.response?.data?.message || 'Failed to update order status.',
         variant: 'destructive',
       });
     } finally {
       setUpdatingStatus(null);
     }
   };
+  
 
   const handleSaveSettings = async () => {
     const activeStores = deliverySettings.storeLocations.filter(s => s.isActive);
@@ -523,56 +554,65 @@ export const AdminOrderListPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="pricePerKm" className="text-sm font-medium">Price per Kilometer (₹)</Label>
-                      <Input
-                        id="pricePerKm"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={deliverySettings.pricePerKm}
-                        onChange={(e) =>
-                          setDeliverySettings({
-                            ...deliverySettings,
-                            pricePerKm: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="border-gray-300"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="pricePerKm"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={deliverySettings.pricePerKm}
+                          onChange={(e) =>
+                            setDeliverySettings({
+                              ...deliverySettings,
+                              pricePerKm: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className="pl-7 border-gray-300 focus:border-blue-500 transition-colors"
+                        />
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="baseCharge" className="text-sm font-medium">Base Charge (₹)</Label>
-                      <Input
-                        id="baseCharge"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={deliverySettings.baseCharge}
-                        onChange={(e) =>
-                          setDeliverySettings({
-                            ...deliverySettings,
-                            baseCharge: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="border-gray-300"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="baseCharge"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={deliverySettings.baseCharge}
+                          onChange={(e) =>
+                            setDeliverySettings({
+                              ...deliverySettings,
+                              baseCharge: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className="pl-7 border-gray-300 focus:border-blue-500 transition-colors"
+                        />
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="freeDeliveryThreshold" className="text-sm font-medium">Free Delivery Threshold (₹)</Label>
-                      <Input
-                        id="freeDeliveryThreshold"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={deliverySettings.freeDeliveryThreshold}
-                        onChange={(e) =>
-                          setDeliverySettings({
-                            ...deliverySettings,
-                            freeDeliveryThreshold: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="border-gray-300"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="freeDeliveryThreshold"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={deliverySettings.freeDeliveryThreshold}
+                          onChange={(e) =>
+                            setDeliverySettings({
+                              ...deliverySettings,
+                              freeDeliveryThreshold: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className="pl-7 border-gray-300 focus:border-blue-500 transition-colors"
+                        />
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -588,10 +628,10 @@ export const AdminOrderListPage = () => {
                     </div>
                     <Button
                       type="button"
-                      variant="default"
+                      variant="secondary"
                       size="sm"
                       onClick={addStoreLocation}
-                      className="gap-2 shadow-sm"
+                      className="gap-2 shadow-sm border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-900 transition-colors"
                     >
                       <Plus className="h-4 w-4" />
                       Add Store
@@ -611,7 +651,7 @@ export const AdminOrderListPage = () => {
                         type="button"
                         onClick={addStoreLocation}
                         size="lg"
-                        className="gap-2 shadow-md"
+                        className="gap-2 shadow-md bg-blue-600 hover:bg-blue-700 text-white"
                       >
                         <Plus className="h-5 w-5" />
                         Add Your First Store
@@ -650,7 +690,7 @@ export const AdminOrderListPage = () => {
                               <Button
                                 type="button"
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
                                 onClick={() => removeStoreLocation(index)}
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
@@ -669,7 +709,7 @@ export const AdminOrderListPage = () => {
                                   onChange={(e) =>
                                     updateStoreLocation(index, 'name', e.target.value)
                                   }
-                                  className="border-gray-300"
+                                  className="border-gray-300 focus:border-blue-500 transition-colors"
                                 />
                               </div>
 
@@ -683,7 +723,7 @@ export const AdminOrderListPage = () => {
                                   onChange={(e) =>
                                     updateStoreLocation(index, 'contact_number', e.target.value)
                                   }
-                                  className="border-gray-300"
+                                  className="border-gray-300 focus:border-blue-500 transition-colors"
                                 />
                               </div>
 
@@ -697,7 +737,7 @@ export const AdminOrderListPage = () => {
                                   onChange={(e) =>
                                     updateStoreLocation(index, 'address', e.target.value)
                                   }
-                                  className="border-gray-300"
+                                  className="border-gray-300 focus:border-blue-500 transition-colors"
                                 />
                               </div>
 
@@ -711,7 +751,7 @@ export const AdminOrderListPage = () => {
                                   onChange={(e) =>
                                     updateStoreLocation(index, 'city', e.target.value)
                                   }
-                                  className="border-gray-300"
+                                  className="border-gray-300 focus:border-blue-500 transition-colors"
                                 />
                               </div>
 
@@ -727,7 +767,7 @@ export const AdminOrderListPage = () => {
                                   onChange={(e) =>
                                     updateStoreLocation(index, 'latitude', parseFloat(e.target.value) || 0)
                                   }
-                                  className="border-gray-300"
+                                  className="border-gray-300 focus:border-blue-500 transition-colors"
                                 />
                               </div>
 
@@ -743,7 +783,7 @@ export const AdminOrderListPage = () => {
                                   onChange={(e) =>
                                     updateStoreLocation(index, 'longitude', parseFloat(e.target.value) || 0)
                                   }
-                                  className="border-gray-300"
+                                  className="border-gray-300 focus:border-blue-500 transition-colors"
                                 />
                               </div>
                             </div>
@@ -942,7 +982,7 @@ export const AdminOrderListPage = () => {
                     <TableHead className="font-semibold text-gray-900">Store</TableHead>
                     <TableHead className="font-semibold text-gray-900">Status</TableHead>
                     <TableHead className="font-semibold text-gray-900">Delivery Person</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Distance</TableHead>
+                    {/* <TableHead className="font-semibold text-gray-900">Distance</TableHead> */}
                     <TableHead className="font-semibold text-gray-900">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -965,7 +1005,7 @@ export const AdminOrderListPage = () => {
                     paginatedOrders.map((order) => (
                       <TableRow key={order._id} className="hover:bg-gray-50 transition-colors">
                         <TableCell className="font-mono text-xs font-medium">
-                          #{order._id.slice(-8)}
+                        #{order?._id?.toString().slice(-8) || 'N/A'}
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
@@ -1018,7 +1058,7 @@ export const AdminOrderListPage = () => {
                         <TableCell className="text-xs">
                           <div className="space-y-2 max-w-xs">
                             <div className="space-y-1">
-                              {order.orderItems.map((item, index) => (
+                              {order.orderItems?.map((item, index) => (
                                 <div key={index} className="flex justify-between items-start py-1 border-b border-gray-100 last:border-0">
                                   <div className="flex-1 min-w-0 pr-2">
                                     <span className="block font-medium text-gray-900 truncate" title={item.name}>
@@ -1068,10 +1108,28 @@ export const AdminOrderListPage = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="font-medium border-purple-200 text-purple-700 bg-purple-50">
-                            {getResponsibleStore(order)}
-                          </Badge>
-                        </TableCell>
+  <div className="flex flex-col gap-2">
+    {/* Store Name */}
+    <Badge
+      variant="outline"
+      className="font-medium border-purple-200 text-purple-700 bg-purple-50"
+    >
+      🏬 {getResponsibleStore(order)}
+    </Badge>
+
+    {/* Delivery Mode */}
+    {order.deliveryMode === 'delivery' ? (
+      <Badge className="bg-blue-600 hover:bg-blue-700 text-xs w-fit">
+        🚚 Delivery
+      </Badge>
+    ) : (
+      <Badge className="bg-indigo-600 hover:bg-indigo-700 text-xs w-fit">
+        🏪 Pickup
+      </Badge>
+    )}
+  </div>
+</TableCell>
+
                         <TableCell>
                           <div className="space-y-2">
                             {getStatusBadge(order)}
@@ -1111,104 +1169,166 @@ export const AdminOrderListPage = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm font-medium text-gray-900">
+                        {/* <TableCell className="text-sm font-medium text-gray-900">
                           {order.distance ? `${order.distance} km` : <span className="text-gray-400">N/A</span>}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-2 min-w-[140px]">
-                            {order.status !== 'cancelled' && !order.isDelivered && (
-                              <>
-                                <Select
-                                  onValueChange={(value) => updateOrderStatus(order._id, value)}
-                                  disabled={updatingStatus === order._id}
-                                >
-                                  <SelectTrigger className="h-9 text-xs border-gray-300">
-                                    <SelectValue placeholder="Update Status" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="confirmed">✓ Mark Confirmed</SelectItem>
-                                    <SelectItem value="out_for_delivery">🚚 Out for Delivery</SelectItem>
-                                    <SelectItem value="delivered">✅ Mark Delivered</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                        </TableCell> */}
+                       <TableCell>
+  <div className="flex flex-col gap-2 min-w-[140px]">
+    {order.status !== 'cancelled' && !order.isDelivered && (
+      <>
+        <Select
+          onValueChange={(value) => {
+            if (value === 'cancelled') {
+              setCancelOrderId(order._id);
+              setCancelDeliveryMode(order.deliveryMode);
+              setCancelReason('');
+              setCancelDialogOpen(true);
+            } else {
+              updateOrderStatus(order._id, value, order.deliveryMode);
+            }
+          }}
+          disabled={updatingStatus === order._id}
+        >
+          <SelectTrigger className="h-9 text-xs border-gray-300">
+            <SelectValue placeholder="Update Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="confirmed">✓ Mark Confirmed</SelectItem>
 
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-9 text-xs border-gray-300 hover:bg-blue-50 hover:border-blue-300"
-                                      onClick={() => setSelectedOrder(order)}
-                                      disabled={isAssigning}
-                                    >
-                                      Assign Delivery
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="sm:max-w-md">
-                                    <DialogHeader>
-                                      <DialogTitle>Assign Delivery Person</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="grid gap-4 py-4">
-                                      <div className="space-y-2">
-                                        <Label>Delivery Person</Label>
-                                        <Select
-                                          onValueChange={setSelectedDeliveryPerson}
-                                          value={selectedDeliveryPerson}
-                                          disabled={isAssigning}
-                                        >
-                                          <SelectTrigger>
-                                            <SelectValue placeholder="Select" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {deliveryPersons.map(person => (
-                                              <SelectItem key={person._id} value={person._id}>
-                                                {person.username}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                      <div className="space-y-2">
-                                        <Label>ETA</Label>
-                                        <Input
-                                          value={eta}
-                                          onChange={(e) => setEta(e.target.value)}
-                                          placeholder="e.g., 30 mins, 1 hour"
-                                          disabled={isAssigning}
-                                        />
-                                      </div>
-                                    </div>
-                                    <Button onClick={handleAssignDelivery} disabled={isAssigning} className="w-full">
-                                      {isAssigning ? (
-                                        <>
-                                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                          Assigning...
-                                        </>
-                                      ) : (
-                                        'Assign'
-                                      )}
-                                    </Button>
-                                  </DialogContent>
-                                </Dialog>
-                              </>
-                            )}
-                            {order.status === 'cancelled' && (
-                              <Badge variant="outline" className="text-xs text-red-600 bg-red-50 border-red-200">
-                                Cancelled
-                              </Badge>
-                            )}
-                            {order.isDelivered && (
-                              <Badge className="text-xs bg-green-600 hover:bg-green-700">
-                                ✓ Completed
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
+            {order.deliveryMode !== 'pickup' && (
+              <SelectItem value="out_for_delivery">
+                🚚 Out for Delivery
+              </SelectItem>
+            )}
+
+            <SelectItem value="delivered">
+              ✅ Mark Delivered
+            </SelectItem>
+
+            <SelectItem value="cancelled">
+              ❌ Cancel Order
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        {order.deliveryMode !== 'pickup' && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 text-xs border-gray-300 hover:bg-blue-50 hover:border-blue-300"
+                onClick={() => setSelectedOrder(order)}
+                disabled={isAssigning}
+              >
+                Assign Delivery
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Assign Delivery Person</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Delivery Person</Label>
+                  <Select
+                    onValueChange={setSelectedDeliveryPerson}
+                    value={selectedDeliveryPerson}
+                    disabled={isAssigning}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {deliveryPersons.map(person => (
+                        <SelectItem key={person._id} value={person._id}>
+                          {person.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>ETA</Label>
+                  <Input
+                    value={eta}
+                    onChange={(e) => setEta(e.target.value)}
+                    placeholder="e.g., 30 mins, 1 hour"
+                    disabled={isAssigning}
+                  />
+                </div>
+              </div>
+              <Button onClick={handleAssignDelivery} disabled={isAssigning} className="w-full">
+                {isAssigning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Assigning...
+                  </>
+                ) : (
+                  'Assign'
+                )}
+              </Button>
+            </DialogContent>
+          </Dialog>
+        )}
+      </>
+    )}
+
+    {order.status === 'cancelled' && (
+      <Badge variant="outline" className="text-xs text-red-600 bg-red-50 border-red-200">
+        Cancelled
+      </Badge>
+    )}
+
+    {order.isDelivered && (
+      <Badge className="text-xs bg-green-600 hover:bg-green-700">
+        ✓ Completed
+      </Badge>
+    )}
+  </div>
+</TableCell>
+
                       </TableRow>
                     ))
                   )}
                 </TableBody>
               </Table>
+
+              <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+  <DialogContent className="sm:max-w-md">
+    <DialogHeader>
+      <DialogTitle>Cancel Order</DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-4 py-2">
+      <Label>Cancellation Reason</Label>
+      <Input
+        placeholder="Enter cancellation reason"
+        value={cancelReason}
+        onChange={(e) => setCancelReason(e.target.value)}
+      />
+    </div>
+
+    <Button
+      className="w-full"
+      disabled={!cancelReason.trim()}
+      onClick={() => {
+        if (cancelOrderId) {
+          updateOrderStatus(
+            cancelOrderId,
+            'cancelled',
+            cancelDeliveryMode,
+            cancelReason
+          );
+        }
+        setCancelDialogOpen(false);
+      }}
+    >
+      Confirm Cancel
+    </Button>
+  </DialogContent>
+</Dialog>
+
             </div>
           </Card>
 

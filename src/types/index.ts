@@ -150,6 +150,7 @@ export interface Order {
   eta?: string;
   
   status: 'placed' | 'confirmed' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  deliveryMode: 'delivery' | 'pickup';
   
   // 🔥 ADD THIS FIELD TOO
   cancelReason?: string;
