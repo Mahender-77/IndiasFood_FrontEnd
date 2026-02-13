@@ -131,6 +131,7 @@ export interface Order {
   
   distance?: number;
   nearestStore?: string;
+  uengageDeliveryFee?: number; // Add this line
   
   // 🔥 ADD THIS FIELD
   uengage?: {

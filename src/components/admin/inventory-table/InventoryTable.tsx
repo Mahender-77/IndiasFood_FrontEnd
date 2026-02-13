@@ -85,12 +85,12 @@ export function InventoryTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map(product => {
+              {products.map((product , index) => {
                 const categoryId = (product.category as any)?._id || product.category;
                 const categoryName = categories.find(cat => cat._id === categoryId)?.name || 'Unknown';
 
                 return (
-                  <TableRow key={product._id} className="hover:bg-gray-50 transition-colors">
+                  <TableRow key={product._id  || `product-${index}`} className="hover:bg-gray-50 transition-colors">
                     {/* Image */}
                     <TableCell className="py-3">
                       {product.images && product.images.length > 0 ? (
@@ -190,15 +190,15 @@ export function InventoryTable({
 
                     {/* Stock by Location */}
                     <TableCell className="py-3">
-                      <div className="space-y-1.5">
+                      <div className="space-y-1">
                       {locations.map(location => {
   const stock = getLocationStock(product, location.name) ?? 0; 
   // 👆 if null/undefined → treat as 0
 
   return (
     <div
-      key={location.storeId}
-      className="flex items-center justify-between text-sm gap-2"
+      key={location.storeId || `location-${index}`}
+      className="flex items-center text-sm  "
     >
       <span className="text-gray-600 text-xs font-medium">
         {location.displayName}:
@@ -207,14 +207,14 @@ export function InventoryTable({
       {stock === 0 ? (
         <Badge
           variant="destructive"
-          className="text-xs font-medium"
+          className="text-xs font-medium ml-2"
         >
           Out of Stock
         </Badge>
       ) : (
         <Badge
           variant="secondary"
-          className="text-xs bg-green-100 text-green-800 font-medium"
+          className="text-xs bg-green-100 text-green-800 font-medium ml-2"
         >
           {stock} units
         </Badge>
@@ -256,13 +256,13 @@ export function InventoryTable({
 
         {/* Mobile View - Cards */}
         <div className="lg:hidden">
-          {products.map(product => {
+          {products.map((product , index) => {
             const categoryId = (product.category as any)?._id || product.category;
             const categoryName = categories.find(cat => cat._id === categoryId)?.name || 'Unknown';
             const isExpanded = expandedRows.has(product._id);
 
             return (
-              <div key={product._id} className="border-b last:border-b-0">
+              <div key={product._id || `mobile-product-${index}`} className="border-b last:border-b-0">
                 {/* Card Header - Always Visible */}
                 <div className="p-4 space-y-3">
                   <div className="flex gap-3">

@@ -58,7 +58,6 @@ export const AdminOrderListPage = () => {
   const [cancelDeliveryMode, setCancelDeliveryMode] = useState<'delivery' | 'pickup'>('delivery');
   
 
-
   const itemsPerPage = 10;
   
   const { toast } = useToast();
@@ -148,7 +147,6 @@ export const AdminOrderListPage = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
-
 
 
 
@@ -981,7 +979,8 @@ export const AdminOrderListPage = () => {
                     <TableHead className="font-semibold text-gray-900">Products & Pricing</TableHead>
                     <TableHead className="font-semibold text-gray-900">Store</TableHead>
                     <TableHead className="font-semibold text-gray-900">Status</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Delivery Person</TableHead>
+                    {/* <TableHead className="font-semibold text-gray-900">Delivery Person</TableHead> */}
+                    <TableHead className="font-semibold text-gray-900">Delivery Fee</TableHead>
                     {/* <TableHead className="font-semibold text-gray-900">Distance</TableHead> */}
                     <TableHead className="font-semibold text-gray-900">Actions</TableHead>
                   </TableRow>
@@ -1054,6 +1053,14 @@ export const AdminOrderListPage = () => {
                             month: 'short',
                             year: '2-digit'
                           })}
+                          <br />
+                          <span className="text-gray-500">
+                            {new Date(order.createdAt).toLocaleTimeString('en-IN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </span>
                         </TableCell>
                         <TableCell className="text-xs">
                           <div className="space-y-2 max-w-xs">
@@ -1150,25 +1157,24 @@ export const AdminOrderListPage = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm">
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {(order.deliveryPerson as unknown as User)?.username || (
-                                <span className="text-gray-400 text-xs">Unassigned</span>
-                              )}
-                            </p>
-                            {order.eta && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                ETA: {new Date(order.eta).toLocaleString('en-IN', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
+                        <TableCell>
+  {order.deliveryMode === 'pickup' ? (
+    <span className="text-gray-400 text-xs">N/A</span>
+  ) : (
+    <div className="flex flex-col gap-1">
+      <span className="font-semibold text-gray-900">
+        ₹{order.uengageDeliveryFee?.toFixed(2) || '0.00'}
+      </span>
+
+      {order.shippingPrice === 0 && (
+        <Badge className="bg-green-100 text-green-700 border border-green-200 text-xs w-fit">
+          Free for Customer
+        </Badge>
+      )}
+    </div>
+  )}
+</TableCell>
+
                         {/* <TableCell className="text-sm font-medium text-gray-900">
                           {order.distance ? `${order.distance} km` : <span className="text-gray-400">N/A</span>}
                         </TableCell> */}
@@ -1291,6 +1297,7 @@ export const AdminOrderListPage = () => {
                       </TableRow>
                     ))
                   )}
+                  
                 </TableBody>
               </Table>
 
