@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import api from '@/lib/api';
 import { Category, Product, ProductVariant } from '@/types';
 import {
+  ArrowLeft,
   MapPin,
   Plus,
   Save,
@@ -37,6 +38,7 @@ import { toast } from 'sonner';
 import { InventoryTable } from '@/components/admin/inventory-table/InventoryTable';
 import { LocationInventoryManager } from '@/components/admin/inventory-table/LocationInventoryManager';
 import { VariantBuilder } from '@/components/admin/inventory-table/VariantBuilder';
+import { Link } from 'react-router-dom';
 
 
 interface Location {
@@ -512,13 +514,8 @@ const filteredProducts = useMemo(() => {
       
       const createdProduct = response.data;
 
-      console.log("RESPONSE:", response.data);
-
-  
-      // 🔥 Instant UI update (NO refetch)
       setProducts(prev => [createdProduct, ...(prev || [])]);
-
-  
+      
       // ---------------- UPLOAD IMAGES AFTER (BACKGROUND) ----------------
   
       if (newProduct.imageFiles?.length) {
@@ -533,7 +530,7 @@ const filteredProducts = useMemo(() => {
             `/admin/inventory/products/${createdProduct._id}`,
             { images: uploadedImages }
           );
-          
+
           const updatedProduct = updateRes.data;
           
           setProducts(prev =>
@@ -1194,8 +1191,20 @@ const filteredProducts = useMemo(() => {
         keywords="admin inventory, product management, stock control"
       />
 
-      <section className="py-6 px-4 bg-cream min-h-[calc(100vh-150px)]">
-        <div className="w-full lg:w-[90%] mx-auto">
+      <section className=" bg-cream min-h-[calc(100vh-150px)]">
+       {/* Header with Breadcrumb */}
+       <div className="bg-white border-b border-gray-200 shadow-sm">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <Link
+              to="/admin"
+              className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors group"
+            >
+              <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
+        <div className="w-full lg:w-[90%] mx-auto py-6">
           {/* Header */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
             <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">

@@ -20,15 +20,18 @@ const Help = () => {
       items: [
         {
           question: 'How do I place an order?',
-          answer: 'Simply browse our products, add items to your cart, and proceed to checkout. You can pay using various payment methods including UPI, cards, and net banking.',
+          answer:
+            'Simply browse our products, add your favorites to the cart, and proceed to checkout. It’s quick, secure, and easy!',
         },
         {
           question: 'Can I modify my order after placing it?',
-          answer: 'You can modify your order within 1 hour of placing it. After that, please contact our support team for assistance.',
+          answer:
+            'To ensure fast delivery, our system begins processing orders immediately. Once placed, orders cannot be modified or changed.',
         },
         {
-          question: 'What is the minimum order value?',
-          answer: 'There is no minimum order value. However, orders above ₹500 qualify for free delivery.',
+          question: 'Is there a minimum order value?',
+          answer:
+            'There is no minimum order value. You can order as little or as much as you like.',
         },
       ],
     },
@@ -36,16 +39,19 @@ const Help = () => {
       category: 'Delivery',
       items: [
         {
-          question: 'What are the delivery charges?',
-          answer: 'Delivery is free for orders above ₹500. For orders below ₹500, a delivery charge of ₹50 applies.',
+          question: 'What is the eligibility for free delivery?',
+          answer:
+            'Free Delivery is available on all orders of ₹800 or more. For orders below ₹800, delivery charges are calculated at checkout based on your distance from our center.',
         },
         {
-          question: 'How long does delivery take?',
-          answer: 'We typically deliver within 2-4 business days depending on your location. Same-day delivery is available in select cities.',
+          question: 'How long will it take for my order to be delivered?',
+          answer:
+            'Our instant delivery typically takes between 30 minutes and 2 hours. Delivery times may vary slightly depending on courier availability and your location.',
         },
         {
-          question: 'Do you deliver to my area?',
-          answer: 'We currently deliver to all major cities across India. Enter your pincode at checkout to check availability.',
+          question: 'Do you deliver in my locality?',
+          answer:
+            'We are currently serving Bengaluru. We are expanding soon and look forward to delivering to more cities in the future.',
         },
       ],
     },
@@ -54,15 +60,13 @@ const Help = () => {
       items: [
         {
           question: 'What is your return policy?',
-          answer: 'Due to the perishable nature of our products, we do not accept returns. However, if you receive damaged or incorrect items, please contact us within 24 hours.',
+          answer:
+            'As our products are perishable, we do not accept returns once delivered. However, if your order arrives damaged or incorrect, please share a photo within 24 hours and we will resolve it promptly.',
         },
         {
-          question: 'How do I get a refund?',
-          answer: 'If eligible for a refund, the amount will be credited to your original payment method within 5-7 business days.',
-        },
-        {
-          question: 'What if I receive damaged products?',
-          answer: 'Please take photos of the damaged items and contact us immediately. We will arrange for a replacement or refund.',
+          question: 'How long will my refund take?',
+          answer:
+            'Once approved, refunds are processed to your original payment method within 5–7 business days.',
         },
       ],
     },
@@ -70,20 +74,19 @@ const Help = () => {
       category: 'Payment',
       items: [
         {
-          question: 'What payment methods do you accept?',
-          answer: 'We accept UPI, debit/credit cards, net banking, and cash on delivery (COD) in select areas.',
+          question: 'How can I pay for my order?',
+          answer:
+            'We accept secure online payments via UPI, Credit/Debit Cards, and Net Banking. Cash on Delivery (COD) is not available at this time.',
         },
         {
           question: 'Is it safe to pay online?',
-          answer: 'Yes, all our payments are processed through secure, PCI-DSS compliant payment gateways.',
-        },
-        {
-          question: 'Can I pay on delivery?',
-          answer: 'Cash on Delivery (COD) is available for orders up to ₹5000 in select cities.',
+          answer:
+            'Yes, 100%. We use industry-standard SSL encryption and partner with trusted Indian payment gateways. Your transaction details are never stored and are protected with bank-level security.',
         },
       ],
     },
   ];
+  
 
   const contactOptions = [
     { icon: Phone, title: 'Call Us', value: '+91 98765 43210', href: 'tel:+919876543210' },
