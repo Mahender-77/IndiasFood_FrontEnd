@@ -622,15 +622,15 @@ const Auth = () => {
         title={getTitle()} 
         description={getSubtitle()}
       />
-      <div className="h-70% flex items-center justify-center bg-gray-50 px-6 sm:px-6 py-6 sm:py-12 mt-10">
-        <div className="w-full max-w-md">
+      <div className="h-70% flex items-center justify-center bg-cream-50 px-6 sm:px-6 py-6 sm:py-12 mt-10 ">
+        <div className="w-full max-w-md ">
           {/* Card */}
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl p-5 sm:p-8 border border-gray-100">
+          <div className="bg-cream rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl p-5 sm:p-8 border border-cream-100 ">
             {/* Back Button */}
             {shouldShowBackButton() && (
               <button
                 onClick={handleBackClick}
-                className="mb-4 sm:mb-5 flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors"
+                className="mb-4 sm:mb-5 flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors "
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-sm font-medium">Back</span>
@@ -638,7 +638,7 @@ const Auth = () => {
             )}
 
             {/* Header */}
-            <div className="text-center mb-5 sm:mb-7">
+            <div className="text-center mb-5 sm:mb-7 ">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1.5">
                 {getTitle()}
               </h1>
@@ -647,7 +647,7 @@ const Auth = () => {
 
             {/* ---------------- LOGIN WITH PASSWORD ---------------- */}
             {mode === 'login' && (
-              <div className="space-y-4 sm:space-y-5">
+              <div className="space-y-4 sm:space-y-5 ">
                 <div className="space-y-1.5">
                   <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
                     Phone Number
@@ -835,7 +835,7 @@ const Auth = () => {
             {mode === 'register' && registerStep === 'otp' && (
               <div className="space-y-4 sm:space-y-5">
                 {/* Phone Display */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="bg-cream-50 border border-cream-200 rounded-lg p-3">
                   <p className="text-xs text-gray-700">
                     OTP sent to <span className="font-semibold">+91 {formData.phone}</span>
                   </p>
@@ -910,7 +910,7 @@ const Auth = () => {
                       type="tel"
                       value={formData.phone}
                       disabled
-                      className="pl-10 h-11 bg-gray-50 border-gray-200 text-sm"
+                      className="pl-10 h-11 bg-cream-50 border-cream-200 text-sm"
                     />
                   </div>
                 </div>
@@ -1020,7 +1020,7 @@ const Auth = () => {
             {/* ---------------- FORGOT PASSWORD - STEP 2: OTP ---------------- */}
             {mode === 'forgotPassword' && forgotPasswordStep === 'otp' && (
               <div className="space-y-4 sm:space-y-5">
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="bg-cream-50 border border-cream-200 rounded-lg p-3">
                   <p className="text-xs text-gray-700">
                     OTP sent to <span className="font-semibold">+91 {formData.phone}</span>
                   </p>
@@ -1188,7 +1188,7 @@ const Auth = () => {
             {/* ---------------- LOGIN WITH OTP - STEP 2: OTP ---------------- */}
             {mode === 'loginWithOtp' && loginOtpStep === 'otp' && (
               <div className="space-y-4 sm:space-y-5">
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="bg-cream-50 border border-cream-200 rounded-lg p-3">
                   <p className="text-xs text-gray-700">
                     OTP sent to <span className="font-semibold">+91 {formData.phone}</span>
                   </p>

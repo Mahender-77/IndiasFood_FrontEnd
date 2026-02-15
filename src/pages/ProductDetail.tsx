@@ -593,7 +593,7 @@ const ProductDetail = () => {
                       <Button
                         size="lg"
                         variant="hero"
-                        className="flex-1 gap-2 h-11 text-sm font-semibold"
+                        className="flex-1 gap-2 h-11 text-sm font-semibold hover:text-white bg-orange-600"
                         onClick={handleAddToCart}
                         disabled={cartLoading}
                       >

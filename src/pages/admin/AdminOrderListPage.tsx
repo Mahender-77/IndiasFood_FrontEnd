@@ -46,6 +46,7 @@ export const AdminOrderListPage = () => {
     pricePerKm: 10,
     baseCharge: 50,
     freeDeliveryThreshold: 500,
+    gstPercentage: 0,
     storeLocations: [] as StoreLocation[]
   });
   const [locationFilter, setLocationFilter] = useState<string>('all');
@@ -115,6 +116,7 @@ export const AdminOrderListPage = () => {
           pricePerKm: settingsResponse.data.pricePerKm,
           baseCharge: settingsResponse.data.baseCharge,
           freeDeliveryThreshold: settingsResponse.data.freeDeliveryThreshold,
+          gstPercentage: settingsResponse.data.gstPercentage,
           storeLocations: settingsResponse.data.storeLocations || []
         });
       }
@@ -577,7 +579,8 @@ export const AdminOrderListPage = () => {
                     </div>
                     <h3 className="font-semibold text-lg text-gray-900">Pricing Rules</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
                     <div className="space-y-2">
                       <Label htmlFor="pricePerKm" className="text-sm font-medium">Price per Kilometer (₹)</Label>
                       <div className="relative">
@@ -640,6 +643,32 @@ export const AdminOrderListPage = () => {
                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
                       </div>
                     </div>
+                    <div className="space-y-2">
+  <Label htmlFor="gstPercentage" className="text-sm font-medium">
+    GST Percentage (%)
+  </Label>
+  <div className="relative">
+    <Input
+      id="gstPercentage"
+      type="number"
+      min="0"
+      max="100"
+      step="0.01"
+      value={deliverySettings.gstPercentage}
+      onChange={(e) =>
+        setDeliverySettings({
+          ...deliverySettings,
+          gstPercentage: parseFloat(e.target.value) || 0,
+        })
+      }
+      className="pl-7 border-gray-300 focus:border-blue-500 transition-colors"
+    />
+    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+      %
+    </span>
+  </div>
+</div>
+
                   </div>
                 </div>
 
@@ -1131,7 +1160,7 @@ export const AdminOrderListPage = () => {
                               )}
                               {order.taxPrice > 0 && (
                                 <div className="flex justify-between text-xs text-gray-600">
-                                  <span>Tax:</span>
+                                  <span>GST:</span>
                                   <span className="font-medium">₹{order.taxPrice.toFixed(2)}</span>
                                 </div>
                               )}

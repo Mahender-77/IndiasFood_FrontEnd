@@ -627,7 +627,7 @@ const Orders = () => {
                           )}
                           {order.taxPrice > 0 && (
                             <div className="flex justify-between text-xs">
-                              <span className="text-muted-foreground">Tax</span>
+                              <span className="text-muted-foreground">GST</span>
                               <span className="font-medium">₹{order.taxPrice.toFixed(2)}</span>
                             </div>
                           )}
