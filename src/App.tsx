@@ -30,7 +30,7 @@ import About from "./pages/About";
 import Gifting from "./pages/Gifting";
 import BulkOrders from "./pages/BulkOrders";
 import Help from "./pages/Help";
-import { Toaster } from "./components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { CartProvider } from "./contexts/CartContext";
 

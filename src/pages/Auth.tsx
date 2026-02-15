@@ -551,6 +551,7 @@ const Auth = () => {
       toast({
         title: 'Password Reset Successful',
         description: 'Please login with your new password',
+        variant: "success",
       });
       
       resetForm();
