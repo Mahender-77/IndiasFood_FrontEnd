@@ -460,15 +460,15 @@ const Checkout = () => {
   return (
     <Layout>
       {/* Header */}
-      <div className="bg-white py-3 border-b sticky top-0 z-40">
+      <div className="bg-cream py-3 border-b sticky top-0 z-40">
         <div className="container-custom px-4">
-          <Link to="/cart" className="flex items-center gap-2 text-sm hover:text-gray-600">
+          <Link to="/cart" className="flex items-center gap-2 text-sm hover:text-background-600">
             <ArrowLeft className="h-4 w-4" /> Back to Cart
           </Link>
         </div>
       </div>
 
-      <section className="bg-gray-50 py-4 sm:py-6 min-h-screen">
+      <section className="bg-background-50 py-4 sm:py-6 min-h-screen">
         <div className="container-custom max-w-7xl mx-auto px-4">
 
           <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Checkout</h1>
@@ -489,7 +489,7 @@ const Checkout = () => {
                     0;
 
                   return (
-                    <div key={product._id} className="flex gap-2 items-center bg-white/50 rounded p-1.5">
+                    <div key={product._id} className="flex gap-2 items-center bg-cream/50 rounded p-1.5">
                       <img
                         src={product.images?.[0]}
                         alt={product.name}
@@ -497,7 +497,7 @@ const Checkout = () => {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-medium truncate leading-tight">{product.name}</p>
-                        <p className="text-[10px] text-gray-600">Qty: {item.qty}</p>
+                        <p className="text-[10px] text-background-600">Qty: {item.qty}</p>
                       </div>
                       <p className="text-[10px] font-semibold flex-shrink-0">
                         ₹{(price * item.qty).toFixed(2)}
@@ -521,7 +521,7 @@ const Checkout = () => {
                     </div>
                   ) : (
                     <div className="flex justify-between">
-                      <span className="text-gray-700">Delivery</span>
+                      <span className="text-background-700">Delivery</span>
                       <span className="font-medium">₹{actualDeliveryTotal.toFixed(2)}</span>
                     </div>
                   )}
@@ -531,7 +531,7 @@ const Checkout = () => {
               {/* TOTAL - Mobile (Compact) */}
               <div className="border-t border-orange-200 pt-1.5 space-y-1">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-gray-700">Subtotal</span>
+                  <span className="text-background-700">Subtotal</span>
                   <span className="font-medium">₹{cartTotal.toFixed(2)}</span>
                 </div>
 
@@ -558,13 +558,13 @@ const Checkout = () => {
 
           {/* MOBILE: Delivery/Pickup Selection (Smaller) */}
           <div className="lg:hidden mb-3">
-            <div className="bg-white p-2.5 rounded-lg shadow-sm">
+            <div className="bg-cream p-2.5 rounded-lg shadow-sm">
               <div className="flex gap-2">
                 <label
                   className={`flex-1 flex items-center justify-center py-2 px-3 rounded-md border cursor-pointer transition-colors ${
                     deliveryMode === 'delivery'
                       ? 'border-orange-600 bg-orange-50 text-orange-800'
-                      : 'border-gray-300 bg-gray-50 text-gray-700'
+                      : 'border-background-300 bg-background-50 text-background-700'
                   }`}
                 >
                   <input
@@ -581,7 +581,7 @@ const Checkout = () => {
                   className={`flex-1 flex items-center justify-center py-2 px-3 rounded-md border cursor-pointer transition-colors ${
                     deliveryMode === 'pickup'
                       ? 'border-orange-600 bg-orange-50 text-orange-800'
-                      : 'border-gray-300 bg-gray-50 text-gray-700'
+                      : 'border-background-300 bg-background-50 text-background-700'
                   }`}
                 >
                   <input
@@ -604,7 +604,7 @@ const Checkout = () => {
               <>
                 {/* Show all saved addresses if they exist and no address is selected */}
                 {!isAddressSaved && savedAddresses.length > 0 && !showAddressForm && (
-                  <div className="bg-white p-3 rounded-lg shadow-sm">
+                  <div className="bg-cream p-3 rounded-lg shadow-sm">
                     <div className="flex items-center justify-between mb-3">
                       <h2 className="font-semibold text-sm">Select Address</h2>
                       <Button
@@ -630,12 +630,12 @@ const Checkout = () => {
                               <MapPin className="h-3 w-3 text-blue-600" />
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium text-xs text-gray-900">{addr.locationName}</p>
-                              <p className="text-[10px] text-gray-600 mt-0.5">
+                              <p className="font-medium text-xs text-background-900">{addr.locationName}</p>
+                              <p className="text-[10px] text-background-600 mt-0.5">
                                 {addr.addressLine1}
                                 {addr.addressLine2 && `, ${addr.addressLine2}`}
                               </p>
-                              <p className="text-[10px] text-gray-600">
+                              <p className="text-[10px] text-background-600">
                                 {addr.city}, {addr.postalCode}
                               </p>
                             </div>
@@ -657,7 +657,7 @@ const Checkout = () => {
 
                 {/* ADDRESS FORM - Mobile */}
                 {!isAddressSaved && showAddressForm && (
-                  <div className="bg-white p-3 rounded-lg shadow-sm">
+                  <div className="bg-cream p-3 rounded-lg shadow-sm">
                     <div className="flex items-center justify-between mb-3">
                       <h2 className="font-semibold text-sm">
                         {savedAddresses.length > 0 ? 'Add New Address' : 'Delivery Address'}
@@ -738,7 +738,7 @@ const Checkout = () => {
                           <Input
                             value={address.city}
                             readOnly
-                            className="mt-1 h-8 text-xs bg-gray-50 cursor-not-allowed"
+                            className="mt-1 h-8 text-xs bg-background-50 cursor-not-allowed"
                           />
                         </div>
                         <div>
@@ -746,7 +746,7 @@ const Checkout = () => {
                           <Input
                             value={address.postalCode}
                             readOnly
-                            className="mt-1 h-8 text-xs bg-gray-50 cursor-not-allowed"
+                            className="mt-1 h-8 text-xs bg-background-50 cursor-not-allowed"
                           />
                         </div>
                       </div>
@@ -776,7 +776,7 @@ const Checkout = () => {
 
                 {/* ADDRESS SAVED VIEW - Mobile */}
                 {isAddressSaved && (
-                  <div className="bg-white p-3 rounded-lg shadow-sm">
+                  <div className="bg-cream p-3 rounded-lg shadow-sm">
                     <div className="flex items-start justify-between mb-2">
                       <h2 className="font-semibold text-sm">Delivery Address</h2>
                       <button
@@ -794,8 +794,8 @@ const Checkout = () => {
                           <User className="h-3 w-3 text-blue-600" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-xs text-gray-900">{address.fullName}</p>
-                          <p className="text-[10px] text-gray-600 flex items-center gap-1 mt-0.5">
+                          <p className="font-medium text-xs text-background-900">{address.fullName}</p>
+                          <p className="text-[10px] text-background-600 flex items-center gap-1 mt-0.5">
                             <Phone className="h-2.5 w-2.5" />
                             {address.phone}
                           </p>
@@ -807,11 +807,11 @@ const Checkout = () => {
                           <MapPin className="h-3 w-3 text-green-600" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-[10px] text-gray-900">
+                          <p className="text-[10px] text-background-900">
                             {address.addressLine1}
                             {address.addressLine2 && `, ${address.addressLine2}`}
                           </p>
-                          <p className="text-[10px] text-gray-600 mt-0.5">
+                          <p className="text-[10px] text-background-600 mt-0.5">
                             {address.city}, {address.postalCode}
                           </p>
                         </div>
@@ -884,7 +884,7 @@ const Checkout = () => {
                             className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-all ${
                               paymentMethod === 'COD'
                                 ? 'border-blue-600 bg-blue-50'
-                                : 'border-gray-300 hover:bg-gray-50'
+                                : 'border-background-300 hover:bg-background-50'
                             }`}
                           >
                             <input
@@ -902,7 +902,7 @@ const Checkout = () => {
                             className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-all ${
                               paymentMethod === 'Online'
                                 ? 'border-blue-600 bg-blue-50'
-                                : 'border-gray-300 hover:bg-gray-50'
+                                : 'border-background-300 hover:bg-background-50'
                             }`}
                           >
                             <input
@@ -926,7 +926,7 @@ const Checkout = () => {
             {deliveryMode === 'pickup' && (
               <div className="space-y-3">
                 {/* SELECT CITY - Mobile */}
-                <div className="bg-white p-3 rounded-lg shadow-sm">
+                <div className="bg-cream p-3 rounded-lg shadow-sm">
                   <h2 className="font-semibold text-sm mb-2">Select Store</h2>
                   <Select onValueChange={(value) => {
                     const selected = storeLocations.find(store => store.name === value);
@@ -946,7 +946,7 @@ const Checkout = () => {
                 </div>
 
                 {/* PAYMENT METHOD - Pickup Mobile */}
-                <div className="bg-white p-3 rounded-lg shadow-sm">
+                <div className="bg-cream p-3 rounded-lg shadow-sm">
                   <h3 className="font-semibold text-xs mb-2">Payment Method</h3>
                   <div className="space-y-1.5">
                     <label
@@ -996,14 +996,14 @@ const Checkout = () => {
             <div className="lg:col-span-7 space-y-4">
 
               {/* Delivery/Pickup Selection - Desktop */}
-              <div className="bg-white p-5 rounded-xl shadow-sm">
+              <div className="bg-cream p-5 rounded-xl shadow-sm">
                 <h2 className="font-semibold text-base mb-4">Choose Mode</h2>
                 <div className="flex gap-3">
                   <label
                     className={`flex-1 flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-colors ${
                       deliveryMode === 'delivery'
                         ? 'border-orange-600 bg-orange-50 text-orange-800'
-                        : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400'
+                        : 'border-background-300 bg-background-50 text-background-700 hover:border-background-400'
                     }`}
                   >
                     <input
@@ -1020,7 +1020,7 @@ const Checkout = () => {
                     className={`flex-1 flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-colors ${
                       deliveryMode === 'pickup'
                         ? 'border-orange-600 bg-orange-50 text-orange-800'
-                        : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400'
+                        : 'border-background-300 bg-background-50 text-background-700 hover:border-background-400'
                     }`}
                   >
                     <input
@@ -1040,7 +1040,7 @@ const Checkout = () => {
                 <>
                   {/* Show all saved addresses if they exist and no address is selected */}
                   {!isAddressSaved && savedAddresses.length > 0 && !showAddressForm && (
-                    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
+                    <div className="bg-cream p-4 sm:p-6 rounded-xl shadow-sm">
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="font-semibold text-base sm:text-lg">Select Delivery Address</h2>
                         <Button
@@ -1066,15 +1066,15 @@ const Checkout = () => {
                                 <MapPin className="h-4 w-4 text-blue-600" />
                               </div>
                               <div className="flex-1">
-                                <p className="font-medium text-gray-900">{addr.locationName}</p>
-                                <p className="text-sm text-gray-600 mt-1">
+                                <p className="font-medium text-background-900">{addr.locationName}</p>
+                                <p className="text-sm text-background-600 mt-1">
                                   {addr.addressLine1}
                                   {addr.addressLine2 && `, ${addr.addressLine2}`}
                                 </p>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-background-600">
                                   {addr.city}, {addr.postalCode}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                <p className="text-xs text-background-500 mt-1 flex items-center gap-1">
                                   <Phone className="h-3 w-3" />
                                   {addr.phone}
                                 </p>
@@ -1102,7 +1102,7 @@ const Checkout = () => {
 
                   {/* ADDRESS FORM */}
                   {!isAddressSaved && showAddressForm && (
-                    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
+                    <div className="bg-cream p-4 sm:p-6 rounded-xl shadow-sm">
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="font-semibold text-base sm:text-lg">
                           {savedAddresses.length > 0 ? 'Add New Address' : 'Delivery Address'}
@@ -1165,7 +1165,7 @@ const Checkout = () => {
                               onChange={e => setAddress({ ...address, addressLine1: e.target.value })}
                               className="mt-1.5"
                             />
-                            <p className="text-xs text-gray-500 mt-1">Auto-filled from map. You can edit if needed.</p>
+                            <p className="text-xs text-background-500 mt-1">Auto-filled from map. You can edit if needed.</p>
                           </div>
 
                           <div>
@@ -1191,7 +1191,7 @@ const Checkout = () => {
                                 value={address.city}
                                 readOnly
                                 placeholder="Select location on map"
-                                className="mt-1.5 bg-gray-50 cursor-not-allowed pr-10"
+                                className="mt-1.5 bg-background-50 cursor-not-allowed pr-10"
                               />
 
                               {/* Block icon */}
@@ -1209,7 +1209,7 @@ const Checkout = () => {
                               </div>
                             </div>
 
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-background-500 mt-1">
                               Auto-filled from map and cannot be edited
                             </p>
                           </div>
@@ -1223,7 +1223,7 @@ const Checkout = () => {
                                 value={address.postalCode}
                                 readOnly
                                 placeholder="Postal code"
-                                className="mt-1.5 bg-gray-50 cursor-not-allowed pr-10"
+                                className="mt-1.5 bg-background-50 cursor-not-allowed pr-10"
                               />
 
                               {/* Block icon */}
@@ -1241,7 +1241,7 @@ const Checkout = () => {
                               </div>
                             </div>
 
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-background-500 mt-1">
                               Auto-filled from map and cannot be edited
                             </p>
                           </div>
@@ -1252,7 +1252,7 @@ const Checkout = () => {
                             <Input
                               value={address.country}
                               disabled
-                              className="mt-1.5 bg-gray-50 cursor-not-allowed"
+                              className="mt-1.5 bg-background-50 cursor-not-allowed"
                             />
                           </div>
 
@@ -1286,7 +1286,7 @@ const Checkout = () => {
                         </Button>
 
                         {!isFormComplete && (
-                          <p className="text-xs text-center text-gray-500 mt-2">
+                          <p className="text-xs text-center text-background-500 mt-2">
                             Please fill all required fields and select location on map
                           </p>
                         )}
@@ -1295,7 +1295,7 @@ const Checkout = () => {
                   )}
 
                   {isAddressSaved && (
-                    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
+                    <div className="bg-cream p-4 sm:p-6 rounded-xl shadow-sm">
                       <div className="flex items-start justify-between mb-4">
                         <h2 className="font-semibold text-base sm:text-lg">Delivery Address</h2>
                         <button
@@ -1314,8 +1314,8 @@ const Checkout = () => {
                             <User className="h-4 w-4 text-blue-600" />
                           </div>
                           <div className="flex-1">
-                            <p className="font-medium text-gray-900">{address.fullName}</p>
-                            <p className="text-sm text-gray-600 flex items-center gap-1.5 mt-1">
+                            <p className="font-medium text-background-900">{address.fullName}</p>
+                            <p className="text-sm text-background-600 flex items-center gap-1.5 mt-1">
                               <Phone className="h-3.5 w-3.5" />
                               {address.phone}
                             </p>
@@ -1328,14 +1328,14 @@ const Checkout = () => {
                             <MapPin className="h-4 w-4 text-green-600" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm text-gray-900 leading-relaxed">
+                            <p className="text-sm text-background-900 leading-relaxed">
                               {address.addressLine1}
                               {address.addressLine2 && `, ${address.addressLine2}`}
                             </p>
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-sm text-background-600 mt-1">
                               {address.city}, {address.postalCode}
                             </p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-background-600">
                               {address.country}
                             </p>
                           </div>
@@ -1343,9 +1343,9 @@ const Checkout = () => {
                   
                         {/* Location Name */}
                         {address.locationName && (
-                          <div className="bg-gray-50 p-3 rounded-lg">
-                            <p className="text-xs text-gray-500 mb-1">Selected Location:</p>
-                            <p className="text-xs text-gray-700 line-clamp-2">
+                          <div className="bg-background-50 p-3 rounded-lg">
+                            <p className="text-xs text-background-500 mb-1">Selected Location:</p>
+                            <p className="text-xs text-background-700 line-clamp-2">
                               {address.locationName}
                             </p>
                           </div>
@@ -1429,14 +1429,14 @@ const Checkout = () => {
 
                       {/* PAYMENT METHOD SELECTION - Desktop */}
                       {isAddressSaved && isServiceAvailable && (
-                        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm mt-4">
+                        <div className="bg-cream p-4 sm:p-6 rounded-xl shadow-sm mt-4">
                           <h3 className="font-semibold text-base mb-3">
                             Select Payment Method
                           </h3>
 
                           <div className="space-y-2">
                             <label
-                              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
+                              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-background-50 transition-colors ${
                                 paymentMethod === 'COD' ? 'border-blue-600 bg-blue-50' : ''
                               }`}
                             >
@@ -1450,12 +1450,12 @@ const Checkout = () => {
                               />
                               <div className="flex-1">
                                 <p className="text-sm font-medium">Cash on Delivery</p>
-                                <p className="text-xs text-gray-500">Pay when you receive</p>
+                                <p className="text-xs text-background-500">Pay when you receive</p>
                               </div>
                             </label>
 
                             <label
-                              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
+                              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-background-50 transition-colors ${
                                 paymentMethod === 'Online' ? 'border-blue-600 bg-blue-50' : ''
                               }`}
                             >
@@ -1469,7 +1469,7 @@ const Checkout = () => {
                               />
                               <div className="flex-1">
                                 <p className="text-sm font-medium">Online Payment</p>
-                                <p className="text-xs text-gray-500">UPI, Card, NetBanking</p>
+                                <p className="text-xs text-background-500">UPI, Card, NetBanking</p>
                               </div>
                             </label>
                           </div>
@@ -1483,7 +1483,7 @@ const Checkout = () => {
               {deliveryMode === 'pickup' && (
                 <div className="space-y-4">
                   {/* SELECT CITY */}
-                  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
+                  <div className="bg-cream p-4 sm:p-6 rounded-xl shadow-sm">
                     <h2 className="font-semibold text-base sm:text-lg mb-3">Select Store</h2>
                     <Select onValueChange={(value) => {
                       const selected = storeLocations.find(store => store.name === value);
@@ -1508,14 +1508,14 @@ const Checkout = () => {
                   </div>
 
                   {/* PAYMENT METHOD SELECTION (for pickup) - Desktop */}
-                  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm mt-4">
+                  <div className="bg-cream p-4 sm:p-6 rounded-xl shadow-sm mt-4">
                     <h3 className="font-semibold text-base mb-3">
                       Select Payment Method
                     </h3>
 
                     <div className="space-y-2">
                       <label
-                        className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
+                        className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-background-50 transition-colors ${
                           paymentMethod === 'COD' ? 'border-blue-600 bg-blue-50' : ''
                         }`}
                       >
@@ -1529,12 +1529,12 @@ const Checkout = () => {
                         />
                         <div className="flex-1">
                           <p className="text-sm font-medium">Pay at Store (COD)</p>
-                          <p className="text-xs text-gray-500">Pay when you pick up</p>
+                          <p className="text-xs text-background-500">Pay when you pick up</p>
                         </div>
                       </label>
 
                       <label
-                        className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
+                        className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-background-50 transition-colors ${
                           paymentMethod === 'Online' ? 'border-blue-600 bg-blue-50' : ''
                         }`}
                       >
@@ -1548,7 +1548,7 @@ const Checkout = () => {
                         />
                         <div className="flex-1">
                           <p className="text-sm font-medium">Online Payment</p>
-                          <p className="text-xs text-gray-500">UPI, Card, NetBanking</p>
+                          <p className="text-xs text-background-500">UPI, Card, NetBanking</p>
                         </div>
                       </label>
                     </div>
@@ -1584,7 +1584,7 @@ const Checkout = () => {
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs sm:text-sm font-medium truncate">{product.name}</p>
-                            <p className="text-sm text-gray-700">Qty: {item.qty}</p>
+                            <p className="text-sm text-background-700">Qty: {item.qty}</p>
                           </div>
                           <p className="text-xs sm:text-sm font-semibold">
                             ₹{(price * item.qty).toFixed(2)}
@@ -1612,12 +1612,12 @@ const Checkout = () => {
                       ) : (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-gray-700">Delivery Charge</span>
+                            <span className="text-background-700">Delivery Charge</span>
                             <span className="font-medium">₹{actualDeliveryPrice.toFixed(2)}</span>
                           </div>
 
                           <div className="flex justify-between">
-                            <span className="text-gray-700">Delivery Tax</span>
+                            <span className="text-background-700">Delivery Tax</span>
                             <span className="font-medium">₹{actualDeliveryTax.toFixed(2)}</span>
                           </div>
 
@@ -1633,7 +1633,7 @@ const Checkout = () => {
                   {/* TOTAL */}
                   <div className="border-t pt-3 mt-3 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-700">Subtotal</span>
+                      <span className="text-background-700">Subtotal</span>
                       <span className="font-medium">₹{cartTotal.toFixed(2)}</span>
                     </div>
 
@@ -1703,7 +1703,7 @@ const Checkout = () => {
           </div>
 
           {/* MOBILE: Place Order Button (Fixed at bottom) */}
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-30">
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-cream border-t p-4 z-30">
             <Button
               disabled={(
                 (deliveryMode === 'delivery' && (!isAddressSaved || !isServiceAvailable))

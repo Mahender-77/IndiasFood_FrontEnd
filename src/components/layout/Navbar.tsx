@@ -85,7 +85,7 @@ export function Navbar() {
       {/* Desktop Navigation - Two Layer Design */}
       <div className="hidden lg:block">
         {/* First Layer - Logo, Search Bar, Icons */}
-        <div className="border-b border-gray-200 ">
+        <div className="bg-cream ">
           <div className="container mx-auto px-10">
             <div className="flex h-22 items-center justify-around  ">
               <div className="flex items-center justify-center " >
@@ -93,14 +93,15 @@ export function Navbar() {
               <Link to="/" className="flex items-center shrink-0">
                 <img
                   src="/IndiasFood-.png"
-                  alt="India's Food - Authentic Indian Sweets"
+                  alt="India's Food"
                   className="h-24 w-auto"
                 />
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-orange-600 whitespace-nowrap">
-                  India's Food
-                </h1>
+              <h1 className="text-3xl whitespace-nowrap logo-animated-text">
+  India's Food
+</h1>
+
               </div>
 
               {/* Home Icon and Text */}

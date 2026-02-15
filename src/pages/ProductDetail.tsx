@@ -263,7 +263,7 @@ const ProductDetail = () => {
       )}
 
       {/* Breadcrumb */}
-      <div className="bg-muted/50 py-3">
+      <div className="bg-muted/50 py-3 border">
         <div className="container-custom px-4 sm:px-6">
           <Link
             to="/products"
@@ -275,7 +275,7 @@ const ProductDetail = () => {
         </div>
       </div>
 
-      <section className="bg-background py-6 sm:py-8">
+      <section className="bg-cream py-6 sm:py-8">
         <div className="container-custom px-4 sm:px-6 lg:px-8">
           {/* Product Main Section */}
           <div className="grid lg:grid-cols-2 gap-6 lg:gap-10 mb-12 sm:mb-16 items-start">

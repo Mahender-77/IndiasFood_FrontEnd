@@ -69,7 +69,7 @@ const Index = () => {
       <Categories />
       <FeaturedProducts />
       <WhyChooseUs />
-      <Testimonials />
+      {/* <Testimonials /> */}
       <Newsletter />
     </Layout>
   );

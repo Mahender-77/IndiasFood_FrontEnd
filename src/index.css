@@ -8,118 +8,52 @@
 
 @layer base {
   :root {
-    /* Warm Indian-inspired palette */
-    --background: 30 30% 98%;
+    /* 🌸 Premium Royal Cream Background (Updated) */
+    --background: 38 50% 97%;
     --foreground: 20 20% 15%;
 
-    --card: 30 25% 99%;
+    --cream: 38 55% 96%;
+    --cream-light: 38 60% 99%;
+    --cream-deep: 38 40% 92%;
+
+    /* Cards & Surfaces */
+    --card: 38 50% 98%;
     --card-foreground: 20 20% 15%;
 
-    --popover: 30 25% 99%;
+    --popover: 38 50% 98%;
     --popover-foreground: 20 20% 15%;
 
-    /* Saffron Orange - Primary brand color */
+    /* Primary – Saffron */
     --primary: 28 80% 52%;
     --primary-foreground: 0 0% 100%;
 
-    /* Deep Maroon - Secondary */
+    /* Secondary – Maroon */
     --secondary: 0 45% 35%;
     --secondary-foreground: 0 0% 100%;
 
-    /* Warm cream muted */
-    --muted: 35 30% 94%;
+    /* Muted */
+    --muted: 38 35% 93%;
     --muted-foreground: 20 15% 45%;
 
-    /* Gold accent */
+    /* Accent – Gold */
     --accent: 43 80% 55%;
     --accent-foreground: 20 20% 15%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 30 20% 88%;
-    --input: 30 20% 88%;
+    --border: 38 25% 88%;
+    --input: 38 25% 88%;
     --ring: 28 80% 52%;
 
     --radius: 0.75rem;
 
-    /* Custom brand colors */
-    --saffron: 28 80% 52%;
-    --saffron-light: 28 80% 92%;
-    --maroon: 0 45% 35%;
-    --maroon-light: 0 45% 95%;
-    --gold: 43 80% 55%;
-    --gold-light: 43 80% 92%;
-    --cream: 35 40% 96%;
-    --terracotta: 15 60% 45%;
-    --pistachio: 120 25% 45%;
-
-    /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(28 80% 52%) 0%, hsl(0 45% 35%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(35 40% 99%) 0%, hsl(35 40% 96%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(28 80% 52%) 100%);
-
-    /* Shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(20 20% 15% / 0.08);
-    --shadow-medium: 0 8px 30px -6px hsl(20 20% 15% / 0.12);
-    --shadow-strong: 0 12px 40px -8px hsl(20 20% 15% / 0.18);
-    --shadow-card: 0 2px 12px -2px hsl(20 20% 15% / 0.06);
-    --shadow-hover: 0 8px 24px -4px hsl(28 80% 52% / 0.2);
-
-    /* Typography */
-    --font-display: 'Playfair Display', serif;
-    --font-body: 'Inter', sans-serif;
-
-    /* Sidebar */
-    --sidebar-background: 30 30% 98%;
-    --sidebar-foreground: 20 20% 15%;
-    --sidebar-primary: 28 80% 52%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 35 30% 94%;
-    --sidebar-accent-foreground: 20 20% 15%;
-    --sidebar-border: 30 20% 88%;
-    --sidebar-ring: 28 80% 52%;
-  }
-
-  .dark {
-    --background: 20 15% 8%;
-    --foreground: 30 20% 95%;
-
-    --card: 20 15% 12%;
-    --card-foreground: 30 20% 95%;
-
-    --popover: 20 15% 12%;
-    --popover-foreground: 30 20% 95%;
-
-    --primary: 28 80% 55%;
-    --primary-foreground: 20 15% 8%;
-
-    --secondary: 0 40% 45%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 20 15% 18%;
-    --muted-foreground: 30 15% 60%;
-
-    --accent: 43 75% 50%;
-    --accent-foreground: 20 15% 8%;
-
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 20 15% 20%;
-    --input: 20 15% 20%;
-    --ring: 28 80% 55%;
-
-    --sidebar-background: 20 15% 10%;
-    --sidebar-foreground: 30 20% 95%;
-    --sidebar-primary: 28 80% 55%;
-    --sidebar-primary-foreground: 20 15% 8%;
-    --sidebar-accent: 20 15% 18%;
-    --sidebar-accent-foreground: 30 20% 95%;
-    --sidebar-border: 20 15% 20%;
-    --sidebar-ring: 28 80% 55%;
+    /* Subtle Luxury Gradient Background */
+    --gradient-background: linear-gradient(
+      180deg,
+      hsl(38 60% 99%) 0%,
+      hsl(38 50% 97%) 100%
+    );
   }
 }
+
 
 @layer base {
   * {
@@ -127,7 +61,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-cream text-foreground font-body antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -291,12 +225,12 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #c084fc;
+  background: #dcb084;
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #a855f7;
+  background: #f18306;
 }
 
 /* Remove default search clear button */
@@ -334,4 +268,27 @@ input[type="search"]::-webkit-search-results-decoration {
     border-radius: 0.5rem !important;
     margin: 0 0 1rem 0 !important;
   }
+}
+.logo-animated-text {
+  font-family: 'Playfair Display', serif;
+  font-weight: 900;
+  background: linear-gradient(
+    135deg,
+    #8B4513,
+    #DAA520,
+    #FF8C00,
+    #DC143C,
+    #DAA520
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: sweetGradient 8s ease infinite;
+  letter-spacing: -1px;
+}
+
+@keyframes sweetGradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
