@@ -89,7 +89,7 @@ export function Categories() {
 
   if (loading) {
     return (
-      <section className="section-padding bg-muted/50 pt-10">
+      <section className="section-padding bg-cream pt-10">
         <div className="container-custom">
           <div className="mb-10">
             <Skeleton className="h-6 w-32" />
@@ -107,7 +107,7 @@ export function Categories() {
 
   if (error) {
     return (
-      <section className="section-padding bg-muted/50 pt-10">
+      <section className="section-padding bg-cream pt-10">
         <div className="container-custom text-center py-16">
           <h2 className="font-display text-2xl font-bold text-red-500 mb-4">Error</h2>
           <p className="text-red-500 mb-4">{error}</p>
@@ -121,7 +121,7 @@ export function Categories() {
 
   if (categories.length === 0) {
     return (
-      <section className="section-padding bg-muted/50 pt-10">
+      <section className="section-padding bg-cream pt-10">
         <div className="container-custom text-center py-16">
           <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="font-display text-2xl font-bold text-foreground mb-2">
@@ -139,7 +139,7 @@ export function Categories() {
   }
 
   return (
-    <section className="section-padding bg-muted/50  pt-10 pb-6">
+    <section className="section-padding bg-cream  pt-10 pb-6">
       <div className="container-custom  sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">

@@ -56,6 +56,34 @@ export const AdminOrderListPage = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [cancelDeliveryMode, setCancelDeliveryMode] = useState<'delivery' | 'pickup'>('delivery');
+
+  const handleAdminViewInvoice = async (orderId: string, printMode: boolean = false) => {
+    try {
+      const response = await api.get(`/admin/orders/${orderId}/invoice`, {
+        responseType: 'blob',
+      });
+
+      const fileURL = URL.createObjectURL(response.data);
+      const newWindow = window.open(fileURL, '_blank');
+
+      if (newWindow && printMode) {
+        newWindow.onload = () => {
+          newWindow.print();
+        };
+      }
+
+      toast({
+        title: 'Invoice Generated',
+        description: `Invoice has been opened${printMode ? ' for printing' : ''}.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Invoice Error',
+        description: err.response?.data?.message || 'Failed to generate invoice.',
+        variant: 'destructive',
+      });
+    }
+  };
   
 
   const itemsPerPage = 10;
@@ -1277,6 +1305,43 @@ export const AdminOrderListPage = () => {
             </DialogContent>
           </Dialog>
         )}
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleAdminViewInvoice(order._id)}
+          className="h-9 text-xs border-gray-300 hover:bg-gray-50"
+        >
+          <Eye className="h-3.5 w-3.5 mr-1.5" />
+          View Invoice
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleAdminViewInvoice(order._id, true)}
+          className="h-9 text-xs border-gray-300 hover:bg-gray-50"
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-printer"
+            >
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect width="12" height="8" x="6" y="14" />
+            </svg>
+            Print Invoice
+          </span>
+        </Button>
       </>
     )}
 

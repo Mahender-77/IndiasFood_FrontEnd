@@ -26,7 +26,23 @@ export function ProductCard({ product }: ProductCardProps) {
   const [isAdding, setIsAdding] = useState(false);
   
   const hasVariants = product.variants && product.variants.length > 0;
-  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
+
+  const initialVariantIndex = useMemo(() => {
+    if (hasVariants && product.variants && product.inventory && product.inventory.length > 0) {
+      for (let i = 0; i < product.variants.length; i++) {
+        const variantStock = product.inventory.reduce((total, location) => {
+          const stockItem = location.stock.find(s => s.variantIndex === i);
+          return total + (stockItem?.quantity || 0);
+        }, 0);
+        if (variantStock > 0) {
+          return i;
+        }
+      }
+    }
+    return 0;
+  }, [hasVariants, product.variants, product.inventory]);
+
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(initialVariantIndex);
 
   // Get cart quantity - this will reactively update when cart changes
   const cartQuantity = getCartItemQuantity(

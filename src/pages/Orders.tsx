@@ -105,6 +105,29 @@ const Orders = () => {
   const [isTracking, setIsTracking] = useState<Set<string>>(new Set());
   const [trackingDialogId, setTrackingDialogId] = useState<string | null>(null);
 
+  const handleViewInvoice = async (orderId: string) => {
+    try {
+      const response = await api.get(`/user/orders/${orderId}/invoice`, {
+        responseType: 'blob', // Important for handling PDF/file responses
+      });
+
+      // Create a blob URL and open in new tab
+      const fileURL = URL.createObjectURL(response.data);
+      window.open(fileURL, '_blank');
+
+      toast({
+        title: 'Invoice Generated',
+        description: 'Your invoice has been opened in a new tab.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Invoice Error',
+        description: err.response?.data?.message || 'Failed to generate invoice.',
+        variant: 'destructive',
+      });
+    }
+  };
+
 
   const fetchOrders = async () => {
     try {
@@ -646,6 +669,17 @@ const Orders = () => {
                             )}
                           </Button>
                         )}
+
+                        {/* View Invoice Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewInvoice(order._id)}
+                          className="flex-1 sm:flex-initial text-xs h-8"
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1.5" />
+                          View Invoice
+                        </Button>
 
                        {/* View Details Button */}
 <Dialog

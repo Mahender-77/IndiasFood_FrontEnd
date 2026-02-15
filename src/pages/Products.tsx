@@ -275,7 +275,7 @@ const Products = () => {
 
   // Desktop Filter Sidebar
   const FilterSidebar = () => (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div className="bg-cream rounded-2xl p-6 shadow-sm border border-gray-200">
       <div className="flex items-center gap-2 mb-6">
         <SlidersHorizontal className="h-5 w-5 text-gray-700" />
         <h3 className="font-semibold text-lg text-gray-900">Filter By:</h3>
@@ -345,7 +345,7 @@ const Products = () => {
                 "w-full px-5 py-3.5 rounded-xl text-left font-medium transition-all duration-200",
                 selectedCategory === category.name
                   ? "bg-orange-100 text-orange-700 border-2 border-orange-300 shadow-sm"
-                  : "bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-200 hover:bg-orange-50"
+                  : "bg-cream text-gray-700 border-2 border-gray-200 hover:border-orange-200 hover:bg-orange-50"
               )}
             >
               {category.name}
@@ -371,7 +371,7 @@ const Products = () => {
       />
 
       {/* Header */}
-      <section className="bg-gradient-to-b from-orange-50 to-white py-2 sm:py-6 ">
+      <section className="bg-cream py-2 sm:py-6 ">
         <div className="container-custom">
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
             Our Collections
@@ -382,7 +382,7 @@ const Products = () => {
         </div>
       </section>
 
-      <section className="section-padding bg-gray-50 pt-6 sm:pt-10">
+      <section className="section-padding bg-cream pt-6 sm:pt-10">
         <div className="w-full max-w-[90%] mx-auto px-4 sm:px-6 lg:px-8">
           {/* Mobile Filters */}
           <div className="lg:hidden mb-3 space-y-2">

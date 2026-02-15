@@ -33,7 +33,7 @@ export function FeaturedProducts() {
 
   if (loading) {
     return (
-      <section className="section-padding bg-background pt-0">
+      <section className="section-padding bg-cream pt-0">
         <div className="container-custom">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
             <div>
@@ -55,7 +55,7 @@ export function FeaturedProducts() {
 
   if (error) {
     return (
-      <section className="section-padding bg-background pt-0">
+      <section className="section-padding bg-cream pt-0">
         <div className="container-custom text-center py-16">
           <h2 className="font-display text-2xl font-bold text-red-500 mb-4">Error</h2>
           <p className="text-red-500 mb-4">{error}</p>
@@ -69,7 +69,7 @@ export function FeaturedProducts() {
 
   if (featuredProducts.length === 0) {
     return (
-      <section className="section-padding bg-background pt-0">
+      <section className="section-padding bg-cream pt-0">
         <div className="container-custom text-center py-16">
           <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="font-display text-2xl font-bold text-foreground mb-2">
@@ -87,7 +87,7 @@ export function FeaturedProducts() {
   }
 
   return (
-    <section className="section-padding bg-background pt-10">
+    <section className="section-padding bg-cream pt-10">
       <div className="container-custom">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">

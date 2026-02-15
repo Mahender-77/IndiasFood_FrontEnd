@@ -174,7 +174,7 @@ const Cart = () => {
           description="Your shopping cart is empty."
           keywords="shopping cart, empty cart"
         />
-        <section className="section-padding bg-background">
+        <section className="section-padding bg-cream">
           <div className="container-custom">
             <div className="max-w-md mx-auto text-center py-16">
               <div className="w-24 h-24 mx-auto rounded-full bg-muted flex items-center justify-center mb-6">
@@ -206,13 +206,13 @@ const Cart = () => {
         description={`Your cart has ${availableItemsCount} items. Total: ₹${cartTotal}.`}
         keywords="shopping cart, checkout"
       />
-      <section className="section-padding bg-background pt-6 sm:pt-8 lg:pt-10">
+      <section className="section-padding bg-cream pt-6 sm:pt-8 lg:pt-10">
         <div className="container-custom px-4 sm:px-6 lg:px-8">
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4 sm:mb-6 lg:mb-8">
             Your Cart ({availableItemsCount} {availableItemsCount === 1 ? 'item' : 'items'})
           </h1>
 
-          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8 ">
             <div className="lg:col-span-2 space-y-4">
               {state.items.map((item) => {
                 const product = item.product as Product;
@@ -229,7 +229,7 @@ const Cart = () => {
                 return (
                   <div
                     key={itemKey}
-                    className="flex flex-col sm:flex-row gap-4 p-4 sm:p-5 bg-card rounded-xl shadow-card border"
+                    className="flex flex-col sm:flex-row gap-4 p-4 sm:p-5 bg-cream rounded-xl shadow-card border"
                   >
                     <Link
                       to={`/product/${product._id}`}
@@ -443,7 +443,7 @@ const Cart = () => {
             </div>
 
             <div className="lg:col-span-1">
-              <div className="bg-card rounded-xl shadow-card p-5 sm:p-6 sticky top-24">
+              <div className="bg-cream rounded-xl shadow-card p-5 sm:p-6 sticky top-24">
                 <h2 className="font-display text-xl font-semibold text-foreground mb-4">
                   Order Summary
                 </h2>
