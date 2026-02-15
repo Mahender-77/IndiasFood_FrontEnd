@@ -259,7 +259,7 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
 
         {hasVariants && !isEntirelyOutOfStock && (
-          <div className="absolute top-3 left-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+          <div className="absolute top-3 left-3 bg-orange-600 text-white px-2 py-1 rounded-full text-xs font-medium">
             {product.variants!.length} Options
           </div>
         )}
@@ -413,7 +413,7 @@ export function ProductCard({ product }: ProductCardProps) {
                   variant="cart"
                   disabled={isAdding}
                   onClick={handleAddToCart}
-                  className="w-full gap-1.5 h-8 text-[11px] font-semibold rounded-lg"
+                  className="w-full gap-1.5 h-8 text-[11px] font-semibold rounded-lg hover:text-white bg-orange-600"
                 >
                   {isAdding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5" />}
                   {isAdding ? "Adding..." : "Add to Cart"}
@@ -437,7 +437,7 @@ export function ProductCard({ product }: ProductCardProps) {
             <Button
               size="sm"
               variant="outline"
-              className="w-full h-8 text-[11px] font-semibold border-gray-300 hover:bg-gray-50 rounded-lg"
+              className="w-full h-8 text-[11px] text-orange-600 hover:text-white font-semibold border-gray-300 hover:bg-orange-600 rounded-lg"
             >
               View Details
             </Button>

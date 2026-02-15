@@ -516,7 +516,7 @@ const Cart = () => {
                     <Button 
                       size="lg" 
                       variant="hero" 
-                      className="w-full gap-2"
+                      className="w-full gap-2 hover:text-white bg-orange-600"
                       onClick={handleCheckoutClick} // Use the new handler
                       disabled={cartLoading || availableItemsCount === 0}
                     >

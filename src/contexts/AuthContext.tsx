@@ -12,6 +12,7 @@ interface User {
   role: 'user' | 'admin' | 'delivery' | 'delivery-pending'; // Add role field
   addresses: Address[];
   deliveryProfile?: DeliveryProfile; // Add deliveryProfile
+  newsletterSubscribed?: boolean; // Add newsletterSubscribed
 }
 
 interface Address {
@@ -40,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('userToken')); // Initialize token from localStorage
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [newsletterSubscribed, setNewsletterSubscribed] = useState<boolean>(false);
 
   // Effect to load user profile on initial mount or when token changes
   useEffect(() => {
@@ -89,6 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       const { data } = await api.get(`/auth/profile`);
       setUser(data);
+      setNewsletterSubscribed(data.newsletterSubscribed || false);
       localStorage.setItem('authUser', JSON.stringify(data));
     } catch (err: any) {
       console.error('Failed to fetch user profile', err);

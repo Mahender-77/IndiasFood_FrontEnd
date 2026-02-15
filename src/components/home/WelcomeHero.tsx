@@ -85,7 +85,7 @@ export const WelcomeHero = () => {
         </div>
 
         {/* Main Heading - Responsive typography */}
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-7xl lg:h-16
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-5xl lg:h-16 mx-auto
                        font-bold
                        mb-4 sm:mb-6
                        leading-tight sm:leading-snug md:leading-[1.2]
@@ -106,27 +106,24 @@ export const WelcomeHero = () => {
                       font-semibold">
           Directly from Renowned Makers to Your Doorstep
         </p>
-
-        {/* Delivery + Location Info - Stack on mobile, row on larger screens */}
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 mb-6 sm:mb-8 px-4">
-          <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 
+  {/* Delivery + Location Info - Side by side on all screens */}
+  <div className="flex flex-row justify-center items-center gap-2 sm:gap-4 mb-6 sm:mb-8 px-4">
+          <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2.5 
                           rounded-full border border-amber-400 bg-amber-100/40
                           hover:bg-amber-100/60 hover:border-amber-500 
-                          transition-all duration-300
-                          w-full sm:w-auto max-w-xs sm:max-w-none">
-            <span className="text-base sm:text-lg">⚡</span>
-            <span className="text-sm sm:text-base font-semibold text-amber-900">
+                          transition-all duration-300">
+            <span className="text-sm sm:text-lg">⚡</span>
+            <span className="text-[10px] sm:text-base font-semibold text-amber-900 whitespace-nowrap">
               Instant Delivery
             </span>
           </div>
 
-          <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 
+          <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2.5 
                           rounded-full border border-amber-400 bg-amber-100/40
                           hover:bg-amber-100/60 hover:border-amber-500 
-                          transition-all duration-300
-                          w-full sm:w-auto max-w-xs sm:max-w-none">
-            <span className="text-base sm:text-lg">📍</span>
-            <span className="text-sm sm:text-base font-semibold text-amber-900">
+                          transition-all duration-300">
+            <span className="text-sm sm:text-lg">📍</span>
+            <span className="text-[10px] sm:text-base font-semibold text-amber-900 whitespace-nowrap">
               Now Serving Bangalore
             </span>
           </div>
@@ -136,22 +133,21 @@ export const WelcomeHero = () => {
         <Link
           to="/products"
           className="inline-block 
-                     px-8 sm:px-10 md:px-12 
-                     py-3 sm:py-3.5 md:py-4 
+                     px-6 sm:px-10 md:px-12 
+                     py-2.5 sm:py-3.5 md:py-4 
                      bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 
                      text-white 
                      font-semibold 
-                     text-base sm:text-lg md:text-xl
+                     text-sm sm:text-lg md:text-xl
                      rounded-full 
-                     shadow-2xl 
-                     hover:shadow-3xl 
+                     shadow-lg sm:shadow-2xl 
+                     hover:shadow-2xl sm:hover:shadow-3xl 
                      active:scale-95
                      hover:scale-105 
                      transform 
                      transition-all duration-300 
                      border-2 border-yellow-400
-                     focus:outline-none focus:ring-4 focus:ring-yellow-300
-                     w-full sm:w-auto max-w-xs sm:max-w-none mx-auto">
+                     focus:outline-none focus:ring-4 focus:ring-yellow-300">
           Order Now
         </Link>
 

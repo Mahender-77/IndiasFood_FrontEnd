@@ -68,6 +68,7 @@ const Checkout = () => {
   const [deliverySettings, setDeliverySettings] = useState({
     pricePerKm: 0,
     baseCharge: 0,
+    gstPercentage: 0,
     freeDeliveryThreshold: 0
   });
 
@@ -120,6 +121,24 @@ const Checkout = () => {
   const originalDeliveryTax = serviceabilityResult?.payouts?.tax ?? 0;
   const originalDeliveryTotal = serviceabilityResult?.payouts?.total ?? 0;
 
+
+// GST %
+const gstPercentage = deliverySettings?.gstPercentage || 0;
+
+// GST amount on cart subtotal
+const gstAmount = (cartTotal * gstPercentage) / 100;
+
+// Delivery total (0 if not applicable)
+const deliveryTotal =
+  deliveryMode === 'delivery' && isServiceAvailable
+    ? actualDeliveryTotal
+    : 0;
+
+// Final total including GST + Delivery
+const finalTotal = cartTotal + gstAmount + deliveryTotal;
+
+
+
   /* ---------------- API HELPERS ---------------- */
 
   const fetchDeliverySettings = async () => {
@@ -131,6 +150,8 @@ const Checkout = () => {
       console.error('Failed to fetch delivery settings:', error);
     }
   };
+
+
 
   const fetchSavedAddresses = async () => {
     try {
@@ -429,7 +450,7 @@ const Checkout = () => {
             : 'Online Payment',
       
         shippingPrice: deliveryMode === 'delivery' ? deliveryTotal : 0,
-        taxPrice: 0, // or actual tax if you want
+        taxPrice: gstAmount, // or actual tax if you want
       
         deliveryMode
       });
@@ -473,88 +494,82 @@ const Checkout = () => {
 
           <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Checkout</h1>
 
-          {/* MOBILE: Order Summary at Top */}
-          <div className="lg:hidden mb-3">
-            <div className="bg-orange-100 rounded-lg p-3 shadow-sm">
-              <h2 className="font-semibold text-sm mb-2">Order Summary</h2>
+         {/* MOBILE: Order Summary at Top */}
+<div className="lg:hidden mb-3">
+  <div className="bg-orange-100 rounded-lg p-3 shadow-sm">
+    <h2 className="font-semibold text-sm mb-3">Order Summary</h2>
 
-              {/* CART ITEMS - Compact */}
-              <div className="space-y-1.5 mb-2 max-h-32 overflow-y-auto">
-                {state.items.map(item => {
-                  const product = item.product as Product;
-                  let price =
-                    product.variants?.[item.selectedVariantIndex ?? 0]?.offerPrice ??
-                    product.offerPrice ??
-                    product.originalPrice ??
-                    0;
+    {/* CART ITEMS */}
+    <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
+      {state.items.map(item => {
+        const product = item.product as Product;
+        let price =
+          product.variants?.[item.selectedVariantIndex ?? 0]?.offerPrice ??
+          product.offerPrice ??
+          product.originalPrice ??
+          0;
 
-                  return (
-                    <div key={product._id} className="flex gap-2 items-center bg-cream/50 rounded p-1.5">
-                      <img
-                        src={product.images?.[0]}
-                        alt={product.name}
-                        className="w-8 h-8 rounded object-cover flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-medium truncate leading-tight">{product.name}</p>
-                        <p className="text-[10px] text-background-600">Qty: {item.qty}</p>
-                      </div>
-                      <p className="text-[10px] font-semibold flex-shrink-0">
-                        ₹{(price * item.qty).toFixed(2)}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* 🔥 UPDATED: DELIVERY INFO - Mobile (Compact) */}
-              {deliveryMode === 'delivery' && serviceabilityResult && isServiceAvailable && (
-                <div className="border-t border-orange-200 pt-1.5 space-y-1 text-[10px] mb-1.5">
-                  {qualifiesForFreeDelivery ? (
-                    <div className="bg-green-50 border border-green-200 rounded p-1.5 mb-1">
-                      <p className="text-green-700 font-semibold text-[10px]">
-                        🎉 FREE Delivery Applied!
-                      </p>
-                      <p className="text-green-600 text-[9px]">
-                        Orders above ₹{deliverySettings.freeDeliveryThreshold}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between">
-                      <span className="text-background-700">Delivery</span>
-                      <span className="font-medium">₹{actualDeliveryTotal.toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TOTAL - Mobile (Compact) */}
-              <div className="border-t border-orange-200 pt-1.5 space-y-1">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-background-700">Subtotal</span>
-                  <span className="font-medium">₹{cartTotal.toFixed(2)}</span>
-                </div>
-
-                {deliveryMode === 'delivery' && isServiceAvailable && (
-                  <div className="flex justify-between text-xs font-bold">
-                    <span>Total</span>
-                    <span className="text-orange-600">
-                      ₹{(cartTotal + actualDeliveryTotal).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-
-                {deliveryMode === 'pickup' && (
-                  <div className="flex justify-between text-xs font-bold">
-                    <span>Total</span>
-                    <span className="text-orange-600">
-                      ₹{cartTotal.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
+        return (
+          <div key={product._id} className="flex gap-2 items-center bg-cream/50 rounded p-2">
+            <img
+              src={product.images?.[0]}
+              alt={product.name}
+              className="w-8 h-8 rounded object-cover"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-medium truncate">{product.name}</p>
+              <p className="text-[10px] text-background-600">Qty: {item.qty}</p>
             </div>
+            <p className="text-[11px] font-semibold">
+              ₹{(price * item.qty).toFixed(2)}
+            </p>
           </div>
+        );
+      })}
+    </div>
+
+    {/* PRICE BREAKDOWN */}
+    <div className="border-t border-orange-200 pt-2 space-y-1 text-[11px]">
+
+      <div className="flex justify-between">
+        <span>Subtotal</span>
+        <span>₹{cartTotal.toFixed(2)}</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span>GST ({gstPercentage}%)</span>
+        <span>₹{gstAmount.toFixed(2)}</span>
+      </div>
+
+      {deliveryMode === 'delivery' && isServiceAvailable && (
+        qualifiesForFreeDelivery ? (
+          <div className="bg-green-50 border border-green-200 rounded p-2 mt-1">
+            <p className="text-green-700 font-semibold text-[10px]">
+              🎉 Free Delivery Applied
+            </p>
+            <p className="text-green-600 text-[9px]">
+              You saved ₹{originalDeliveryTotal.toFixed(2)}
+            </p>
+          </div>
+        ) : (
+          <div className="flex justify-between">
+            <span>Delivery</span>
+            <span>₹{deliveryTotal.toFixed(2)}</span>
+          </div>
+        )
+      )}
+
+      {/* FINAL TOTAL */}
+      <div className="border-t border-orange-300 pt-2 flex justify-between font-bold text-sm">
+        <span>Total Payable</span>
+        <span className="text-orange-600">
+          ₹{finalTotal.toFixed(2)}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
 
           {/* MOBILE: Delivery/Pickup Selection (Smaller) */}
           <div className="lg:hidden mb-3">
@@ -993,7 +1008,7 @@ const Checkout = () => {
           <div className="hidden lg:grid lg:grid-cols-10 gap-6">
 
             {/* LEFT - MAIN CONTENT (70%) */}
-            <div className="lg:col-span-7 space-y-4">
+            <div className="lg:col-span-7 space-y-4 ">
 
               {/* Delivery/Pickup Selection - Desktop */}
               <div className="bg-cream p-5 rounded-xl shadow-sm">
@@ -1631,30 +1646,51 @@ const Checkout = () => {
                   )}
 
                   {/* TOTAL */}
-                  <div className="border-t pt-3 mt-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-background-700">Subtotal</span>
-                      <span className="font-medium">₹{cartTotal.toFixed(2)}</span>
-                    </div>
+<div className="border-t pt-3 mt-3 space-y-2 text-sm">
 
-                    {deliveryMode === 'delivery' && isServiceAvailable && (
-                      <div className="flex justify-between text-base sm:text-lg font-bold">
-                        <span>Total Payable</span>
-                        <span className="text-orange-600">
-                          ₹{(cartTotal + actualDeliveryTotal).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
+<div className="flex justify-between">
+  <span className="text-background-700">Subtotal</span>
+  <span className="font-medium">₹{cartTotal.toFixed(2)}</span>
+</div>
 
-                    {deliveryMode === 'pickup' && (
-                      <div className="flex justify-between text-base sm:text-lg font-bold">
-                        <span>Total Payable</span>
-                        <span className="text-orange-600">
-                          ₹{cartTotal.toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+<div className="flex justify-between">
+  <span className="text-background-700">
+    GST ({gstPercentage}%)
+  </span>
+  <span className="font-medium">
+    ₹{gstAmount.toFixed(2)}
+  </span>
+</div>
+
+{deliveryMode === 'delivery' && isServiceAvailable && (
+  qualifiesForFreeDelivery ? (
+    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
+      <p className="text-green-700 font-semibold text-sm">
+        🎉 Free Delivery Applied
+      </p>
+      <p className="text-green-600 text-xs mt-1">
+        You saved ₹{originalDeliveryTotal.toFixed(2)}
+      </p>
+    </div>
+  ) : (
+    <div className="flex justify-between">
+      <span className="text-background-700">Delivery</span>
+      <span className="font-medium">
+        ₹{deliveryTotal.toFixed(2)}
+      </span>
+    </div>
+  )
+)}
+
+{/* FINAL TOTAL */}
+<div className="border-t pt-3 flex justify-between text-lg font-bold">
+  <span>Total Payable</span>
+  <span className="text-orange-600">
+    ₹{finalTotal.toFixed(2)}
+  </span>
+</div>
+</div>
+
 
                   {/* PLACE ORDER BUTTON */}
                   <Button

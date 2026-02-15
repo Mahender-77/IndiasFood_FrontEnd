@@ -167,7 +167,7 @@ export function Navbar() {
                       <User className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
                       <span className="text-xs text-gray-600 group-hover:text-orange-600">Profile</span>
                     </div>
-                    <div className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
+                    <div className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg bg-background ring-1 ring-black ring-opacity-5 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
                       <div className="py-1">
                         <div className="px-4 py-2 text-sm text-gray-700 border-b">
                           <div className="font-medium">{user.username}</div>
@@ -287,7 +287,7 @@ export function Navbar() {
 
      
      {/* Mobile Navigation - Single Layer */}
-     <div className="lg:hidden">
+     <div className="lg:hidden bg-background">
         <div className="container mx-auto px-2">
           <div className="flex h-18 items-center justify-between">
             {/* Logo and Text Group */}
@@ -307,7 +307,7 @@ export function Navbar() {
                   isSearchOpen ? "w-0 opacity-0 overflow-hidden" : "opacity-100"
                 )}
               >
-                <span className="text-lg font-bold text-orange-600 whitespace-nowrap">
+                <span className="text-lg font-bold logo-animated-text whitespace-nowrap">
                   India's Food
                 </span>
               </div>
@@ -431,7 +431,7 @@ export function Navbar() {
 
         {/* Mobile Menu Dropdown */}
         {isMenuOpen && (
-          <div className="border-t bg-white shadow-lg animate-slide-down">
+          <div className="border-t bg-backgound shadow-lg animate-slide-down">
             <nav className="container mx-auto">
               <div className="flex flex-col">
                 {/* Home Link - First in menu */}
