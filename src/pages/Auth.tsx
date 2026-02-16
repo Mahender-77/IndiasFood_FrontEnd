@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { Eye, EyeOff, Lock, Phone, User, Mail, ArrowLeft } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface GuestCartItem {
   productId: string;
@@ -63,7 +63,6 @@ const Auth = () => {
   });
 
   const { login } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation(); // Initialize useLocation
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -179,11 +178,8 @@ const Auth = () => {
   // ---------------- LOGIN WITH PASSWORD ----------------
   const handleLogin = async () => {
     if (!formData.phone || !formData.password) {
-      toast({
-        title: 'Error',
-        description: 'Phone and password are required',
-        variant: 'destructive',
-      });
+      toast.error('Phone and password are required');
+
       return;
     }
 
@@ -194,16 +190,13 @@ const Auth = () => {
         password: formData.password,
       });
       login(res.data.token);
-      toast({ title: 'Welcome back!' });
+      toast.success('Welcome back!');
       await mergeGuestCartWithUserCart();
       const from = (location.state as { from: string })?.from || '/';
       navigate(from);
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.response?.data?.message || 'Login failed',
-        variant: 'destructive',
-      });
+      toast.error('Some message');
+
     } finally {
       setIsLoading(false);
     }
@@ -212,29 +205,19 @@ const Auth = () => {
   // ---------------- SEND OTP (REGISTER) ----------------
   const sendRegisterOtp = async () => {
     if (!formData.name || !formData.email || !formData.phone) {
-      toast({
-        title: 'Error',
-        description: 'All fields are required',
-        variant: 'destructive',
-      });
+      toast.error('All fields are required');
+     
       return;
     }
 
     if (!isValidEmail(formData.email)) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid email',
-        variant: 'destructive',
-      });
+      toast.error('Please enter a valid email');
+     
       return;
     }
 
     if (!isValidPhone(formData.phone)) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid 10-digit phone number',
-        variant: 'destructive',
-      });
+      toast.error('Please enter a valid 10-digit phone number');
       return;
     }
 
@@ -244,19 +227,14 @@ const Auth = () => {
         phone: formData.phone,
         type: 'register',
       });
-      toast({
-        title: 'OTP Sent',
-        description: 'Please check your phone for the OTP',
-      });
+      toast.success('OTP sent successfully');
+
+      
       setRegisterStep('otp');
       setCountdown(60);
       setOtpValues(['', '', '', '', '', '']);
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.response?.data?.message || 'Failed to send OTP',
-        variant: 'destructive',
-      });
+      toast.error(err.response?.data?.message || 'Failed to send OTP');
     } finally {
       setIsLoading(false);
     }
@@ -271,18 +249,12 @@ const Auth = () => {
         type: 'register',
       });
       
-      toast({
-        title: 'OTP Resent',
-        description: 'A new OTP has been sent to your phone',
-      });
+      toast.success('OTP resent successfully');
       setCountdown(60);
       setOtpValues(['', '', '', '', '', '']);
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.response?.data?.message || 'Failed to resend OTP',
-        variant: 'destructive',
-      });
+      toast.error(err.response?.data?.message || 'Login failed');
+
     } finally {
       setIsLoading(false);
     }
@@ -292,11 +264,7 @@ const Auth = () => {
   const verifyRegisterOtp = async () => {
     const otp = getOtpString();
     if (otp.length !== 6) {
-      toast({
-        title: 'Error',
-        description: 'Please enter complete OTP',
-        variant: 'destructive',
-      });
+   toast.error('Please enter complete OTP'); 
       return;
     }
 
@@ -306,14 +274,10 @@ const Auth = () => {
         phone: formData.phone,
         otp,
       });
-      toast({ title: 'OTP Verified Successfully' });
+      toast.success('OTP verified successfully');
       setRegisterStep('password');
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.response?.data?.message || 'Invalid OTP',
-        variant: 'destructive',
-      });
+      toast.error(err.response?.data?.message || 'Invalid OTP');
     } finally {
       setIsLoading(false);
     }
@@ -322,29 +286,17 @@ const Auth = () => {
   // ---------------- REGISTER ----------------
   const handleRegister = async () => {
     if (!formData.password || !formData.confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Please enter password',
-        variant: 'destructive',
-      });
+      toast.error('Please enter password');
       return;
     }
 
     if (formData.password.length < 6) {
-      toast({
-        title: 'Error',
-        description: 'Password must be at least 6 characters',
-        variant: 'destructive',
-      });
+      toast.error('Password must be at least 6 characters');
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Passwords do not match',
-        variant: 'destructive',
-      });
+      toast.error('Passwords do not match');
       return;
     }
 
@@ -356,20 +308,11 @@ const Auth = () => {
         phone: formData.phone,
         password: formData.password,
       });
-      
-      toast({
-        title: 'Account Created Successfully!',
-        description: 'Please login to continue',
-      });
-      
+      toast.success('Account created successfully');
       resetForm();
       setMode('login');
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.response?.data?.message || 'Registration failed',
-        variant: 'destructive',
-      });
+      toast.error(err.response?.data?.message || 'Registration failed');
     } finally {
       setIsLoading(false);
     }
@@ -378,11 +321,7 @@ const Auth = () => {
   // ---------------- SEND OTP (LOGIN WITH OTP) ----------------
   const sendLoginOtp = async () => {
     if (!formData.phone || !isValidPhone(formData.phone)) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid 10-digit phone number',
-        variant: 'destructive',
-      });
+      toast.error('Please enter a valid 10-digit phone number');
       return;
     }
 
@@ -393,19 +332,12 @@ const Auth = () => {
         type: 'login',
       });
       
-      toast({
-        title: 'OTP Sent',
-        description: 'Please check your phone for the OTP',
-      });
+      toast.success('OTP sent successfully');
       setLoginOtpStep('otp');
       setCountdown(60);
       setOtpValues(['', '', '', '', '', '']);
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.response?.data?.message || 'Failed to send OTP',
-        variant: 'destructive',
-      });
+      toast.error(err.response?.data?.message || 'Failed to send OTP');
     } finally {
       setIsLoading(false);
     }
@@ -415,11 +347,7 @@ const Auth = () => {
   const verifyLoginOtp = async () => {
     const otp = getOtpString();
     if (otp.length !== 6) {
-      toast({
-        title: 'Error',
-        description: 'Please enter complete OTP',
-        variant: 'destructive',
-      });
+      toast.error('Please enter complete OTP');
       return;
     }
 
@@ -430,16 +358,12 @@ const Auth = () => {
         otp,
       });
       login(res.data.token);
-      toast({ title: 'Welcome back!' });
+      toast.success('Welcome back!');
       await mergeGuestCartWithUserCart();
       const from = (location.state as { from: string })?.from || '/';
       navigate(from);
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.response?.data?.message || 'Invalid OTP',
-        variant: 'destructive',
-      });
+      toast.error(err.response?.data?.message || 'Invalid OTP');
     } finally {
       setIsLoading(false);
     }
@@ -448,11 +372,7 @@ const Auth = () => {
   // ---------------- SEND OTP (FORGOT PASSWORD) ----------------
   const sendForgotPasswordOtp = async () => {
     if (!formData.phone || !isValidPhone(formData.phone)) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid 10-digit phone number',
-        variant: 'destructive',
-      });
+      toast.error('Please enter a valid 10-digit phone number');
       return;
     }
 
@@ -462,20 +382,12 @@ const Auth = () => {
         phone: formData.phone,
         type: 'forgot',
       });
-      
-      toast({
-        title: 'OTP Sent',
-        description: 'Please check your phone for the OTP',
-      });
+      toast.success('OTP sent successfully');
       setForgotPasswordStep('otp');
       setCountdown(60);
       setOtpValues(['', '', '', '', '', '']);
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.response?.data?.message || 'Failed to send OTP',
-        variant: 'destructive',
-      });
+      toast.error(err.response?.data?.message || 'Failed to send OTP');
     } finally {
       setIsLoading(false);
     }
@@ -485,11 +397,7 @@ const Auth = () => {
   const verifyForgotPasswordOtp = async () => {
     const otp = getOtpString();
     if (otp.length !== 6) {
-      toast({
-        title: 'Error',
-        description: 'Please enter complete OTP',
-        variant: 'destructive',
-      });
+      toast.error('Please enter complete OTP');
       return;
     }
 
@@ -499,14 +407,10 @@ const Auth = () => {
         phone: formData.phone,
         otp,
       });
-      toast({ title: 'OTP Verified' });
+      toast.success('OTP verified successfully');
       setForgotPasswordStep('newPassword');
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.response?.data?.message || 'Invalid OTP',
-        variant: 'destructive',
-      });
+      toast.error(err.response?.data?.message || 'Invalid OTP');
     } finally {
       setIsLoading(false);
     }
@@ -515,29 +419,17 @@ const Auth = () => {
   // ---------------- RESET PASSWORD ----------------
   const handleResetPassword = async () => {
     if (!formData.password || !formData.confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Please enter password',
-        variant: 'destructive',
-      });
+      toast.error('Please enter password');
       return;
     }
 
     if (formData.password.length < 6) {
-      toast({
-        title: 'Error',
-        description: 'Password must be at least 6 characters',
-        variant: 'destructive',
-      });
+      toast.error('Password must be at least 6 characters');
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Passwords do not match',
-        variant: 'destructive',
-      });
+      toast.error('Passwords do not match');
       return;
     }
 
@@ -548,20 +440,14 @@ const Auth = () => {
         password: formData.password,
       });
       
-      toast({
-        title: 'Password Reset Successful',
-        description: 'Please login with your new password',
-        variant: "success",
-      });
+      toast.success('Password reset successfully');
+      toast.success('Please login with your new password');
       
       resetForm();
       setMode('login');
     } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.response?.data?.message || 'Failed to reset password',
-        variant: 'destructive',
-      });
+
+      toast.error(err.response?.data?.message || 'Failed to reset password');
     } finally {
       setIsLoading(false);
     }

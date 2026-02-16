@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Menu, X, LogOut, ChevronDown, Home } from 'lucide-react';
+import { Search, ShoppingCart, Heart,LogIn, User,Menu, X, LogOut, ChevronDown, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/contexts/CartContext';
@@ -134,91 +134,104 @@ export function Navbar() {
 
               {/* Right Icons */}
               <div className="flex items-center gap-6 shrink-0">
-                {/* Wishlist */}
-                <Link to="/wishlist" className="flex flex-col items-center gap-1 group">
-                  <div className="relative">
-                    <Heart className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
-                    {state.wishlist.length > 0 && (
-                      <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-semibold">
-                        {state.wishlist.length}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-600 group-hover:text-orange-600">Wishlist</span>
-                </Link>
 
-                {/* Cart */}
-                <Link to="/cart" className="flex flex-col items-center gap-1 group">
-                  <div className="relative">
-                    <ShoppingCart className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
-                    {cartCount > 0 && (
-                      <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-semibold">
-                        {cartCount}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-600 group-hover:text-orange-600">Cart</span>
-                </Link>
+{user ? (
+  <>
+    {/* Wishlist */}
+    <Link to="/wishlist" className="flex flex-col items-center gap-1 group">
+      <div className="relative">
+        <Heart className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
+        {state.wishlist.length > 0 && (
+          <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-semibold">
+            {state.wishlist.length}
+          </span>
+        )}
+      </div>
+      <span className="text-xs text-gray-600 group-hover:text-orange-600">
+        Wishlist
+      </span>
+    </Link>
 
-                {/* User Profile */}
-                {user ? (
-                  <div className="relative group z-50">
-                    <div className="flex flex-col items-center gap-1 cursor-pointer">
-                      <User className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
-                      <span className="text-xs text-gray-600 group-hover:text-orange-600">Profile</span>
-                    </div>
-                    <div className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg bg-background ring-1 ring-black ring-opacity-5 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
-                      <div className="py-1">
-                        <div className="px-4 py-2 text-sm text-gray-700 border-b">
-                          <div className="font-medium">{user.username}</div>
-                          {isAdmin && <div className="text-xs text-orange-600">Admin</div>}
-                          {isDelivery && <div className="text-xs text-blue-600">Delivery</div>}
-                        </div>
-                        <Link
-                          to="/profile"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          My Profile
-                        </Link>
-                        <Link
-                          to="/orders"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          My Orders
-                        </Link>
-                        {isAdmin && (
-                          <Link
-                            to="/admin"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          >
-                            Admin Dashboard
-                          </Link>
-                        )}
-                        {isDelivery && (
-                          <Link
-                            to="/delivery"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          >
-                            Delivery Dashboard
-                          </Link>
-                        )}
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                        >
-                          <LogOut className="h-4 w-4" />
-                          Logout
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <Link to="/auth" className="flex flex-col items-center gap-1 group">
-                    <User className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
-                    <span className="text-xs text-gray-600 group-hover:text-orange-600">Profile</span>
-                  </Link>
-                )}
-              </div>
+    {/* Cart */}
+    <Link to="/cart" className="flex flex-col items-center gap-1 group">
+      <div className="relative">
+        <ShoppingCart className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
+        {cartCount > 0 && (
+          <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-semibold">
+            {cartCount}
+          </span>
+        )}
+      </div>
+      <span className="text-xs text-gray-600 group-hover:text-orange-600">
+        Cart
+      </span>
+    </Link>
+
+    {/* Profile Dropdown */}
+    <div className="relative group z-50">
+      <div className="flex flex-col items-center gap-1 cursor-pointer">
+        <User className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" />
+        <span className="text-xs text-gray-600 group-hover:text-orange-600">
+          Profile
+        </span>
+      </div>
+
+      <div className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg bg-background ring-1 ring-black ring-opacity-5 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
+        <div className="py-1">
+          <div className="px-4 py-2 text-sm text-gray-700 border-b">
+            <div className="font-medium">{user.username}</div>
+            {isAdmin && <div className="text-xs text-orange-600">Admin</div>}
+            {isDelivery && <div className="text-xs text-blue-600">Delivery</div>}
+          </div>
+
+          <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            My Profile
+          </Link>
+
+          <Link to="/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            My Orders
+          </Link>
+
+          {isAdmin && (
+            <Link to="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              Admin Dashboard
+            </Link>
+          )}
+
+          {isDelivery && (
+            <Link to="/delivery" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              Delivery Dashboard
+            </Link>
+          )}
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </>
+) : (
+  /* Show Login Button ONLY if not on /auth */
+  !location.pathname.startsWith("/auth") && (
+    <Link to="/auth">
+      <Button
+        className="bg-orange-600 hover:bg-orange-700 text-white h-9 px-4 rounded-full text-sm font-semibold flex items-center gap-2 shadow-sm transition-all active:scale-95"
+      >
+        <LogIn className="h-4 w-4" />
+        Login
+      </Button>
+    </Link>
+  )
+)}
+
+</div>
+
+
             </div>
           </div>
         </div>
@@ -359,73 +372,94 @@ export function Navbar() {
 
             </div>
 
-            {/* Right Icons */}
-            <div className="flex items-center gap-1 shrink-0">
-              {/* Search Icon Toggle - Only show when search is closed */}
-              {!isSearchOpen && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6"  
-                  onClick={() => setIsSearchOpen(true)}
-                >
-                  <Search className="h-5 w-5 text-gray-700" />
-                </Button>
-              )}
+ <div className="flex items-center gap-1 shrink-0">
 
-              {/* Wishlist */}
-              <Link to="/wishlist">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative h-6 w-6"
-                >
-                  <Heart className="h-6 w-4" />
-                  {state.wishlist.length > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-semibold">
-                      {state.wishlist.length}
-                    </span>
-                  )}
-                </Button>
-              </Link>
+  {user ? (
+    <>
+      {/* Search Icon */}
+      {!isSearchOpen && (
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-6 w-6"  
+          onClick={() => setIsSearchOpen(true)}
+        >
+          <Search className="h-5 w-5 text-gray-700" />
+        </Button>
+      )}
 
-              {/* Cart */}
-              <Link to="/cart">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative h-6 w-6"
-                >
-                  <ShoppingCart className="h-6 w-4" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-semibold">
-                      {cartCount}
-                    </span>
-                  )}
-                </Button>
-              </Link>
+      {/* Wishlist */}
+      <Link to="/wishlist">
+        <Button variant="ghost" size="icon" className="relative h-6 w-6">
+          <Heart className="h-6 w-4" />
+          {state.wishlist.length > 0 && (
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-semibold">
+              {state.wishlist.length}
+            </span>
+          )}
+        </Button>
+      </Link>
 
-              {/* Profile */}
-              <Link to={user ? "/profile" : "/auth"}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                >
-                  <User className="h-6 w-4" />
-                </Button>
-              </Link>
+      {/* Cart */}
+      <Link to="/cart">
+        <Button variant="ghost" size="icon" className="relative h-6 w-6">
+          <ShoppingCart className="h-6 w-4" />
+          {cartCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-semibold">
+              {cartCount}
+            </span>
+          )}
+        </Button>
+      </Link>
 
-              {/* Menu Toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-              >
-                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </Button>
-            </div>
+      {/* Profile */}
+      <Link to="/profile">
+        <Button variant="ghost" size="icon" className="h-6 w-6">
+          <User className="h-6 w-4" />
+        </Button>
+      </Link>
+
+      {/* Menu */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6"
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+      >
+        {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </Button>
+    </>
+  ) : (
+    <>
+      {location.pathname === "/auth" ? (
+        /* ON LOGIN PAGE → SHOW HOME ICON */
+        <Link to="/">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+          >
+            <Home className="h-7 w-7 text-orange-600" />
+          </Button>
+        </Link>
+      ) : (
+        /* NOT ON LOGIN PAGE → SHOW SMALL LOGIN BUTTON */
+        <Link to="/auth">
+          <Button
+            className="bg-orange-600 hover:bg-orange-700 text-white h-6 px-2 rounded text-[10px] font-medium flex items-center gap-1 shadow-sm"
+          >
+            <LogIn className="h-1 w-1" />
+            Login
+          </Button>
+        </Link>
+      )}
+    </>
+  )}
+
+</div>
+
+
+
           </div>
         </div>
 
