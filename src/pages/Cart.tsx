@@ -304,12 +304,12 @@ const Cart = () => {
 
                       <div className="flex flex-wrap items-center gap-2 mb-3">
                         {product.isGITagged && (
-                          <span className="inline-block px-2 py-1 bg-saffron-light text-primary text-xs rounded-full">
+                          <span className="inline-block px-2 py-1 bg-saffron-light text-green-600 text-xs rounded-full">
                             GI Tagged
                           </span>
                         )}
                         {product.isNewArrival && (
-                          <span className="inline-block px-2 py-1 bg-pistachio text-white text-xs rounded-full">
+                          <span className="inline-block px-2 py-1 bg-pistachio text-blue-600 text-xs rounded-full">
                             New Arrival
                           </span>
                         )}

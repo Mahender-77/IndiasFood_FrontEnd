@@ -165,34 +165,34 @@ const Products = () => {
   useEffect(() => {
     fetchSubcategories();
   }, [selectedCategory]);
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (selectedCategory && selectedCategory !== 'all') {
+        params.append('category', selectedCategory);
+      }
+      if (selectedSubcategories.length > 0) {
+        params.append('subcategories', selectedSubcategories.join(','));
+      }
+      params.append('pageNumber', String(pageNumberParam));
+      params.append('sortBy', sortBy);
+
+      const { data } = await api.get(`/products?${params.toString()}`);
+      setProducts(data.products);
+      setPage(data.page);
+      setPages(data.pages);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to fetch products');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fetch products
   useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams();
-        if (search) params.append('search', search);
-        if (selectedCategory && selectedCategory !== 'all') {
-          params.append('category', selectedCategory);
-        }
-        if (selectedSubcategories.length > 0) {
-          params.append('subcategories', selectedSubcategories.join(','));
-        }
-        params.append('pageNumber', String(pageNumberParam));
-        params.append('sortBy', sortBy);
-
-        const { data } = await api.get(`/products?${params.toString()}`);
-        setProducts(data.products);
-        setPage(data.page);
-        setPages(data.pages);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to fetch products');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchProducts();
   }, [search, selectedCategory, selectedSubcategories, pageNumberParam, sortBy, urlSearchTerm]);
 
@@ -558,7 +558,7 @@ const Products = () => {
               ) : error ? (
                 <div className="text-center py-16">
                   <p className="text-red-500 text-lg mb-4">Error: {error}</p>
-                  <Button onClick={() => window.location.reload()} variant="outline">
+                  <Button onClick={() => fetchProducts()} variant="outline">
                     Try Again
                   </Button>
                 </div>

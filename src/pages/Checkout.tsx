@@ -520,9 +520,9 @@ const finalTotal = cartTotal + gstAmount + deliveryTotal;
               <p className="text-[11px] font-medium truncate">{product.name}</p>
               <p className="text-[10px] text-background-600">Qty: {item.qty}</p>
             </div>
-            <p className="text-[11px] font-semibold">
-              ₹{(price * item.qty).toFixed(2)}
-            </p>
+            {/* <p className="text-[11px] font-semibold">
+              {(price * item.qty).toFixed(2)}
+            </p> */}
           </div>
         );
       })}
@@ -1601,9 +1601,9 @@ const finalTotal = cartTotal + gstAmount + deliveryTotal;
                             <p className="text-xs sm:text-sm font-medium truncate">{product.name}</p>
                             <p className="text-sm text-background-700">Qty: {item.qty}</p>
                           </div>
-                          <p className="text-xs sm:text-sm font-semibold">
+                          {/* <p className="text-xs sm:text-sm font-semibold">
                             ₹{(price * item.qty).toFixed(2)}
-                          </p>
+                          </p> */}
                         </div>
                       );
                     })}
