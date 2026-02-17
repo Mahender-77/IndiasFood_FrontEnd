@@ -44,7 +44,7 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-3 sm:space-y-4">
           <Link to="/" className="shrink-0">
-          <img src="/IndiasFood-.png" alt="Indiasfood Logo" className="h-20 w-auto" />
+          <img src="/IndiasFood.png" alt="Indiasfood Logo" className="h-20 w-auto" />
             </Link>
             <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">A unit of Maha foods</p>
             <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">

@@ -9,15 +9,20 @@ import { SEO } from '@/components/seo/SEO';
 import { WelcomeHero } from '@/components/home/WelcomeHero';
 import { InfiniteScrollText } from '@/components/ui/infinite-scroll-text';
 import { AutoCarousel } from '@/components/ui/auto-carousel';
+import { useEffect, useState } from 'react'; // Added useEffect and useState
+
+import api from '@/lib/api'; // Added api import
+import { Product } from '@/types'; // Added Product type import
 
 import image1 from '@/assets/indiasFood (2).jpeg';
 import image2 from '@/assets/image2.webp';
 import image3 from '@/assets/image3.avif';
+import { MostSoldProductsCarousel } from '@/components/products/MostSoldProductsCarousel';
 
 
 // Sample images for the carousel - replace with your actual images
 const carouselImages = [
-  "/IndiasFood-.png",
+  "/IndiasFood.png",
   image1,
   image2,
   image3,
@@ -36,6 +41,21 @@ const scrollTexts = [
 ];
 
 const Index = () => {
+  const [mostSoldProducts, setMostSoldProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const fetchMostSoldProducts = async () => {
+      try {
+        const response = await api.get('/products/most-saled');
+        setMostSoldProducts(response.data.products);
+      } catch (error) {
+        console.error('Error fetching most sold products:', error);
+      }
+    };
+
+    fetchMostSoldProducts();
+  }, []);
+
   return (
     <Layout>
       <SEO
@@ -53,6 +73,7 @@ const Index = () => {
           className="w-full"
         />
       </section>
+      <MostSoldProductsCarousel products={mostSoldProducts} />
 
       {/* Welcome Hero Section */}
       <WelcomeHero />

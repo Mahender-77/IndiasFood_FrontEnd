@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
 import { Edit, Warehouse, Image as ImageIcon, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
@@ -28,6 +29,7 @@ interface InventoryTableProps {
   getLocationStock: (product: Product, locationName: string) => number;
   onUpdateStock?: (productId: string, location: string, variantIndex: number, quantity: number) => void;
   updatingStocks?: Set<string>;
+  onToggleMostSaled: (productId: string, isMostSaled: boolean) => void;
 }
 
 export function InventoryTable({
@@ -37,7 +39,8 @@ export function InventoryTable({
   onEditProduct,
   getLocationStock,
   onUpdateStock,
-  updatingStocks = new Set()
+  updatingStocks = new Set(),
+  onToggleMostSaled
 }: InventoryTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -81,6 +84,7 @@ export function InventoryTable({
                 <TableHead className="min-w-[130px] py-4">Variants</TableHead>
                 <TableHead className="min-w-[220px] py-4">Stock by Location</TableHead>
                 <TableHead className="w-[90px] text-center py-4">Status</TableHead>
+                <TableHead className="w-[90px] text-center py-4">Most Sold</TableHead>
                 <TableHead className="w-[80px] text-center py-4">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -236,6 +240,15 @@ export function InventoryTable({
                       </Badge>
                     </TableCell>
 
+                    {/* Most Sold Toggle */}
+                    <TableCell className="text-center py-3">
+                      <Switch
+                        checked={product.isMostSaled ?? false}
+                        onCheckedChange={(checked) => onToggleMostSaled(product._id, checked)}
+                        aria-label="Toggle Most Sold"
+                      />
+                    </TableCell>
+
                     {/* Actions */}
                     <TableCell className="text-center py-3">
                       <Button
@@ -324,9 +337,20 @@ export function InventoryTable({
 
                   {/* Status & Action Row */}
                   <div className="flex items-center justify-between">
-                    <Badge variant={product.isActive ? "default" : "secondary"} className="text-xs">
-                      {product.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={product.isActive ? "default" : "secondary"} className="text-xs">
+                        {product.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={product.isMostSaled}
+                          onCheckedChange={(checked) => onToggleMostSaled(product._id, checked)}
+                          aria-label="Toggle Most Sold"
+                          id={`most-saled-switch-${product._id}`}
+                        />
+                        <label htmlFor={`most-saled-switch-${product._id}`} className="text-xs text-muted-foreground">Most Sold</label>
+                      </div>
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         size="sm"

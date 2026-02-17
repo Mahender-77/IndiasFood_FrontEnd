@@ -195,7 +195,7 @@ const Auth = () => {
       const from = (location.state as { from: string })?.from || '/';
       navigate(from);
     } catch (err: any) {
-      toast.error('Some message');
+      toast.error('Invalid credentials');
 
     } finally {
       setIsLoading(false);
