@@ -31,7 +31,7 @@ import {
   Trash2,
   X
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 // Import modular components
@@ -227,6 +227,25 @@ const filteredProducts = useMemo(() => {
   const goToNextPage = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
+
+  const onToggleMostSaled = useCallback(async (productId: string, isMostSaled: boolean) => {
+    try {
+      const token = localStorage.getItem('userToken');
+      await api.put(`/admin/inventory/${productId}/most-saled`, { value: isMostSaled }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setProducts(prevProducts =>
+        prevProducts.map(product =>
+          product._id === productId ? { ...product, isMostSaled } : product
+        )
+      );
+      toast.success(`Product marked as ${isMostSaled ? 'Most Sold' : 'Not Most Sold'}`);
+    } catch (error: any) {
+      console.error('Failed to toggle most saled status:', error);
+      toast.error('Failed to update most saled status.');
+    }
+  }, []);
 
   // Optimized API Calls
   const fetchProducts = async () => {
@@ -835,7 +854,7 @@ const filteredProducts = useMemo(() => {
     );
   };
   
-  
+
 
   // Inventory Management for Product Creation
   const addLocationToInventory = (storeId: string) => {
@@ -1268,7 +1287,6 @@ const filteredProducts = useMemo(() => {
 
               {/* Divider */}
               <div className="hidden sm:block h-6 w-px bg-gray-300 mx-1"></div>
-
            
               {/* Add Product */}
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -1609,6 +1627,7 @@ const filteredProducts = useMemo(() => {
             getLocationStock={getLocationStock}
             onUpdateStock={handleUpdateStock}
             updatingStocks={updatingStocks}
+            onToggleMostSaled={onToggleMostSaled}
           />
 
           {/* Pagination Controls */}

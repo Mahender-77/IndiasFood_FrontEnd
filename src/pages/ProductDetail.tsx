@@ -257,7 +257,7 @@ const ProductDetail = () => {
           title={`${product.name} - Authentic Indian Sweet`}
           description={`${product.name} - ${product.description}. Fresh, authentic Indian sweet made with traditional recipes. Available in multiple weights. Fast delivery. ₹${currentPrice.displayPrice}.`}
           keywords={`${product.name}, Indian sweet, ${product.category?.name}, authentic recipe, fresh ingredients, traditional sweets, Indian mithai`}
-          image={product.images?.[0] || '/IndiasFood-.png'}
+          image={product.images?.[0] || '/IndiasFood.png'}
           type="product"
         />
       )}

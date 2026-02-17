@@ -85,7 +85,7 @@ const About = () => {
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-200 to-amber-200 rounded-3xl transform rotate-3"></div>
                 <div className="relative bg-white rounded-3xl p-8 md:p-12 shadow-xl">
                   <img 
-                    src="/IndiasFood-.png" 
+                    src="/IndiasFood.png" 
                     alt="India's Food Logo" 
                     className="w-full h-auto"
                   />

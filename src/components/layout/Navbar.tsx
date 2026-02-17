@@ -92,7 +92,7 @@ export function Navbar() {
                   {/* Logo */}
               <Link to="/" className="flex items-center shrink-0">
                 <img
-                  src="/IndiasFood-.png"
+                  src="/IndiasFood.png"
                   alt="India's Food"
                   className="h-24 w-auto"
                 />
@@ -307,7 +307,7 @@ export function Navbar() {
             <div className="flex items-center shrink-0">
               <Link to="/" className="shrink-0">
                 <img 
-                  src="/IndiasFood-.png" 
+                  src="/IndiasFood.png" 
                   alt="India's Food" 
                   className="h-14 w-auto" 
                 />

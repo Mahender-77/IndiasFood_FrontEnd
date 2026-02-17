@@ -53,6 +53,7 @@ export interface Product {
   // FLAGS for Frontend Sections
   isGITagged?: boolean;
   isNewArrival?: boolean;
+  isMostSaled?: boolean;
 
   // LOCATION-BASED INVENTORY (Multi-branch)
   inventory?: ProductInventory[];

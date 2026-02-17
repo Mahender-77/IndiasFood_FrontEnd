@@ -13,7 +13,7 @@ export const SEO = ({
   title,
   description,
   keywords,
-  image = '/IndiasFood-.png',
+  image = '/IndiasFood.png',
   url = window.location.href,
   type = 'website'
 }: SEOProps) => {
