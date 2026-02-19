@@ -355,7 +355,7 @@ const ProductDetail = () => {
             <div className="space-y-3">
               {/* Product Name & Tags */}
               <div>
-                <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-2">
+                <h1 className="product-name  font-display text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-2">
                   {product.name}
                 </h1>
                 <div className="flex flex-wrap gap-1.5">
@@ -525,7 +525,7 @@ const ProductDetail = () => {
                     <Clock className="h-4 w-4 text-primary flex-shrink-0" />
                     <div>
                       <p className="text-[10px] text-muted-foreground">Shelf Life</p>
-                      <p className="font-semibold text-xs">{product.shelfLife}</p>
+                      <p className="font-semibold text-xs">{product.shelfLife} {product.shelfLife === 1 ? 'day' : 'days'}</p>
                     </div>
                   </div>
                 )}

@@ -40,7 +40,7 @@ export interface Product {
   description?: string;
   images: string[];
   videoUrl?: string;
-  shelfLife?: string;
+  shelfLife?: number;
 
   // DUAL PRICING SYSTEM (keeping backward compatibility)
   originalPrice: number;

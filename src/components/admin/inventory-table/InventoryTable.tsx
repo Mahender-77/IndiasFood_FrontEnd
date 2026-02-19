@@ -113,7 +113,7 @@ export function InventoryTable({
                     {/* Product Name & Badges */}
                     <TableCell className="py-3">
                       <div className="space-y-2">
-                        <div className="font-semibold text-sm text-gray-900">{product.name}</div>
+                        <div className="product-name font-semibold text-sm text-gray-900">{product.name}</div>
                         <div className="flex flex-wrap gap-1">
                           {product.isGITagged && (
                             <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 font-medium">
@@ -292,7 +292,7 @@ export function InventoryTable({
                     )}
 
                     <div className="flex-1">
-                      <h4 className="font-semibold text-sm mb-1">{product.name}</h4>
+                      <h4 className="product-name font-semibold text-sm mb-1">{product.name}</h4>
                       <div className="flex flex-wrap gap-1 mb-2">
                         {product.isGITagged && (
                           <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">

@@ -26,6 +26,7 @@ import NotFound from "./pages/NotFound";
 // New Pages
 import GITagProducts from "./pages/GITagProducts";
 import NewArrivals from "./pages/NewArrivals";
+import DealOfTheDay from "./pages/DealOfTheDay";
 import About from "./pages/About";
 import Gifting from "./pages/Gifting";
 import BulkOrders from "./pages/BulkOrders";
@@ -56,6 +57,7 @@ const App = () => {
             {/* New Public Pages */}
             <Route path="/gi-tag-products" element={<GITagProducts />} />
             <Route path="/new-arrivals" element={<NewArrivals />} />
+            <Route path="/deal-of-the-day" element={<DealOfTheDay />} />
             <Route path="/about" element={<About />} />
             <Route path="/gifting" element={<Gifting />} />
             <Route path="/bulk-orders" element={<BulkOrders />} />

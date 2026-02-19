@@ -93,7 +93,7 @@ const AdminInventory = () => {
     description: '',
     originalPrice: undefined,
     offerPrice: undefined,
-    shelfLife: '',
+    shelfLife: undefined,
     videoUrl: '',
     variants: [],
     inventory: [],
@@ -507,7 +507,7 @@ const filteredProducts = useMemo(() => {
         originalPrice: newProduct.originalPrice,
         offerPrice: newProduct.offerPrice,
         variants: hasVariants ? newProduct.variants : undefined,
-        shelfLife: newProduct.shelfLife?.trim() || '',
+        shelfLife: newProduct.shelfLife !== undefined && newProduct.shelfLife !== null ? Number(newProduct.shelfLife) : undefined,
         category: selectedCategory,
         subcategory:
           selectedSubcategory &&
@@ -592,7 +592,7 @@ const filteredProducts = useMemo(() => {
       description: '',
       originalPrice: undefined,
       offerPrice: undefined,
-      shelfLife: '',
+      shelfLife: undefined,
       videoUrl: '',
       variants: [],
       inventory: [],
@@ -663,7 +663,7 @@ const filteredProducts = useMemo(() => {
         description: editingProduct.description?.trim() || '',
         originalPrice: editingProduct.originalPrice,
         offerPrice: editingProduct.offerPrice,
-        shelfLife: editingProduct.shelfLife?.trim() || '',
+        shelfLife: editingProduct.shelfLife !== undefined && editingProduct.shelfLife !== null ? Number(editingProduct.shelfLife) : undefined,
         videoUrl: editingProduct.videoUrl?.trim() || '',
         variants: editingProduct.variants || [],
         inventory: editingProduct.inventory || [],
@@ -1414,11 +1414,13 @@ const filteredProducts = useMemo(() => {
                     {/* Additional Info */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <Label>Shelf Life</Label>
+                        <Label>Shelf Life (Days)</Label>
                         <Input
-                          value={newProduct.shelfLife}
-                          onChange={(e) => setNewProduct({ ...newProduct, shelfLife: e.target.value })}
-                          placeholder="e.g., 7 days"
+                          type="number"
+                          min="0"
+                          value={newProduct.shelfLife || ''}
+                          onChange={(e) => setNewProduct({ ...newProduct, shelfLife: e.target.value ? Number(e.target.value) : undefined })}
+                          placeholder="e.g., 7"
                         />
                       </div>
                       <div>
@@ -1795,13 +1797,16 @@ const filteredProducts = useMemo(() => {
                   {/* Additional Info */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label>Shelf Life</Label>
+                      <Label>Shelf Life (Days)</Label>
                       <Input
+                        type="number"
+                        min="0"
                         value={editingProduct.shelfLife || ''}
                         onChange={(e) => setEditingProduct({
                           ...editingProduct,
-                          shelfLife: e.target.value
+                          shelfLife: e.target.value ? Number(e.target.value) : undefined
                         })}
+                        placeholder="e.g., 7"
                       />
                     </div>
                     <div>

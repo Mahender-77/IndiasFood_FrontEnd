@@ -267,7 +267,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
       <div className="p-3 flex-1 flex flex-col">
         <Link to={`/product/${product._id}`}>
-          <h3 className="font-display text-[13px] leading-tight font-semibold text-foreground mb-1.5 group-hover:text-primary transition-colors line-clamp-2 min-h-[2.2rem] flex items-center">
+          <h3 className="product-name font-display text-[13px] leading-tight font-semibold text-foreground mb-1.5 group-hover:text-primary transition-colors line-clamp-2 min-h-[2.2rem] flex items-center">
             {product.name}
           </h3>
         </Link>
@@ -375,7 +375,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
 {/* 
         {product.shelfLife && (
-          <div className="text-[10px] text-gray-500 mb-2">{product.shelfLife}</div>
+          <div className="text-[10px] text-gray-500 mb-2">{product.shelfLife} {product.shelfLife === 1 ? 'day' : 'days'}</div>
         )} */}
 
         <div className="space-y-1.5">

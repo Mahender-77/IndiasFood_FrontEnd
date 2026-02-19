@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 // ─── Offer Data ────────────────────────────────────────────────────────────────
 // Add or remove offers here. Each offer needs: id, title, subtitle, icon, badge
@@ -12,16 +13,16 @@ const OFFERS = [
     badge: "Limited Time",
     badgeColor: "bg-yellow-300 text-orange-900",
   },
+  {
+    id: 2,
+    title: "Deal of the Day 🔥",
+    subtitle: "Exclusive discounts",
+    highlight: "Up to 60% OFF",
+    icon: "🔥",
+    badge: "Today Only",
+    badgeColor: "bg-red-500 text-white",
+  },
   // ── Add more offers below ──
-  // {
-  //   id: 2,
-  //   title: "Flat ₹200 OFF",
-  //   subtitle: "Use code SAVE200",
-  //   highlight: null,
-  //   icon: "🏷️",
-  //   badge: "Today Only",
-  //   badgeColor: "bg-orange-400 text-white",
-  // },
 ];
 
 // ─── Brand logos row (add/remove freely) ──────────────────────────────────────
@@ -29,6 +30,14 @@ const BRANDS = ["ITC", "SUBWAY", "NIC", "KFC", "McDonald's"];
 
 export default function OffersSection() {
   const [activeIdx, setActiveIdx] = useState(0);
+  const navigate = useNavigate();
+
+  const handleCardClick = (offerId: number) => {
+    if (offerId === 2) {
+      // Deal of the Day card - navigate to the deal of the day page
+      navigate('/deal-of-the-day');
+    }
+  };
 
   return (
     <section className="w-full bg-amber-50 py-6 px-4 md:px-10 font-sans border-t border-amber-100">
@@ -74,7 +83,7 @@ export default function OffersSection() {
         >
           {OFFERS.map((offer) => (
             <div key={offer.id} className="snap-start shrink-0 w-[170px]">
-              <OfferCard offer={offer} mobile />
+              <OfferCard offer={offer} mobile onClick={() => handleCardClick(offer.id)} />
             </div>
           ))}
         </div>
@@ -92,7 +101,7 @@ export default function OffersSection() {
           }`}
         >
           {OFFERS.map((offer) => (
-            <OfferCard key={offer.id} offer={offer} />
+            <OfferCard key={offer.id} offer={offer} onClick={() => handleCardClick(offer.id)} />
           ))}
         </div>
 
@@ -118,9 +127,10 @@ export default function OffersSection() {
 }
 
 // ─── Single Offer Card ─────────────────────────────────────────────────────────
-function OfferCard({ offer, mobile = false }) {
+function OfferCard({ offer, mobile = false, onClick }: { offer: any; mobile?: boolean; onClick?: () => void }) {
   return (
     <div
+      onClick={onClick}
       className={`group bg-orange-500 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between relative overflow-hidden cursor-pointer
         ${mobile ? "p-3 min-h-[130px]" : "p-5 min-h-[180px] rounded-2xl"}`}
     >

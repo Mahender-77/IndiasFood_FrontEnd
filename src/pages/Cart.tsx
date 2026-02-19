@@ -244,7 +244,7 @@ const Cart = () => {
 
                     <div className="flex-1 min-w-0">
                       <Link to={`/product/${product._id}`}>
-                        <h3 className="font-display font-semibold text-base sm:text-lg text-foreground hover:text-primary transition-colors mb-2">
+                        <h3 className="product-name font-display font-semibold text-base sm:text-lg text-foreground hover:text-primary transition-colors mb-2">
                           {product.name}
                         </h3>
                       </Link>
@@ -479,7 +479,7 @@ const Cart = () => {
                       return (
                         <div key={itemKey} className="flex justify-between items-start gap-2 text-sm">
                           <div className="flex-1 min-w-0">
-                            <p className="truncate text-foreground font-medium">
+                            <p className="product-name truncate text-foreground font-medium">
                               {displayName}
                             </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
