@@ -517,7 +517,7 @@ const finalTotal = cartTotal + gstAmount + deliveryTotal;
               className="w-8 h-8 rounded object-cover"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-medium truncate">{product.name}</p>
+              <p className="product-name text-[11px] font-medium truncate">{product.name}</p>
               <p className="text-[10px] text-background-600">Qty: {item.qty}</p>
             </div>
             {/* <p className="text-[11px] font-semibold">
@@ -1598,7 +1598,7 @@ const finalTotal = cartTotal + gstAmount + deliveryTotal;
                             className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs sm:text-sm font-medium truncate">{product.name}</p>
+                            <p className="product-name text-xs sm:text-sm font-medium truncate">{product.name}</p>
                             <p className="text-sm text-background-700">Qty: {item.qty}</p>
                           </div>
                           {/* <p className="text-xs sm:text-sm font-semibold">

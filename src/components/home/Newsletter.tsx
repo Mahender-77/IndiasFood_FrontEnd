@@ -7,9 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function Newsletter() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   
   const handleSubscribe = async () => {
     setIsLoading(true);
@@ -17,7 +16,8 @@ export function Newsletter() {
     try {
       await api.post('/user/newsletter/subscribe');
 
-      setIsSubscribed(true); // 🔥 important
+      // Scalable: Update only the newsletterSubscribed field without full refetch
+      updateUser({ newsletterSubscribed: true });
 
       toast({
         title: 'Subscribed!',

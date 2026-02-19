@@ -34,7 +34,7 @@ export const AdminProductEditPage = () => {
     description: '',
     price: '',
     weight: '',
-    shelfLife: '',
+    shelfLife: undefined as number | undefined,
     category: '',
     countInStock: '',
     videoUrl: '',
@@ -78,7 +78,7 @@ export const AdminProductEditPage = () => {
           description: data.product.description,
           price: data.product.price.toString(),
           weight: data.product.weight || '',
-          shelfLife: data.product.shelfLife || '',
+          shelfLife: data.product.shelfLife !== undefined && data.product.shelfLife !== null ? data.product.shelfLife : undefined,
           category: (data.product.category as Category)._id, // Ensure category is ID
           countInStock: data.product.countInStock.toString(),
           videoUrl: data.product.videoUrl || '',
@@ -139,7 +139,7 @@ export const AdminProductEditPage = () => {
         images: existingImages, // Send updated existing images back
         // Conditionally include weight, shelfLife, and videoUrl
         ...(formData.weight && { weight: formData.weight }),
-        ...(formData.shelfLife && { shelfLife: formData.shelfLife }),
+        ...(formData.shelfLife !== undefined && formData.shelfLife !== null && { shelfLife: Number(formData.shelfLife) }),
         // Conditionally include videoUrl if it's not empty
         ...(formData.videoUrl && { videoUrl: formData.videoUrl }),
       });
@@ -237,7 +237,7 @@ export const AdminProductEditPage = () => {
             Back to Admin Dashboard
           </Link>
           <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-8">
-            Edit Product: {product.name}
+            Edit Product: <span className="product-name">{product.name}</span>
           </h1>
 
           <form onSubmit={handleSubmit} className="max-w-xl mx-auto space-y-6 bg-card p-6 rounded-xl shadow-card">
@@ -258,8 +258,16 @@ export const AdminProductEditPage = () => {
               <Input id="weight" value={formData.weight} onChange={handleChange} disabled={isLoading || categoriesLoading || loadingProduct}/>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="shelfLife">Shelf Life (e.g., 7 days)</Label>
-              <Input id="shelfLife" value={formData.shelfLife} onChange={handleChange} disabled={isLoading || categoriesLoading || loadingProduct}/>
+              <Label htmlFor="shelfLife">Shelf Life (Days)</Label>
+              <Input 
+                id="shelfLife" 
+                type="number"
+                min="0"
+                value={formData.shelfLife || ''} 
+                onChange={(e) => setFormData({ ...formData, shelfLife: e.target.value ? Number(e.target.value) : undefined })} 
+                disabled={isLoading || categoriesLoading || loadingProduct}
+                placeholder="e.g., 7"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>

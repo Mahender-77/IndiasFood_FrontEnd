@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
 import { Product } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ProductCard } from '@/components/products/ProductCard';
 
 export function DealOfTheDay() {
+  const navigate = useNavigate();
   const [deals, setDeals] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,15 +20,12 @@ export function DealOfTheDay() {
         setLoading(true);
         setError(null);
 
-        // Fetch products with discounts/offers
-        const { data } = await api.get('/products?limit=10&sort=createdAt&order=desc');
+        // Fetch products expiring in 2 days or less
+        const { data } = await api.get('/products/deal-of-the-day?pageSize=10');
 
-        // Filter products that have discounts or special offers
+        // Get products from response
         const dealProducts = Array.isArray(data.products)
-          ? data.products.filter((product: Product) =>
-              (product.offerPrice && product.offerPrice < product.originalPrice) ||
-              (product.price && product.originalPrice && product.price < product.originalPrice)
-            ).slice(0, 4) // Show max 4 deals
+          ? data.products
           : [];
 
         setDeals(dealProducts);
@@ -48,9 +49,9 @@ export function DealOfTheDay() {
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-10 w-64 mt-2" />
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="min-w-[280px] aspect-square rounded-2xl flex-shrink-0" />
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-72 w-full" />
             ))}
           </div>
         </div>
@@ -79,6 +80,16 @@ export function DealOfTheDay() {
       <div className="container-custom px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Go Back</span>
+            </Button>
+          </div>
           <span className="text-red-600 font-medium text-sm uppercase tracking-wider">
             Limited Time
           </span>
@@ -90,77 +101,17 @@ export function DealOfTheDay() {
           </h2>
         </div>
 
-        {/* Horizontal Scrolling Container */}
-        <div className="relative -mx-4 sm:-mx-6 lg:-mx-8">
-          <div className="overflow-x-auto scrollbar-hide px-4 sm:px-6 lg:px-8">
-            <div className="flex gap-4 sm:gap-6 pb-4">
-              {deals.map((product, index) => {
-                const effectivePrice = product.offerPrice || product.price || product.originalPrice;
-                const discountPercent = product.originalPrice && effectivePrice < product.originalPrice
-                  ? Math.round(((product.originalPrice - effectivePrice) / product.originalPrice) * 100)
-                  : 0;
-
-                return (
-                  <Link
-                    key={product._id}
-                    to={`/product/${product._id}`}
-                    className="group animate-slide-up flex-shrink-0"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <div className="relative bg-card rounded-2xl shadow-card card-hover overflow-hidden w-[45vw] sm:w-[280px] md:w-[320px] lg:w-[360px] aspect-square">
-                      {/* Image */}
-                      <div className="aspect-square overflow-hidden">
-                        <img
-                          src={product.images?.[0] || '/images/placeholder.png'}
-                          alt={product.name}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                      </div>
-
-                      {/* Discount Badge */}
-                      {discountPercent > 0 && (
-                        <div className="absolute top-3 left-3">
-                          <Badge variant="destructive" className="text-xs font-bold">
-                            {discountPercent}% OFF
-                          </Badge>
-                        </div>
-                      )}
-
-                      {/* Content Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex flex-col justify-end p-3 sm:p-4 lg:p-6">
-                        <h3 className="font-display text-sm sm:text-base lg:text-xl font-bold text-white mb-1 line-clamp-2">
-                          {product.name}
-                        </h3>
-                        <p className="text-xs sm:text-sm text-white/90 line-clamp-2 hidden sm:block mb-2">
-                          {product.description || 'Delicious treat'}
-                        </p>
-
-                        {/* Price */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-lg sm:text-xl font-bold text-white">
-                            ₹{product.price}
-                          </span>
-                          {product.originalPrice && product.originalPrice > product.price && (
-                            <span className="text-sm text-white/70 line-through">
-                              ₹{product.originalPrice}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* CTA */}
-                        <div className="opacity-0 transform translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
-                          <span className="inline-flex items-center gap-2 text-white font-medium text-xs sm:text-sm">
-                            Grab Deal
-                            <span className="text-base sm:text-lg">→</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+        {/* Products Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+          {deals.map((product, index) => (
+            <div
+              key={product._id}
+              className="animate-slide-up"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <ProductCard product={product} />
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>

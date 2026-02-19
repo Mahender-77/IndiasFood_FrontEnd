@@ -30,6 +30,7 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   fetchUserProfile: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => void; // Scalable: update user without full refetch
   isAdmin: boolean;
   isDelivery: boolean;
 }
@@ -106,11 +107,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Scalable: Update user object partially without full refetch
+  const updateUser = (updates: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      // Also update localStorage to keep it in sync
+      localStorage.setItem('authUser', JSON.stringify(updatedUser));
+      // Update newsletterSubscribed if it's in the updates
+      if ('newsletterSubscribed' in updates) {
+        setNewsletterSubscribed(updates.newsletterSubscribed || false);
+      }
+    }
+  };
+
   const isAdmin = user?.role === 'admin' || false;
   const isDelivery = user?.role === 'delivery' || false;
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, error, fetchUserProfile, isAdmin, isDelivery }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, error, fetchUserProfile, updateUser, isAdmin, isDelivery }}>
       {children}
     </AuthContext.Provider>
   );
