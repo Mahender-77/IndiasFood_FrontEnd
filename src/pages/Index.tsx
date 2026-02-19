@@ -18,6 +18,7 @@ import image1 from '@/assets/indiasFood (2).jpeg';
 import image2 from '@/assets/image2.webp';
 import image3 from '@/assets/image3.avif';
 import { MostSoldProductsCarousel } from '@/components/products/MostSoldProductsCarousel';
+import OffersSection from '@/components/home/OffersSection';
 
 
 // Sample images for the carousel - replace with your actual images
@@ -74,6 +75,7 @@ const Index = () => {
         />
       </section>
       <MostSoldProductsCarousel products={mostSoldProducts} />
+      <OffersSection />
 
       {/* Welcome Hero Section */}
       <WelcomeHero />
