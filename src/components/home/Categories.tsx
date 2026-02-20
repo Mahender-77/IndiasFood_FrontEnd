@@ -195,7 +195,7 @@ export function Categories() {
 
               {/* Deal of the Day Category */}
               <Link
-                to="/products?featured=deal"
+                to="/deal-of-the-day"
                 className="group animate-slide-up flex-shrink-0"
                 style={{ animationDelay: `${categories.length * 100}ms` }}
               >
