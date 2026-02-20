@@ -7,7 +7,7 @@ import { Product } from '@/types';
 import api from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SEO } from '@/components/seo/SEO';
-import { Flame } from 'lucide-react';
+import { Flame, ArrowLeft } from 'lucide-react';
 
 const DealOfTheDay = () => {
   const [searchParams] = useSearchParams();
@@ -58,6 +58,14 @@ const DealOfTheDay = () => {
       {/* Header */}
       <section className="bg-gradient-to-r from-red-50 to-orange-50 py-10">
         <div className="container-custom">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="mb-4 -ml-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </Button>
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-red-100 rounded-full">
               <Flame className="h-6 w-6 text-red-700" />
