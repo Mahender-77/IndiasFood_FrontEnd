@@ -56,12 +56,12 @@ const DealOfTheDay = () => {
       />
 
       {/* Header */}
-      <section className="bg-gradient-to-r from-red-50 to-orange-50 py-10">
+      <section className="bg-gradient-to-r from-red-50 to-orange-50 pt-2">
         <div className="container-custom">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
-            className="mb-4 -ml-2"
+            className="mb-4 -ml-2 mt-0 lg:hidden"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Go Back
@@ -71,7 +71,7 @@ const DealOfTheDay = () => {
               <Flame className="h-6 w-6 text-red-700" />
             </div>
             <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
-              🔥 Deal of the Day
+               Deal of the Day
             </h1>
           </div>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl">

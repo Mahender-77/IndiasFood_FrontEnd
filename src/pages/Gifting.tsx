@@ -15,7 +15,7 @@ import { Product } from '@/types';
 import api from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SEO } from '@/components/seo/SEO';
-import { Gift, Search, Heart, Package } from 'lucide-react';
+import { Gift, Search, Heart, Package, ArrowLeft } from 'lucide-react';
 
 const Gifting = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -97,8 +97,16 @@ const Gifting = () => {
       />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-pink-50 to-rose-50 py-12">
+      <section className="bg-gradient-to-r from-pink-50 to-rose-50 py-2">
         <div className="container-custom">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="mb-4 -ml-2 lg:hidden"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </Button>
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center p-3 bg-pink-100 rounded-full mb-4">
               <Gift className="h-8 w-8 text-pink-600" />
@@ -156,9 +164,9 @@ const Gifting = () => {
 
           {/* Results */}
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {[...Array(8)].map((_, i) => (
-                <Skeleton key={i} className="h-72 w-full" />
+                <Skeleton key={i} className="h-72 w-full rounded-2xl" />
               ))}
             </div>
           ) : error ? (
@@ -169,7 +177,7 @@ const Gifting = () => {
               </Button>
             </div>
           ) : products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {products.map((product, index) => (
                 <div
                   key={product._id}
