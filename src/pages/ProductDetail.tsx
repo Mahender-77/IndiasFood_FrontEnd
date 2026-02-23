@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Heart, ShoppingCart, Minus, Plus, ArrowLeft, Package, Tag, Scale, Clock, Loader2 } from 'lucide-react';
+import { Heart, ShoppingCart, Minus, Plus, ArrowLeft, Package, Tag, Scale, Clock, Loader2, House } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/ProductCard';
@@ -538,6 +538,16 @@ const ProductDetail = () => {
                       <p className="font-semibold text-xs">
                         {typeof product.category === 'string' ? product.category : (product.category as any).name}
                       </p>
+                    </div>
+                  </div>
+                )}
+
+                {product.originLocation && (
+                  <div className="flex items-center gap-2">
+                    <House className="h-4 w-4 text-primary flex-shrink-0" />
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Origin</p>
+                      <p className="font-semibold text-xs">{product.originLocation}</p>
                     </div>
                   </div>
                 )}

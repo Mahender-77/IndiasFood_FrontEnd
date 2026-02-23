@@ -41,6 +41,7 @@ export interface Product {
   images: string[];
   videoUrl?: string;
   shelfLife?: number;
+  originLocation?:string, 
 
   // DUAL PRICING SYSTEM (keeping backward compatibility)
   originalPrice: number;

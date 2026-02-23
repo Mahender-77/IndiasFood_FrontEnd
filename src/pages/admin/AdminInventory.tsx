@@ -91,6 +91,7 @@ const AdminInventory = () => {
   const [newProduct, setNewProduct] = useState<Partial<Product & { imageFiles?: File[], inventoryData?: InventoryEntry[], variantStocks?: VariantStockEntry[][] }>>({
     name: '',
     description: '',
+    originLocation: '', 
     originalPrice: undefined,
     offerPrice: undefined,
     shelfLife: undefined,
@@ -504,6 +505,7 @@ const filteredProducts = useMemo(() => {
         name: newProduct.name.trim(),
         description: newProduct.description?.trim() || '',
         store: finalStoreId,
+        originLocation: newProduct.originLocation?.trim() || undefined, // ✅ ADD
         originalPrice: newProduct.originalPrice,
         offerPrice: newProduct.offerPrice,
         variants: hasVariants ? newProduct.variants : undefined,
@@ -591,6 +593,7 @@ const filteredProducts = useMemo(() => {
       name: '',
       description: '',
       originalPrice: undefined,
+      originLocation:'', // ✅ ADD
       offerPrice: undefined,
       shelfLife: undefined,
       videoUrl: '',
@@ -1423,6 +1426,22 @@ const filteredProducts = useMemo(() => {
                           placeholder="e.g., 7"
                         />
                       </div>
+                      <div>
+  <Label>Product Origin (Optional)</Label>
+  <Input
+    value={newProduct.originLocation || ''}
+    onChange={(e) =>
+      setNewProduct({
+        ...newProduct,
+        originLocation: e.target.value
+      })
+    }
+    placeholder="e.g., Hyderabad, Kakinada"
+  />
+  <p className="text-xs text-muted-foreground mt-1">
+    Mention where this product is traditionally prepared.
+  </p>
+</div>
                       <div>
                         <Label>Video URL</Label>
                         <Input
