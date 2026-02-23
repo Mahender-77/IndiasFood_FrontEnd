@@ -16,7 +16,7 @@ import { Product, Category } from '@/types';
 import api from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SEO } from '@/components/seo/SEO';
-import { ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Subcategory {
@@ -373,6 +373,14 @@ const Products = () => {
       {/* Header */}
       <section className="bg-cream py-2 sm:py-6 ">
         <div className="container-custom">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="mb-2 -ml-2 lg:hidden"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </Button>
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
             Our Collections
           </h1>

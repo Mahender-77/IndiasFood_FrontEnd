@@ -1,8 +1,12 @@
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { SEO } from '@/components/seo/SEO';
-import { MapPin, Clock, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MapPin, Clock, Star, ArrowLeft } from 'lucide-react';
 
 const About = () => {
+  const navigate = useNavigate();
+
   return (
     <Layout>
       <SEO
@@ -12,9 +16,17 @@ const About = () => {
       />
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 py-10 md:py-18 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 py-2 md:py-18 overflow-hidden">
         <div className="absolute inset-0 pattern-dots opacity-20"></div>
         <div className="container-custom relative z-10">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="mb-4 -ml-2 lg:hidden"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </Button>
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-block ">
               <span className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full text-sm font-medium text-orange-600 shadow-sm">

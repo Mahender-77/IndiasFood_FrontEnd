@@ -15,7 +15,7 @@ import { Product } from '@/types';
 import api from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SEO } from '@/components/seo/SEO';
-import { Award, Search } from 'lucide-react';
+import { Award, ArrowLeft, Search } from 'lucide-react';
 
 const GITagProducts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -95,8 +95,16 @@ const GITagProducts = () => {
       />
 
       {/* Header */}
-      <section className="bg-gradient-to-r from-amber-50 to-orange-50 py-10">
+      <section className="bg-gradient-to-r from-amber-50 to-orange-50 pt-2">
         <div className="container-custom">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="mb-4 -ml-2 lg:hidden"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </Button>
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-amber-100 rounded-full">
               <Award className="h-6 w-6 text-amber-700" />
@@ -153,9 +161,9 @@ const GITagProducts = () => {
           )}
 
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {[...Array(8)].map((_, i) => (
-                <Skeleton key={i} className="h-72 w-full" />
+                <Skeleton key={i} className="h-72 w-full rounded-2xl" />
               ))}
             </div>
           ) : error ? (
@@ -166,7 +174,7 @@ const GITagProducts = () => {
               </Button>
             </div>
           ) : products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {products.map((product, index) => (
                 <div
                   key={product._id}

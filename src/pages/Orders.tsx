@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Package, ArrowRight, Clock, CheckCircle2, Truck, XCircle, AlertCircle, MapPin, Phone, RefreshCw, Navigation, Eye, Store, ShoppingBag } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Package, ArrowLeft, ArrowRight, Clock, CheckCircle2, Truck, XCircle, AlertCircle, MapPin, Phone, RefreshCw, Navigation, Eye, Store, ShoppingBag } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -93,6 +93,7 @@ const uengageStatusMap: Record<string, { label: string; description: string }> =
 };
 
 const Orders = () => {
+  const navigate = useNavigate();
   const { token } = useAuth();
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -344,8 +345,16 @@ const Orders = () => {
 
   return (
     <Layout>
-      <section className="section-padding bg-background pt-10">
+      <section className="section-padding bg-background pt-2">
         <div className="container-custom max-w-5xl">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="mb-4 -ml-2 lg:hidden"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </Button>
           {/* Page Header */}
           <div className="mb-8">
             <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-2">

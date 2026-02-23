@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { SEO } from '@/components/seo/SEO';
 import { Button } from '@/components/ui/button';
@@ -8,10 +9,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { HelpCircle, Phone, Mail, MessageCircle, Clock, Truck, CreditCard, RotateCcw, Search } from 'lucide-react';
+import { HelpCircle, Phone, Mail, MessageCircle, Clock, Truck, CreditCard, RotateCcw, Search, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 
 const Help = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
   const faqs = [
@@ -120,8 +122,18 @@ const Help = () => {
       />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-purple-50 to-violet-50 py-12">
+      <section className="bg-gradient-to-r from-purple-50 to-violet-50 py-2">
         <div className="container-custom text-center">
+          <div className="lg:hidden text-left">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              className="mb-4 -ml-2"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Go Back
+            </Button>
+          </div>
           <div className="inline-flex items-center justify-center p-3 bg-purple-100 rounded-full mb-4">
             <HelpCircle className="h-8 w-8 text-purple-600" />
           </div>

@@ -1,11 +1,13 @@
+import { Link, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 const Profile = () => {
+  const navigate = useNavigate();
   const { user, loading: authLoading, error: authError, isAdmin } = useAuth();
 
   if (authLoading) {
@@ -52,8 +54,16 @@ const Profile = () => {
 
   return (
     <Layout>
-      <section className="section-padding bg-cream min-h-[calc(100vh-200px)]">
+      <section className="section-padding bg-cream min-h-[calc(100vh-200px)] pt-2">
         <div className="container-custom">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="mb-4 -ml-2 lg:hidden"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </Button>
           <h1 className="font-display text-3xl font-bold mb-8">User Profile</h1>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <Card>
