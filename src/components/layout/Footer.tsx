@@ -109,20 +109,20 @@ export function Footer() {
               <li className="flex items-start gap-2 sm:gap-3">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0 mt-0.5" />
                 <div className="text-muted-foreground text-xs sm:text-sm leading-tight">
-                  <div>location name</div>
-                  <div>Bangalore, Karnataka XXXX</div>
+                  <div>Site No.6, Surabhi Complex, Prashant Residential Layout, Pattandur Agrahara</div>
+                  <div>Bangalore-560066, Karnataka </div>
                 </div>
               </li>
               <li className="flex items-center gap-2 sm:gap-3">
                 <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
                 <a href="tel:+919876543210" className="text-muted-foreground hover:text-primary text-xs sm:text-sm transition-colors">
-                  +91 XXXX XXXX XXXX
+                  +91 9902312314
                 </a>
               </li>
               <li className="flex items-center gap-2 sm:gap-3">
                 <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
                 <a href="mailto:hello@indiasfood.com" className="text-muted-foreground hover:text-primary text-xs sm:text-sm transition-colors break-all">
-                  XXX@XXXX.com
+               indiasfood@gmail.com
                 </a>
               </li>
             </ul>
