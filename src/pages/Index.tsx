@@ -14,22 +14,15 @@ import { useEffect, useState } from 'react'; // Added useEffect and useState
 import api from '@/lib/api'; // Added api import
 import { Product } from '@/types'; // Added Product type import
 
-import image1 from '@/assets/IndaisFood2.jpeg';
-import image2 from '@/assets/IndiasFood3.jpeg';
-import image3 from '@/assets/IndaisFood4.jpeg';
-import image4 from '@/assets/IndiasFood5.jpeg';
 import { MostSoldProductsCarousel } from '@/components/products/MostSoldProductsCarousel';
 import OffersSection from '@/components/home/OffersSection';
 
+import carousel1 from '@/assets/IndaisFood01.jpeg';
+import carousel2 from '@/assets/IndasFood02jpeg.jpeg';
+import carousel3 from '@/assets/IndaisFood03.jpeg';
+import carousel4 from '@/assets/IndaisFood04.jpeg';
 
-// Sample images for the carousel - replace with your actual images
-const carouselImages = [
-  // "/IndiasFood.png",
-  image1,
-  image2,
-  image3,
-  image4
-];
+const carouselImages = [carousel1, carousel2, carousel3, carousel4];
 
 // Sample texts for infinite scroll
 const scrollTexts = [
