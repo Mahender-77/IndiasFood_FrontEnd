@@ -546,7 +546,7 @@ const ProductDetail = () => {
                   <div className="flex items-center gap-2">
                     <House className="h-4 w-4 text-primary flex-shrink-0" />
                     <div>
-                      <p className="text-[10px] text-muted-foreground">Origin</p>
+                      <p className="text-[10px] text-muted-foreground">MFG</p>
                       <p className="font-semibold text-xs">{product.originLocation}</p>
                     </div>
                   </div>
