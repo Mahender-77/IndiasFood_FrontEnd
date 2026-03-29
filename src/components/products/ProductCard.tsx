@@ -16,27 +16,44 @@ import { toast } from 'sonner';
 
 interface ProductCardProps {
   product: Product;
+  /** When true (e.g. Deal of the Day page), show deal pricing only if product is in deal period. */
+  isDealView?: boolean;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, isDealView = false }: ProductCardProps) {
   const { addToCart, updateCartItemQuantity, removeFromCart, getCartItemQuantity, toggleWishlist, isInWishlist, cartLoading } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const inWishlist = isInWishlist(product._id);
   const [isAdding, setIsAdding] = useState(false);
-  
+
+  const showDeal = isDealView && !!product.isInDealPeriod;
+
   const hasVariants = product.variants && product.variants.length > 0;
 
+  /** Maps list position → inventory `variantIndex` (Deal of the Day may return a subset of variants). */
+  const resolveVariantIndex = (arrayIndex: number) =>
+    hasVariants && product.variants?.[arrayIndex]
+      ? product.variants[arrayIndex].variantIndex ?? arrayIndex
+      : arrayIndex;
+
+  const getVariantQty = (loc: typeof product.inventory[0], vi: number) =>
+    loc.batches?.length
+      ? loc.batches
+          .filter(b => {
+            if (b.variantIndex !== vi) return false;
+            if (!b.expiryDate) return true;
+            return new Date(b.expiryDate as any).getTime() >= Date.now();
+          })
+          .reduce((s, b) => s + (b.quantity || 0), 0)
+      : (loc.stock?.find(s => s.variantIndex === vi)?.quantity || 0);
+
   const initialVariantIndex = useMemo(() => {
-    if (hasVariants && product.variants && product.inventory && product.inventory.length > 0) {
+    if (hasVariants && product.variants && product.inventory?.length > 0) {
       for (let i = 0; i < product.variants.length; i++) {
-        const variantStock = product.inventory.reduce((total, location) => {
-          const stockItem = location.stock.find(s => s.variantIndex === i);
-          return total + (stockItem?.quantity || 0);
-        }, 0);
-        if (variantStock > 0) {
-          return i;
-        }
+        const vi = product.variants[i].variantIndex ?? i;
+        const stock = product.inventory.reduce((t, loc) => t + getVariantQty(loc, vi), 0);
+        if (stock > 0) return i;
       }
     }
     return 0;
@@ -44,10 +61,10 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(initialVariantIndex);
 
-  // Get cart quantity - this will reactively update when cart changes
   const cartQuantity = getCartItemQuantity(
     product._id,
-    hasVariants ? selectedVariantIndex : 0
+    hasVariants ? resolveVariantIndex(selectedVariantIndex) : 0,
+    showDeal
   );
 
   const { totalStock, selectedVariantStock } = useMemo(() => {
@@ -55,53 +72,129 @@ export function ProductCard({ product }: ProductCardProps) {
       return { totalStock: 0, selectedVariantStock: 0 };
     }
 
+    const totalFromLoc = (loc: typeof product.inventory[0]) =>
+      loc.batches?.length
+        ? loc.batches
+            .filter(b => {
+              if (!b.expiryDate) return true;
+              return new Date(b.expiryDate as any).getTime() >= Date.now();
+            })
+            .reduce((s, b) => s + (b.quantity || 0), 0)
+        : (loc.stock?.reduce((s, st) => s + (st.quantity || 0), 0) || 0);
+
     if (hasVariants) {
-      const variantStock = product.inventory.reduce((total, location) => {
-        const stockItem = location.stock.find(s => s.variantIndex === selectedVariantIndex);
-        return total + (stockItem?.quantity || 0);
-      }, 0);
-      
-      const allStock = product.inventory.reduce((total, location) => {
-        return total + location.stock.reduce((locTotal, stockItem) => locTotal + (stockItem.quantity || 0), 0);
-      }, 0);
-      
+      const variantStock = product.inventory.reduce(
+        (t, loc) => t + getVariantQty(loc, resolveVariantIndex(selectedVariantIndex)),
+        0
+      );
+      const allStock = product.inventory.reduce((t, loc) => t + totalFromLoc(loc), 0);
       return { totalStock: allStock, selectedVariantStock: variantStock };
-    } else {
-      const stock = product.inventory.reduce((total, location) => {
-        return total + location.stock.reduce((locTotal, stockItem) => locTotal + (stockItem.quantity || 0), 0);
-      }, 0);
-      return { totalStock: stock, selectedVariantStock: stock };
     }
-  }, [product.inventory, hasVariants, selectedVariantIndex]);
+
+    const stock = product.inventory.reduce((t, loc) => t + totalFromLoc(loc), 0);
+    return { totalStock: stock, selectedVariantStock: stock };
+  }, [product.inventory, product.variants, hasVariants, selectedVariantIndex]);
 
   const selectedVariant = hasVariants ? product.variants![selectedVariantIndex] : null;
-  
+
+  /**
+   * Gets the best deal discount % for a specific variant index
+   * by scanning batch-level dealDiscountPercent for that variant's non-expired batches.
+   * Falls back to product-level dealDiscountPercent if no batch-level value found.
+   */
+  const getVariantDealDiscount = (variantIndex: number): number | null => {
+    if (!showDeal) return null;
+
+    const now = Date.now();
+    let bestDiscount: number | null = null;
+
+    if (product.inventory?.length) {
+      for (const loc of product.inventory) {
+        if (!loc.batches?.length) continue;
+        for (const batch of loc.batches) {
+          if (batch.variantIndex !== variantIndex) continue;
+          if (batch.expiryDate && new Date(batch.expiryDate as any).getTime() < now) continue;
+          if (batch.dealDiscountPercent != null) {
+            if (bestDiscount === null || batch.dealDiscountPercent > bestDiscount) {
+              bestDiscount = batch.dealDiscountPercent;
+            }
+          }
+        }
+      }
+    }
+
+    // Fall back to product-level discount
+    if (bestDiscount === null && product.dealDiscountPercent != null) {
+      bestDiscount = product.dealDiscountPercent;
+    }
+
+    return bestDiscount;
+  };
+
   const currentPrice = useMemo(() => {
+    const baseOriginal = hasVariants && selectedVariant
+      ? selectedVariant.originalPrice
+      : (product.originalPrice || 0);
+
+    const baseOffer = hasVariants && selectedVariant
+      ? selectedVariant.offerPrice
+      : product.offerPrice;
+
+    const baseDisplay = baseOriginal;
+
+    // Get deal discount specific to the selected variant's batches
+    const resolvedVi = hasVariants ? resolveVariantIndex(selectedVariantIndex) : 0;
+    const serverDealPct = hasVariants && selectedVariant?.dealDiscountPercent;
+    const variantDealDiscount =
+      serverDealPct != null ? serverDealPct : getVariantDealDiscount(resolvedVi);
+
+    if (showDeal && variantDealDiscount != null) {
+      const dealPrice =
+        hasVariants && selectedVariant?.dealPrice != null
+          ? selectedVariant.dealPrice
+          : Math.round(baseDisplay * (1 - variantDealDiscount / 100) * 100) / 100;
+      return {
+        originalPrice: baseOriginal,
+        offerPrice: dealPrice,
+        hasOffer: true,
+        savings: Math.round((baseDisplay - dealPrice) * 100) / 100,
+        displayPrice: dealPrice,
+        dealDiscountPercent: variantDealDiscount,
+      };
+    }
+
     if (hasVariants && selectedVariant) {
       return {
         originalPrice: selectedVariant.originalPrice,
         offerPrice: selectedVariant.offerPrice,
-        hasOffer: selectedVariant.offerPrice && selectedVariant.offerPrice < selectedVariant.originalPrice,
-        savings: selectedVariant.offerPrice 
-          ? selectedVariant.originalPrice - selectedVariant.offerPrice 
-          : 0,
-        displayPrice: selectedVariant.offerPrice || selectedVariant.originalPrice
-      };
-    } else {
-      return {
-        originalPrice: product.originalPrice || 0,
-        offerPrice: product.offerPrice,
-        hasOffer: product.offerPrice && product.offerPrice < (product.originalPrice || 0),
-        savings: product.offerPrice 
-          ? (product.originalPrice || 0) - product.offerPrice 
-          : 0,
-        displayPrice: product.offerPrice || product.originalPrice || 0
+        hasOffer: !!(selectedVariant.offerPrice && selectedVariant.offerPrice < selectedVariant.originalPrice),
+        savings: selectedVariant.offerPrice ? selectedVariant.originalPrice - selectedVariant.offerPrice : 0,
+        displayPrice: selectedVariant.offerPrice || selectedVariant.originalPrice,
+        dealDiscountPercent: null,
       };
     }
-  }, [hasVariants, selectedVariant, product.originalPrice, product.offerPrice]);
+
+    return {
+      originalPrice: product.originalPrice || 0,
+      offerPrice: product.offerPrice,
+      hasOffer: !!(product.offerPrice && product.offerPrice < (product.originalPrice || 0)),
+      savings: product.offerPrice ? (product.originalPrice || 0) - product.offerPrice : 0,
+      displayPrice: product.offerPrice || product.originalPrice || 0,
+      dealDiscountPercent: null,
+    };
+  }, [
+    hasVariants,
+    selectedVariant,
+    selectedVariantIndex,
+    product.originalPrice,
+    product.offerPrice,
+    showDeal,
+    product.dealDiscountPercent,
+    product.inventory,
+    product.variants,
+  ]);
 
   const handleAddToCart = async () => {
-    // Check if user is logged in
     if (!user) {
       toast.error('Please login to add items to cart', {
         description: 'You need to be logged in to add products to your cart',
@@ -112,12 +205,17 @@ export function ProductCard({ product }: ProductCardProps) {
 
     setIsAdding(true);
     try {
-      const variantIdx = hasVariants ? selectedVariantIndex : 0;
-      await addToCart(product._id, 1, variantIdx);
+      const variantIdx = hasVariants ? resolveVariantIndex(selectedVariantIndex) : 0;
+      await addToCart(product._id, 1, variantIdx, {
+        price: currentPrice.displayPrice,
+        originalPrice: currentPrice.originalPrice,
+        isDealApplied: showDeal && currentPrice.dealDiscountPercent != null,
+        dealDiscountPercent: currentPrice.dealDiscountPercent,
+        isDealItem: showDeal,
+      });
 
       const variantInfo = hasVariants && selectedVariant ? ` (${selectedVariant.value})` : '';
-      
-      // Custom toast with View Cart action
+
       toast.success(
         <div className="flex items-center justify-between w-full gap-3">
           <div className="flex-1 min-w-0">
@@ -136,70 +234,44 @@ export function ProductCard({ product }: ProductCardProps) {
             View Cart
           </button>
         </div>,
-        {
-          duration: 4000,
-          position: 'bottom-center',
-        }
+        { duration: 4000, position: 'bottom-center' }
       );
     } catch (error) {
-      toast.error('Failed to add to cart', {
-        description: 'Please try again',
-        duration: 2000,
-      });
+      toast.error('Failed to add to cart', { description: 'Please try again', duration: 2000 });
     } finally {
       setIsAdding(false);
     }
   };
 
   const handleIncreaseQuantity = async () => {
-    // Check if user is logged in
     if (!user) {
-      toast.error('Please login to modify cart items', {
-        description: 'You need to be logged in to modify items in your cart',
-        duration: 3000,
-      });
+      toast.error('Please login to modify cart items', { duration: 3000 });
       return;
     }
-
     const maxStock = hasVariants ? selectedVariantStock : totalStock;
-
     if (cartQuantity < maxStock) {
       await updateCartItemQuantity(
         product._id,
         cartQuantity + 1,
-        hasVariants ? selectedVariantIndex : 0
+        hasVariants ? resolveVariantIndex(selectedVariantIndex) : 0,
+        showDeal
       );
     } else {
-      toast.warning('Maximum stock reached', {
-        description: `Only ${maxStock} items available`,
-        duration: 2000,
-      });
+      toast.warning('Maximum stock reached', { description: `Only ${maxStock} items available`, duration: 2000 });
     }
   };
 
   const handleDecreaseQuantity = async () => {
-    // Check if user is logged in
     if (!user) {
-      toast.error('Please login to modify cart items', {
-        description: 'You need to be logged in to modify items in your cart',
-        duration: 3000,
-      });
+      toast.error('Please login to modify cart items', { duration: 3000 });
       return;
     }
-
-    const variantIdx = hasVariants ? selectedVariantIndex : 0;
-
+    const variantIdx = hasVariants ? resolveVariantIndex(selectedVariantIndex) : 0;
     if (cartQuantity > 1) {
-      await updateCartItemQuantity(
-        product._id,
-        cartQuantity - 1,
-        variantIdx
-      );
+      await updateCartItemQuantity(product._id, cartQuantity - 1, variantIdx, showDeal);
     } else {
-      await removeFromCart(product._id, variantIdx);
-      toast.info(`"${product.name}" removed from cart`, {
-        duration: 2000,
-      });
+      await removeFromCart(product._id, variantIdx, showDeal);
+      toast.info(`"${product.name}" removed from cart`, { duration: 2000 });
     }
   };
 
@@ -223,17 +295,18 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
       )}
 
-      <div className="block relative aspect-square overflow-hidden flex-shrink-0">
+      {/* Image container */}
+      <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
         {isEntirelyOutOfStock ? (
           <img
-            src={product.images && product.images.length > 0 ? product.images[0] : '/assets/placeholder.svg'}
+            src={product.images?.length > 0 ? product.images[0] : '/assets/placeholder.svg'}
             alt={product.name}
             className="w-full h-full object-cover"
           />
         ) : (
           <Link to={`/product/${product._id}`}>
             <img
-              src={product.images && product.images.length > 0 ? product.images[0] : '/assets/placeholder.svg'}
+              src={product.images?.length > 0 ? product.images[0] : '/assets/placeholder.svg'}
               alt={product.name}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             />
@@ -258,7 +331,17 @@ export function ProductCard({ product }: ProductCardProps) {
           </button>
         )}
 
-        {hasVariants && !isEntirelyOutOfStock && (
+        {/* Deal badge — reflects the selected variant's discount, not a fixed product-level value */}
+        {showDeal && currentPrice.dealDiscountPercent != null && (
+          <div className="absolute top-3 left-3">
+            <span className="bg-red-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+              {currentPrice.dealDiscountPercent}% OFF
+            </span>
+          </div>
+        )}
+
+        {/* Variants badge — only when no active deal */}
+        {hasVariants && !isEntirelyOutOfStock && !showDeal && (
           <div className="absolute top-3 left-3 bg-orange-600 text-white px-2 py-1 rounded-full text-xs font-medium">
             {product.variants!.length} Options
           </div>
@@ -272,16 +355,10 @@ export function ProductCard({ product }: ProductCardProps) {
           </h3>
         </Link>
 
-        {/* <p className="text-muted-foreground text-[11px] leading-snug mb-2 line-clamp-2">
-          {product.description}
-        </p> */}
-
+        {/* Variant selector — each option shows its own deal-adjusted price */}
         {hasVariants && product.variants && product.variants.length > 1 && !isEntirelyOutOfStock && (
           <div className="mb-2">
-            <Select
-              value={selectedVariantIndex.toString()}
-              onValueChange={handleVariantChange}
-            >
+            <Select value={selectedVariantIndex.toString()} onValueChange={handleVariantChange}>
               <SelectTrigger className="h-8 text-[11px] w-full bg-white border border-gray-200 hover:border-gray-300 transition-colors rounded-lg shadow-sm">
                 <div className="flex items-center justify-between w-full">
                   <span className="text-gray-600 font-medium">
@@ -294,41 +371,49 @@ export function ProductCard({ product }: ProductCardProps) {
               </SelectTrigger>
               <SelectContent className="rounded-lg">
                 {product.variants.map((variant, index) => {
+                  const vi = variant.variantIndex ?? index;
+                  const now = Date.now();
                   const variantStock = product.inventory?.reduce((total, location) => {
-                    const stockItem = location.stock.find(s => s.variantIndex === index);
-                    return total + (stockItem?.quantity || 0);
+                    const qty = location.batches?.length
+                      ? location.batches
+                          .filter((b: any) =>
+                            b.variantIndex === vi &&
+                            (!b.expiryDate || new Date(b.expiryDate).getTime() >= now)
+                          )
+                          .reduce((s: number, b: any) => s + (b.quantity || 0), 0)
+                      : (location.stock?.find((s: any) => s.variantIndex === vi)?.quantity || 0);
+                    return total + qty;
                   }, 0) || 0;
-                  
+
+                  const variantDiscount =
+                    variant.dealDiscountPercent ?? getVariantDealDiscount(vi);
+                  const variantBase = variant.originalPrice;
+                  const variantDisplayPrice =
+                    showDeal && variantDiscount != null
+                      ? variant.dealPrice ??
+                        Math.round(variantBase * (1 - variantDiscount / 100) * 100) / 100
+                      : variantBase;
+
                   return (
-                    <SelectItem 
-  key={index} 
-  value={index.toString()}
-  disabled={variantStock === 0}
-  className="cursor-pointer"
->
-  <div className="
-    flex items-center justify-between w-full
-    gap-2
-    text-[11px] sm:text-sm
-  ">
-    <span className="font-medium text-gray-900 truncate">
-      {variant.value}
-    </span>
-
-    <div className="flex items-center gap-1.5">
-      <span className="text-gray-900 font-semibold">
-        ₹{variant.offerPrice || variant.originalPrice}
-      </span>
-
-      {variantStock === 0 && (
-        <span className="text-red-500 text-[10px] font-medium">
-          (Out)
-        </span>
-      )}
-    </div>
-  </div>
-</SelectItem>
-
+                    <SelectItem
+                      key={index}
+                      value={index.toString()}
+                      disabled={variantStock === 0}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between w-full gap-2 text-[11px] sm:text-sm">
+                        <span className="font-medium text-gray-900 truncate">{variant.value}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-gray-900 font-semibold">₹{variantDisplayPrice}</span>
+                          {showDeal && variantDiscount != null && (
+                            <span className="text-red-500 text-[10px] font-bold">{variantDiscount}% OFF</span>
+                          )}
+                          {variantStock === 0 && (
+                            <span className="text-red-500 text-[10px] font-medium">(Out)</span>
+                          )}
+                        </div>
+                      </div>
+                    </SelectItem>
                   );
                 })}
               </SelectContent>
@@ -342,10 +427,9 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         )}
 
-        {/* Spacer to push price and buttons to bottom */}
-        <div className="flex-1"></div>
+        <div className="flex-1" />
 
-        {/* Stock Warning - Fixed height to maintain consistency across all cards */}
+        {/* Stock Warning */}
         <div className="mb-1.5 min-h-[14px]">
           {hasVariants && !isEntirelyOutOfStock && (
             <>
@@ -358,11 +442,11 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Price - Fixed position above buttons */}
+        {/* Price */}
         <div className="text-sm font-semibold mb-2 flex flex-wrap items-center gap-1.5">
           {currentPrice.hasOffer ? (
             <>
-              <span className="text-green-600 font-bold text-[15px]">₹{currentPrice.offerPrice}</span>
+              <span className="text-green-600 font-bold text-[15px]">₹{currentPrice.displayPrice}</span>
               <span className="text-gray-400 line-through text-[11px] font-normal">₹{currentPrice.originalPrice}</span>
               <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-semibold">
                 SAVE ₹{currentPrice.savings}
@@ -372,11 +456,6 @@ export function ProductCard({ product }: ProductCardProps) {
             <span className="text-gray-900 font-bold text-[15px]">₹{currentPrice.originalPrice}</span>
           )}
         </div>
-
-{/* 
-        {product.shelfLife && (
-          <div className="text-[10px] text-gray-500 mb-2">{product.shelfLife} {product.shelfLife === 1 ? 'day' : 'days'}</div>
-        )} */}
 
         <div className="space-y-1.5">
           {!isOutOfStock && (
@@ -392,11 +471,7 @@ export function ProductCard({ product }: ProductCardProps) {
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </Button>
-
-                  <span className="text-sm font-bold min-w-[2.5rem] text-center">
-                    {cartQuantity}
-                  </span>
-
+                  <span className="text-sm font-bold min-w-[2.5rem] text-center">{cartQuantity}</span>
                   <Button
                     size="sm"
                     variant="outline"
@@ -416,20 +491,15 @@ export function ProductCard({ product }: ProductCardProps) {
                   className="w-full gap-1.5 h-8 text-[11px] font-semibold rounded-lg hover:text-white bg-orange-600"
                 >
                   {isAdding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5" />}
-                  {isAdding ? "Adding..." : "Add to Cart"}
+                  {isAdding ? 'Adding...' : 'Add to Cart'}
                 </Button>
               )}
             </>
           )}
-          
+
           {isOutOfStock && (
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled
-              className="w-full gap-1 h-8 text-[11px] font-semibold rounded-lg"
-            >
-              {hasVariants ? "Select Another Size" : "Out of Stock"}
+            <Button size="sm" variant="secondary" disabled className="w-full gap-1 h-8 text-[11px] font-semibold rounded-lg">
+              {hasVariants ? 'Select Another Size' : 'Out of Stock'}
             </Button>
           )}
 

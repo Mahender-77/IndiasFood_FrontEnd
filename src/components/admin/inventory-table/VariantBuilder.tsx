@@ -271,33 +271,27 @@ export function VariantBuilder({
                       <div className="text-center py-4 text-gray-500 text-sm">
                         <MapPin className="h-5 w-5 mx-auto mb-2 opacity-50" />
                         <p>No locations selected for this variant</p>
-                        <p className="text-xs">Add locations above to set stock quantities</p>
+                        <p className="text-xs">Add locations above, then add batches with quantities below</p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="flex flex-wrap gap-2">
                         {variantStocks[index].map((stock) => {
                           const location = locations.find(loc => loc.storeId === stock.storeId);
                           return (
-                            <div key={stock.storeId} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50">
-                              <div className="flex-1">
-                                <Label className="text-xs font-medium text-gray-700">
-                                  {location?.displayName}
-                                </Label>
-                                <Input
-                                  type="number"
-                                  value={stock.quantity}
-                                  onChange={(e) => onUpdateVariantStock?.(index, stock.storeId, Math.max(0, Number(e.target.value)))}
-                                  placeholder="0"
-                                  min="0"
-                                  className="mt-1 text-sm h-8"
-                                />
-                              </div>
+                            <div
+                              key={stock.storeId}
+                              className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50"
+                            >
+                              <MapPin className="h-4 w-4 text-blue-600 shrink-0" />
+                              <span className="text-sm font-medium text-gray-700">
+                                {location?.displayName}
+                              </span>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => onRemoveLocationFromVariant?.(index, stock.storeId)}
-                                className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                                className="text-red-600 hover:text-red-700 h-6 w-6 p-0 shrink-0"
                               >
                                 <X className="h-3 w-3" />
                               </Button>
@@ -308,12 +302,9 @@ export function VariantBuilder({
                     )}
 
                     {variantStocks[index]?.length > 0 && (
-                      <div className="mt-3 pt-2 border-t border-gray-200">
-                        <div className="text-xs text-gray-600">
-                          <strong>Total Stock:</strong> {variantStocks[index].reduce((sum, stock) => sum + stock.quantity, 0)} units
-                          across {variantStocks[index].length} location{variantStocks[index].length !== 1 ? 's' : ''}
-                        </div>
-                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Add batches below to enter quantity for each location
+                      </p>
                     )}
                   </div>
                 )}

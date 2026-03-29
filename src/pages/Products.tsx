@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { ProductCard } from '@/components/products/ProductCard';
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Product, Category } from '@/types';  
+import { Product, Category } from '@/types';
 import api from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SEO } from '@/components/seo/SEO';
@@ -29,7 +29,7 @@ interface Subcategory {
 const categoriesCache = {
   data: null as Category[] | null,
   timestamp: null as number | null,
-  CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
+  CACHE_DURATION: 5 * 60 * 1000,
 };
 
 const subcategoriesCache: {
@@ -38,7 +38,42 @@ const subcategoriesCache: {
     timestamp: number;
   };
 } = {};
-const SUBCATEGORIES_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const SUBCATEGORIES_CACHE_DURATION = 5 * 60 * 1000;
+
+/**
+ * Returns the effective display price for a product.
+ * - For variant products: lowest offerPrice (or originalPrice) across all variants
+ * - For non-variant products: offerPrice or originalPrice
+ */
+function getEffectivePrice(product: Product): number {
+  if (product.variants && product.variants.length > 0) {
+    const prices = product.variants.map(
+      (v) => v.offerPrice ?? v.originalPrice ?? Infinity
+    );
+    return Math.min(...prices);
+  }
+  return product.offerPrice ?? product.originalPrice ?? 0;
+}
+
+/**
+ * Sorts products on the client side.
+ * Used to ensure correct ordering for variant-based products
+ * where backend may sort only by root-level price fields.
+ */
+function sortProducts(products: Product[], sortBy: string): Product[] {
+  const sorted = [...products];
+  switch (sortBy) {
+    case 'price-low':
+      return sorted.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
+    case 'price-high':
+      return sorted.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
+    case 'name':
+      return sorted.sort((a, b) => a.name.localeCompare(b.name));
+    case 'featured':
+    default:
+      return sorted; // Keep backend order for featured
+  }
+}
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -69,94 +104,71 @@ const Products = () => {
   const [isSubcategoryOpen, setIsSubcategoryOpen] = useState(false);
   const [isMobileSubcategoryOpen, setIsMobileSubcategoryOpen] = useState(false);
 
+  // Client-side sorted products — fixes variant price ordering
+  const sortedProducts = useMemo(() => sortProducts(products, sortBy), [products, sortBy]);
+
   // Fetch categories with caching
   const fetchCategories = async (forceRefresh = false) => {
     try {
       setCategoriesLoading(true);
-
-      // Check if we have valid cached data
       const now = Date.now();
-      const isCacheValid = 
-        categoriesCache.data && 
-        categoriesCache.timestamp && 
-        (now - categoriesCache.timestamp) < categoriesCache.CACHE_DURATION;
+      const isCacheValid =
+        categoriesCache.data &&
+        categoriesCache.timestamp &&
+        now - categoriesCache.timestamp < categoriesCache.CACHE_DURATION;
 
-      // Use cached data if valid and not forcing refresh
       if (isCacheValid && !forceRefresh) {
         setCategories(categoriesCache.data!);
         setCategoriesLoading(false);
         return;
       }
 
-      // Fetch fresh data
       const { data } = await api.get('/products/categories');
-      
-      // Update cache
       categoriesCache.data = data;
       categoriesCache.timestamp = Date.now();
       setCategories(data);
     } catch (err) {
       console.error('Failed to fetch categories:', err);
-      // Use cached data even if expired on error
-      if (categoriesCache.data) {
-        setCategories(categoriesCache.data);
-      }
+      if (categoriesCache.data) setCategories(categoriesCache.data);
     } finally {
       setCategoriesLoading(false);
     }
   };
 
-  // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  // Fetch subcategories with caching when category changes
   const fetchSubcategories = async (forceRefresh = false) => {
     try {
       setSubcategoriesLoading(true);
 
       let endpoint = '/products/all-subcategories';
       let cacheKey = 'all';
-      
+
       if (selectedCategory && selectedCategory !== 'all') {
         endpoint = `/products/subcategories/${selectedCategory}`;
         cacheKey = selectedCategory;
       }
 
-      // Check if we have valid cached data
       const now = Date.now();
       const cached = subcategoriesCache[cacheKey];
-      const isCacheValid = 
-        cached && 
-        (now - cached.timestamp) < SUBCATEGORIES_CACHE_DURATION;
+      const isCacheValid = cached && now - cached.timestamp < SUBCATEGORIES_CACHE_DURATION;
 
-      // Use cached data if valid and not forcing refresh
       if (isCacheValid && !forceRefresh) {
         setSubcategories(cached.data);
         setSubcategoriesLoading(false);
         return;
       }
 
-      // Fetch fresh data
       const { data } = await api.get(endpoint);
-      
-      // Update cache
-      subcategoriesCache[cacheKey] = {
-        data: data,
-        timestamp: Date.now()
-      };
-      
+      subcategoriesCache[cacheKey] = { data, timestamp: Date.now() };
       setSubcategories(data);
     } catch (err) {
       console.error('Failed to fetch subcategories:', err);
       setSubcategories([]);
-      
-      // Use cached data even if expired on error
       const cacheKey = selectedCategory && selectedCategory !== 'all' ? selectedCategory : 'all';
-      if (subcategoriesCache[cacheKey]) {
-        setSubcategories(subcategoriesCache[cacheKey].data);
-      }
+      if (subcategoriesCache[cacheKey]) setSubcategories(subcategoriesCache[cacheKey].data);
     } finally {
       setSubcategoriesLoading(false);
     }
@@ -165,6 +177,7 @@ const Products = () => {
   useEffect(() => {
     fetchSubcategories();
   }, [selectedCategory]);
+
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
@@ -178,7 +191,10 @@ const Products = () => {
         params.append('subcategories', selectedSubcategories.join(','));
       }
       params.append('pageNumber', String(pageNumberParam));
-      params.append('sortBy', sortBy);
+      // Always fetch without sort from backend for price sorts —
+      // client handles price sorting. For 'featured' and 'name', pass to backend.
+      const backendSort = ['featured', 'name'].includes(sortBy) ? sortBy : 'featured';
+      params.append('sortBy', backendSort);
 
       const { data } = await api.get(`/products?${params.toString()}`);
       setProducts(data.products);
@@ -191,10 +207,19 @@ const Products = () => {
     }
   };
 
-  // Fetch products
   useEffect(() => {
     fetchProducts();
-  }, [search, selectedCategory, selectedSubcategories, pageNumberParam, sortBy, urlSearchTerm]);
+  }, [search, selectedCategory, selectedSubcategories, pageNumberParam, urlSearchTerm]);
+
+  // Re-sort when sortBy changes without refetching (instant UI update)
+  // fetchProducts is only re-called when filters/search/page changes
+  useEffect(() => {
+    // For featured/name we need backend ordering, so refetch
+    if (sortBy === 'featured' || sortBy === 'name') {
+      fetchProducts();
+    }
+    // For price sorts, sortedProducts memo handles it instantly
+  }, [sortBy]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -205,25 +230,25 @@ const Products = () => {
     setSelectedCategory(categoryName);
     setSelectedSubcategories([]);
     setSearch('');
-    updateURLParams({ 
-      category: categoryName !== 'all' ? categoryName : undefined, 
+    updateURLParams({
+      category: categoryName !== 'all' ? categoryName : undefined,
       subcategories: undefined,
       search: undefined,
-      pageNumber: '1' 
+      pageNumber: '1',
     });
   };
 
   const handleSubcategoryToggle = (subcategoryName: string) => {
     const newSelected = selectedSubcategories.includes(subcategoryName)
-      ? selectedSubcategories.filter(s => s !== subcategoryName)
+      ? selectedSubcategories.filter((s) => s !== subcategoryName)
       : [...selectedSubcategories, subcategoryName];
-    
+
     setSelectedSubcategories(newSelected);
     setSearch('');
-    updateURLParams({ 
+    updateURLParams({
       subcategories: newSelected.length > 0 ? newSelected.join(',') : undefined,
       search: undefined,
-      pageNumber: '1' 
+      pageNumber: '1',
     });
   };
 
@@ -239,7 +264,7 @@ const Products = () => {
 
   const updateURLParams = (updates: Record<string, string | undefined>) => {
     const params: Record<string, string> = {};
-    
+
     if (search && !('search' in updates)) params.search = search;
     if (selectedCategory !== 'all' && !('category' in updates)) params.category = selectedCategory;
     if (selectedSubcategories.length > 0 && !('subcategories' in updates)) {
@@ -342,10 +367,10 @@ const Products = () => {
               key={category._id}
               onClick={() => handleCategoryChange(category.name)}
               className={cn(
-                "w-full px-5 py-3.5 rounded-xl text-left font-medium transition-all duration-200",
+                'w-full px-5 py-3.5 rounded-xl text-left font-medium transition-all duration-200',
                 selectedCategory === category.name
-                  ? "bg-orange-100 text-orange-700 border-2 border-orange-300 shadow-sm"
-                  : "bg-cream text-gray-700 border-2 border-gray-200 hover:border-orange-200 hover:bg-orange-50"
+                  ? 'bg-orange-100 text-orange-700 border-2 border-orange-300 shadow-sm'
+                  : 'bg-cream text-gray-700 border-2 border-gray-200 hover:border-orange-200 hover:bg-orange-50'
               )}
             >
               {category.name}
@@ -371,7 +396,7 @@ const Products = () => {
       />
 
       {/* Header */}
-      <section className="bg-cream py-2 sm:py-6 ">
+      <section className="bg-cream py-2 sm:py-6">
         <div className="container-custom">
           <Button
             variant="ghost"
@@ -385,7 +410,7 @@ const Products = () => {
             Our Collections
           </h1>
           <p className="text-sm sm:text-base md:text-lg text-gray-600 mt-2">
-          Discover our range of authentic Indian delicacies, prepared fresh daily with traditional methods.
+            Discover our range of authentic Indian delicacies, prepared fresh daily with traditional methods.
           </p>
         </div>
       </section>
@@ -394,7 +419,6 @@ const Products = () => {
         <div className="w-full max-w-[90%] mx-auto px-4 sm:px-6 lg:px-8">
           {/* Mobile Filters */}
           <div className="lg:hidden mb-3 space-y-2">
-            {/* Search Bar */}
             <Input
               type="search"
               placeholder="Search delicacies..."
@@ -448,7 +472,7 @@ const Products = () => {
               )}
             </div>
 
-            {/* Mobile Sort Dropdown */}
+            {/* Mobile Sort */}
             <Select value={sortBy} onValueChange={handleSortChange}>
               <SelectTrigger className="w-full h-9 text-sm">
                 <SelectValue placeholder="Sort by" />
@@ -467,10 +491,10 @@ const Products = () => {
               <button
                 onClick={() => handleCategoryChange('all')}
                 className={cn(
-                  "px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-all",
+                  'px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-all',
                   selectedCategory === 'all'
-                    ? "bg-orange-500 text-white"
-                    : "bg-white text-gray-700 border border-gray-200"
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-white text-gray-700 border border-gray-200'
                 )}
               >
                 All
@@ -485,10 +509,10 @@ const Products = () => {
                     key={category._id}
                     onClick={() => handleCategoryChange(category.name)}
                     className={cn(
-                      "px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-all",
+                      'px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-all',
                       selectedCategory === category.name
-                        ? "bg-orange-500 text-white"
-                        : "bg-white text-gray-700 border border-gray-200"
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-white text-gray-700 border border-gray-200'
                     )}
                   >
                     {category.name}
@@ -534,7 +558,7 @@ const Products = () => {
                 </Select>
               </div>
 
-              {/* Active Filters Display */}
+              {/* Active Filters */}
               {(selectedSubcategories.length > 0 || selectedCategory !== 'all') && (
                 <div className="mb-4 flex flex-wrap gap-2">
                   {selectedCategory !== 'all' && (
@@ -546,7 +570,10 @@ const Products = () => {
                     </div>
                   )}
                   {selectedSubcategories.map((sub) => (
-                    <div key={sub} className="flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm">
+                    <div
+                      key={sub}
+                      className="flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm"
+                    >
                       <span>{sub}</span>
                       <button onClick={() => handleSubcategoryToggle(sub)}>
                         <X className="h-3 w-3" />
@@ -556,7 +583,7 @@ const Products = () => {
                 </div>
               )}
 
-              {/* Products Grid - 4 columns on large screens for wider cards */}
+              {/* Products Grid */}
               {loading ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                   {[...Array(10)].map((_, i) => (
@@ -570,9 +597,9 @@ const Products = () => {
                     Try Again
                   </Button>
                 </div>
-              ) : products.length > 0 ? (
+              ) : sortedProducts.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-                  {products.map((product, index) => (
+                  {sortedProducts.map((product, index) => (
                     <div
                       key={product._id}
                       className="animate-slide-up"

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Heart, ShoppingCart, Minus, Plus, ArrowLeft, Package, Tag, Scale, Clock, Loader2, House } from 'lucide-react';
+import { Heart, ShoppingCart, Minus, Plus, ArrowLeft, Package, Tag, Scale, Loader2, House } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/ProductCard';
@@ -53,35 +53,47 @@ const ProductDetail = () => {
   // Get selected variant
   const selectedVariant = hasVariants ? product!.variants![selectedVariantIndex] : null;
 
-  // Get cart quantity for current product and variant
-  const cartQuantity = product ? getCartItemQuantity(
-    product._id,
-    hasVariants ? selectedVariantIndex : 0
-  ) : 0;
+  const pdpIsDealLine = !!(product?.isInDealPeriod);
 
-  // Calculate stock based on variant or total
+  // Get cart quantity for current product and variant (deal vs catalog lines are separate)
+  const cartQuantity = product
+    ? getCartItemQuantity(product._id, hasVariants ? selectedVariantIndex : 0, pdpIsDealLine)
+    : 0;
+
+  // Calculate stock based on variant or total (supports batches and legacy stock)
   const stockInfo = useMemo(() => {
     if (!product?.inventory || product.inventory.length === 0) {
       return { totalStock: 0, selectedVariantStock: 0 };
     }
+    const totalFromLocation = (loc: typeof product.inventory[0]) =>
+      loc.batches?.length
+        ? loc.batches
+            .filter(b => {
+              if (!b.expiryDate) return true;
+              const exp = new Date(b.expiryDate as any);
+              return exp.getTime() >= Date.now(); // only non-expired batches
+            })
+            .reduce((s, b) => s + (b.quantity || 0), 0)
+        : (loc.stock?.reduce((s, st) => s + (st.quantity || 0), 0) || 0);
+    const variantFromLocation = (loc: typeof product.inventory[0], vi: number) =>
+      loc.batches?.length
+        ? loc.batches
+            .filter(b => {
+              if (b.variantIndex !== vi) return false;
+              if (!b.expiryDate) return true;
+              const exp = new Date(b.expiryDate as any);
+              return exp.getTime() >= Date.now(); // only non-expired batches
+            })
+            .reduce((s, b) => s + (b.quantity || 0), 0)
+        : (loc.stock?.find(s => s.variantIndex === vi)?.quantity || 0);
 
     if (hasVariants) {
-      const variantStock = product.inventory.reduce((total, location) => {
-        const stockItem = location.stock.find(s => s.variantIndex === selectedVariantIndex);
-        return total + (stockItem?.quantity || 0);
-      }, 0);
-
-      const allStock = product.inventory.reduce((total, location) => {
-        return total + location.stock.reduce((locTotal, stockItem) => locTotal + (stockItem.quantity || 0), 0);
-      }, 0);
-
+      const variantStock = product.inventory.reduce((t, loc) => t + variantFromLocation(loc, selectedVariantIndex), 0);
+      const allStock = product.inventory.reduce((t, loc) => t + totalFromLocation(loc), 0);
       return { totalStock: allStock, selectedVariantStock: variantStock };
-    } else {
-      const stock = product.inventory.reduce((total, location) => {
-        return total + location.stock.reduce((locTotal, stockItem) => locTotal + (stockItem.quantity || 0), 0);
-      }, 0);
-      return { totalStock: stock, selectedVariantStock: stock };
     }
+    const stock = product.inventory.reduce((t, loc) => t + totalFromLocation(loc), 0);
+    return { totalStock: stock, selectedVariantStock: stock };
   }, [product?.inventory, hasVariants, selectedVariantIndex]);
 
   const availableStock = hasVariants ? stockInfo.selectedVariantStock : stockInfo.totalStock;
@@ -144,7 +156,13 @@ const ProductDetail = () => {
     if (!product) return;
 
     try {
-      await addToCart(product._id, 1, hasVariants ? selectedVariantIndex : 0);
+      await addToCart(product._id, 1, hasVariants ? selectedVariantIndex : 0, {
+        price: currentPrice.displayPrice,
+        originalPrice: currentPrice.originalPrice,
+        isDealApplied: pdpIsDealLine,
+        dealDiscountPercent: product.dealDiscountPercent ?? null,
+        isDealItem: pdpIsDealLine,
+      });
       const variantInfo = hasVariants && selectedVariant ? ` (${selectedVariant.value})` : '';
       toast.success('Added to cart', {
         description: `${product.name}${variantInfo} added to your cart.`,
@@ -181,9 +199,9 @@ const ProductDetail = () => {
     const variantIdx = hasVariants ? selectedVariantIndex : 0;
 
     if (cartQuantity > 1) {
-      await updateCartItemQuantity(product._id, cartQuantity - 1, variantIdx);
+      await updateCartItemQuantity(product._id, cartQuantity - 1, variantIdx, pdpIsDealLine);
     } else {
-      await removeFromCart(product._id, variantIdx);
+      await removeFromCart(product._id, variantIdx, pdpIsDealLine);
       toast.info(`"${product.name}" removed from cart`, {
         duration: 2000,
       });
@@ -410,9 +428,18 @@ const ProductDetail = () => {
                     </SelectTrigger>
                     <SelectContent className="w-full sm:w-72">
                       {product.variants.map((variant, index) => {
+                        const now = Date.now();
                         const variantStock = product.inventory?.reduce((total, location) => {
-                          const stockItem = location.stock.find(s => s.variantIndex === index);
-                          return total + (stockItem?.quantity || 0);
+                          const qty = location.batches?.length
+                            ? location.batches
+                                .filter(
+                                  (b: any) =>
+                                    b.variantIndex === index &&
+                                    (!b.expiryDate || new Date(b.expiryDate).getTime() >= now)
+                                )
+                                .reduce((s: number, b: any) => s + (b.quantity || 0), 0)
+                            : (location.stock?.find(s => s.variantIndex === index)?.quantity || 0);
+                          return total + qty;
                         }, 0) || 0;
 
                         const variantPrice = variant.offerPrice || variant.originalPrice;
@@ -519,16 +546,6 @@ const ProductDetail = () => {
                     </div>
                   </div>
                 ) : null}
-
-                {product.shelfLife && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary flex-shrink-0" />
-                    <div>
-                      <p className="text-[10px] text-muted-foreground">Shelf Life</p>
-                      <p className="font-semibold text-xs">{product.shelfLife} {product.shelfLife === 1 ? 'day' : 'days'}</p>
-                    </div>
-                  </div>
-                )}
 
                 {product.category && (
                   <div className="flex items-center gap-2">

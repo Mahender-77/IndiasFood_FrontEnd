@@ -21,17 +21,41 @@ export interface ProductVariant {
   value: string; // "500g", "12pcs", "small"
   originalPrice: number;
   offerPrice?: number;
+  /** When false, this variant's batch quantity is excluded from total/available stock (not deleted). */
+  isActive?: boolean;
+  /** When API returns a subset of variants (e.g. Deal of the Day), maps this row to inventory `batch.variantIndex`. */
+  variantIndex?: number;
+  /** Server-computed deal line price for this variant (Deal of the Day). */
+  dealPrice?: number;
+  /** Server-computed deal discount % for this variant (Deal of the Day). */
+  dealDiscountPercent?: number;
 }
 
 export interface ProductStock {
-  variantIndex: number; // Links to variants array index
+  variantIndex: number;
   quantity: number;
   lowStockThreshold: number;
 }
 
+/** Batch-based inventory for tracking stock per batch */
+export interface ProductBatch {
+  batchNumber: string;
+  quantity: number;
+  manufacturingDate: string | Date;
+  expiryDate: string | Date;
+  purchasePrice: number;
+  sellingPrice: number;
+  variantIndex: number;
+  /** Total/cost value for the whole batch */
+  batchWholePrice?: number;
+  dealTriggerDays?: number;
+  dealDiscountPercent?: number;
+}
+
 export interface ProductInventory {
-  location: string; // Location identifier (e.g., "hyderabad", "bangalore")
-  stock: ProductStock[];
+  location: string;
+  batches?: ProductBatch[];
+  stock?: ProductStock[];
 }
 
 export interface Product {
@@ -40,8 +64,7 @@ export interface Product {
   description?: string;
   images: string[];
   videoUrl?: string;
-  shelfLife?: number;
-  originLocation?:string, 
+  originLocation?: string; 
 
   // DUAL PRICING SYSTEM (keeping backward compatibility)
   originalPrice: number;
@@ -51,10 +74,23 @@ export interface Product {
   // FLEXIBLE VARIANTS (Weight/Pieces/Box)
   variants?: ProductVariant[];
 
+  /** Deal-of-the-day API only: variants currently in an active deal window (full `variants` unchanged). */
+  dealVariants?: ProductVariant[];
+
   // FLAGS for Frontend Sections
   isGITagged?: boolean;
   isNewArrival?: boolean;
   isMostSaled?: boolean;
+
+  /** Deal of the Day: when batch is (expiryDate - dealTriggerDays) away, auto-include with dealDiscountPercent */
+  dealTriggerDays?: number;
+  dealDiscountPercent?: number;
+
+  /** Computed by API when product is in deal period (from batches in deal window) */
+  dealPrice?: number;
+  isInDealPeriod?: boolean;
+  /** Nearest expiry in days among batches in deal window (for Deal of the Day) */
+  nearestExpiryDays?: number;
 
   // LOCATION-BASED INVENTORY (Multi-branch)
   inventory?: ProductInventory[];
@@ -98,6 +134,15 @@ export interface CartItem {
   product: Product | null; // Allow product to be null
   qty: number;
   selectedVariantIndex?: number; // For variant-based products, which variant was selected
+  /** Price snapshot captured when item was added/updated in cart. */
+  price?: number;
+  /** Optional strike-through/original snapshot for UI savings display. */
+  originalPrice?: number;
+  /** Deal metadata snapshot (optional, analytics/display only). */
+  isDealApplied?: boolean;
+  dealDiscountPercent?: number | null;
+  /** True when this line uses deal-of-the-day pricing; distinct from same variant at catalog price. */
+  isDealItem?: boolean;
 }
 
 export interface ShippingAddress {
@@ -117,6 +162,12 @@ export interface Order {
   _id: string;
   user: string;
   orderItems: OrderItem[];
+  /** Admin-applied deal / giveaway lines (price 0) */
+  giveAwayItems?: OrderItem[];
+  giveAwayId?: string;
+  /** Fulfilment store name (inventory deduction) */
+  storeName?: string;
+  nearestStore?: string;
   shippingAddress: ShippingAddress;
   paymentMethod: string;
   
@@ -163,6 +214,12 @@ export interface Order {
   updatedAt: string;
 }
 
+/** Which batch(es) fulfilled this line item (FIFO – for admin visibility). */
+export interface BatchAllocation {
+  batchNumber: string;
+  quantity: number;
+}
+
 export interface OrderItem {
   name: string;
   qty: number;
@@ -170,6 +227,54 @@ export interface OrderItem {
   price: number;
   product: string;
   selectedVariantIndex?: number;
+  /** Fulfilment batches (set at order creation). */
+  batchAllocations?: BatchAllocation[];
+}
+
+export type GiveAwayConditionType =
+  | 'minOrderAmount'
+  | 'minOrdersInDay'
+  | 'minLifetimeOrders'
+  | 'minLifetimeSpent';
+
+export interface GiveAwayCondition {
+  type: GiveAwayConditionType;
+  value: number;
+  isEnabled: boolean;
+}
+
+export type GiveAwayRewardType =
+  | 'free_shipping'
+  | 'flat_discount'
+  | 'percentage_discount'
+  | 'free_item'
+  | 'other';
+
+export interface GiveAwayReward {
+  type: GiveAwayRewardType;
+  value?: number;
+  label?: string;
+  productId?: string;
+}
+
+export interface GiveAwaySelectedProduct {
+  product: string;
+  selectedVariantIndex?: number;
+  qty: number;
+}
+
+export interface GiveAway {
+  _id: string;
+  title: string;
+  description?: string;
+  isActive: boolean;
+  startAt?: string;
+  endAt?: string;
+  conditions: GiveAwayCondition[];
+  selectedProducts?: GiveAwaySelectedProduct[];
+  reward: GiveAwayReward;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ShippingAddress {
