@@ -20,6 +20,8 @@ import AdminCustomerDetailPage from "./pages/admin/AdminCustomerDetailPage";
 import AdminCategoriesPage from "./pages/admin/AdminCategories";
 import { AdminDeliveryApplications } from "./pages/admin/AdminDeliveryApplications";
 import AdminInventory from "./pages/admin/AdminInventory";
+import { AdminProductAnalyticsPage } from "./pages/admin/AdminProductAnalyticsPage";
+import AdminBusinessAnalytics from "./pages/admin/AdminBusinessAnalytics";
 import DeliveryProtectedRoute from "./components/DeliveryProtectedRoute";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
 import NotFound from "./pages/NotFound";
@@ -131,6 +133,22 @@ const App = () => {
               element={
                 <AdminProtectedRoute>
                   <AdminInventory />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/inventory/:id/analytics"
+              element={
+                <AdminProtectedRoute>
+                  <AdminProductAnalyticsPage />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/business-analytics"
+              element={
+                <AdminProtectedRoute>
+                  <AdminBusinessAnalytics />
                 </AdminProtectedRoute>
               }
             />

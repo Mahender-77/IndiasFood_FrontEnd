@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCart } from '@/contexts/CartContext';
+import { isCartLineDeal } from '@/lib/cartPricing';
 import { Product } from '@/types';
 import { SEO } from '@/components/seo/SEO';
 import { toast } from 'sonner';
@@ -34,50 +35,74 @@ const Cart = () => {
   const getVariantStock = (product: Product, variantIndex?: number) => {
     if (!product.inventory || product.inventory.length === 0) return 0;
 
-    if (product.variants && product.variants.length > 0 && variantIndex !== undefined) {
-      return product.inventory.reduce((total, location) => {
-        const stockItem = location.stock.find(s => s.variantIndex === variantIndex);
-        return total + (stockItem?.quantity || 0);
-      }, 0);
-    }
+    const totalFromLoc = (loc: typeof product.inventory[0]) =>
+      loc.batches?.length
+        ? loc.batches.reduce((s, b) => s + (b.quantity || 0), 0)
+        : (loc.stock?.reduce((s, st) => s + (st.quantity || 0), 0) || 0);
+    const variantFromLoc = (loc: typeof product.inventory[0], vi: number) =>
+      loc.batches?.length
+        ? loc.batches.filter(b => b.variantIndex === vi).reduce((s, b) => s + (b.quantity || 0), 0)
+        : (loc.stock?.find(s => s.variantIndex === vi)?.quantity || 0);
 
-    return product.inventory.reduce((total, location) => {
-      return total + location.stock.reduce((locationTotal, stockItem) => {
-        return locationTotal + (stockItem.quantity || 0);
-      }, 0);
-    }, 0);
+    if (product.variants && product.variants.length > 0 && variantIndex !== undefined) {
+      return product.inventory.reduce((t, loc) => t + variantFromLoc(loc, variantIndex), 0);
+    }
+    return product.inventory.reduce((t, loc) => t + totalFromLoc(loc), 0);
   };
 
-  const getPricingInfo = (product: Product, variantIndex?: number) => {
+  const getPricingInfo = (
+    product: Product,
+    variantIndex?: number,
+    item?: { price?: number; originalPrice?: number; isDealItem?: boolean; isDealApplied?: boolean }
+  ) => {
+    let originalPrice: number;
+    let fallbackPrice: number;
+    let variantLabel: string | null = null;
+
     if (product.variants && product.variants.length > 0 && variantIndex !== undefined) {
       const variant = product.variants[variantIndex];
       if (variant) {
-        return {
-          originalPrice: variant.originalPrice,
-          offerPrice: variant.offerPrice,
-          effectivePrice: variant.offerPrice && variant.offerPrice < variant.originalPrice 
-            ? variant.offerPrice 
-            : variant.originalPrice,
-          hasOffer: variant.offerPrice && variant.offerPrice < variant.originalPrice,
-          variantLabel: variant.value
-        };
+        originalPrice = variant.originalPrice;
+        fallbackPrice = variant.offerPrice && variant.offerPrice < variant.originalPrice
+          ? variant.offerPrice
+          : variant.originalPrice;
+        variantLabel = variant.value;
+      } else {
+        originalPrice = product.originalPrice || 0;
+        fallbackPrice = product.offerPrice || product.originalPrice || 0;
       }
+    } else {
+      originalPrice = product.originalPrice || 0;
+      fallbackPrice = product.offerPrice && product.offerPrice < (product.originalPrice || 0)
+        ? product.offerPrice
+        : (product.originalPrice || 0);
     }
 
-    const originalPrice = product.originalPrice || 0;
-    const offerPrice = product.offerPrice;
+    // Trust cart snapshot when present (deal lines persist `price` from add-to-cart / server).
+    const effectivePrice =
+      typeof item?.price === 'number' && Number.isFinite(item.price) ? item.price : fallbackPrice;
+    const effectiveOriginalPrice =
+      typeof item?.originalPrice === 'number' && Number.isFinite(item.originalPrice)
+        ? item.originalPrice
+        : originalPrice;
+
     return {
-      originalPrice,
-      offerPrice,
-      effectivePrice: offerPrice && offerPrice < originalPrice ? offerPrice : originalPrice,
-      hasOffer: offerPrice && offerPrice < originalPrice,
-      variantLabel: null
+      originalPrice: effectiveOriginalPrice,
+      offerPrice: effectivePrice,
+      effectivePrice,
+      hasOffer: effectivePrice < effectiveOriginalPrice,
+      variantLabel
     };
   };
 
-  const handleQuantityIncrease = async (product: Product, currentQty: number, variantIndex?: number) => {
+  const handleQuantityIncrease = async (
+    product: Product,
+    currentQty: number,
+    variantIndex?: number,
+    isDealItem?: boolean
+  ) => {
     const availableStock = getVariantStock(product, variantIndex);
-    
+
     if (currentQty >= availableStock) {
       toast.warning('Maximum stock reached', {
         description: `Only ${availableStock} items available in stock`,
@@ -85,21 +110,33 @@ const Cart = () => {
       });
       return;
     }
-    
-    await updateQuantity(product._id, currentQty + 1, variantIndex);
+
+    await updateQuantity(product._id, currentQty + 1, variantIndex, isDealItem ?? false);
   };
 
-  const handleQuantityDecrease = async (productId: string, currentQty: number, variantIndex?: number) => {
+  const handleQuantityDecrease = async (
+    productId: string,
+    currentQty: number,
+    variantIndex?: number,
+    isDealItem?: boolean
+  ) => {
     if (currentQty <= 1) return;
-    await updateQuantity(productId, currentQty - 1, variantIndex);
+    await updateQuantity(productId, currentQty - 1, variantIndex, isDealItem ?? false);
   };
 
-  const handleRemoveItem = async (productId: string, variantIndex?: number) => {
-    await removeFromCart(productId, variantIndex ?? 0);
+  const handleRemoveItem = async (productId: string, variantIndex?: number, isDealItem?: boolean) => {
+    await removeFromCart(productId, variantIndex ?? 0, isDealItem ?? false);
     toast.info('Item removed from cart', { duration: 2000 });
   };
 
-  const handleVariantChange = async (productId: string, currentVariantIndex: number, currentQty: number, newVariantIndex: number, product: Product) => {
+  const handleVariantChange = async (
+    productId: string,
+    currentVariantIndex: number,
+    currentQty: number,
+    newVariantIndex: number,
+    product: Product,
+    isDealItem?: boolean
+  ) => {
     const newVariantStock = getVariantStock(product, newVariantIndex);
     
     if (newVariantStock === 0) {
@@ -113,7 +150,7 @@ const Cart = () => {
     try {
       const adjustedQty = currentQty > newVariantStock ? newVariantStock : currentQty;
       
-      await updateCartItemVariant(productId, currentVariantIndex, newVariantIndex);
+      await updateCartItemVariant(productId, currentVariantIndex, newVariantIndex, isDealItem ?? false);
       
       if (currentQty > newVariantStock) {
         toast.warning('Quantity adjusted', {
@@ -150,7 +187,7 @@ const Cart = () => {
 
       // Only include items that have stock available
       if (availableStock > 0) {
-        const pricing = getPricingInfo(product, hasVariants ? variantIndex : undefined);
+        const pricing = getPricingInfo(product, hasVariants ? variantIndex : undefined, item);
 
         const itemTotal = pricing.effectivePrice * item.qty;
         total += itemTotal;
@@ -220,11 +257,12 @@ const Cart = () => {
 
                 const hasVariants = product.variants && product.variants.length > 0;
                 const variantIndex = item.selectedVariantIndex !== undefined ? item.selectedVariantIndex : 0;
-                const pricing = getPricingInfo(product, hasVariants ? variantIndex : undefined);
+                const lineDeal = isCartLineDeal(item);
+                const pricing = getPricingInfo(product, hasVariants ? variantIndex : undefined, item);
                 const availableStock = getVariantStock(product, hasVariants ? variantIndex : undefined);
                 const itemTotal = pricing.effectivePrice * item.qty;
                 const savings = pricing.hasOffer ? (pricing.originalPrice - pricing.effectivePrice) * item.qty : 0;
-                const itemKey = `${product._id}-${variantIndex}`;
+                const itemKey = `${product._id}-${variantIndex}-${lineDeal ? 'deal' : 'std'}`;
 
                 return (
                   <div
@@ -253,7 +291,16 @@ const Cart = () => {
                         <div className="mb-3">
                           <Select
                             value={variantIndex.toString()}
-                            onValueChange={(value) => handleVariantChange(product._id, variantIndex, item.qty, parseInt(value, 10), product)}
+                            onValueChange={(value) =>
+                              handleVariantChange(
+                                product._id,
+                                variantIndex,
+                                item.qty,
+                                parseInt(value, 10),
+                                product,
+                                lineDeal
+                              )
+                            }
                             disabled={cartLoading}
                           >
                             <SelectTrigger className="w-full sm:w-[200px] h-9 text-sm bg-white border border-gray-200 hover:border-gray-300 transition-colors rounded-lg">
@@ -358,7 +405,14 @@ const Cart = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 hover:bg-background"
-                            onClick={() => handleQuantityDecrease(product._id, item.qty, hasVariants ? variantIndex : undefined)}
+                            onClick={() =>
+                              handleQuantityDecrease(
+                                product._id,
+                                item.qty,
+                                hasVariants ? variantIndex : undefined,
+                                lineDeal
+                              )
+                            }
                             disabled={cartLoading || item.qty <= 1}
                           >
                             <Minus className="h-4 w-4" />
@@ -370,7 +424,14 @@ const Cart = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 hover:bg-background"
-                            onClick={() => handleQuantityIncrease(product, item.qty, hasVariants ? variantIndex : undefined)}
+                            onClick={() =>
+                              handleQuantityIncrease(
+                                product,
+                                item.qty,
+                                hasVariants ? variantIndex : undefined,
+                                lineDeal
+                              )
+                            }
                             disabled={cartLoading || item.qty >= availableStock}
                           >
                             <Plus className="h-4 w-4" />
@@ -378,7 +439,9 @@ const Cart = () => {
                         </div>
 
                         <button
-                          onClick={() => handleRemoveItem(product._id, hasVariants ? variantIndex : undefined)}
+                          onClick={() =>
+                            handleRemoveItem(product._id, hasVariants ? variantIndex : undefined, lineDeal)
+                          }
                           className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-destructive/10"
                           disabled={cartLoading}
                         >
@@ -395,7 +458,9 @@ const Cart = () => {
 
                     <div className="hidden sm:flex flex-col items-end justify-between gap-3">
                       <button
-                        onClick={() => handleRemoveItem(product._id, hasVariants ? variantIndex : undefined)}
+                        onClick={() =>
+                          handleRemoveItem(product._id, hasVariants ? variantIndex : undefined, lineDeal)
+                        }
                         className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-destructive/10"
                         disabled={cartLoading}
                       >
@@ -419,7 +484,14 @@ const Cart = () => {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 hover:bg-background"
-                          onClick={() => handleQuantityIncrease(product, item.qty, hasVariants ? variantIndex : undefined)}
+                          onClick={() =>
+                            handleQuantityIncrease(
+                              product,
+                              item.qty,
+                              hasVariants ? variantIndex : undefined,
+                              lineDeal
+                            )
+                          }
                           disabled={cartLoading || item.qty >= availableStock}
                         >
                           <Plus className="h-3 w-3" />
@@ -466,7 +538,8 @@ const Cart = () => {
 
                       const hasVariants = product.variants && product.variants.length > 0;
                       const variantIndex = item.selectedVariantIndex !== undefined ? item.selectedVariantIndex : 0;
-                      const pricing = getPricingInfo(product, hasVariants ? variantIndex : undefined);
+                      const sumLineDeal = isCartLineDeal(item);
+                      const pricing = getPricingInfo(product, hasVariants ? variantIndex : undefined, item);
                       const itemTotal = pricing.effectivePrice * item.qty;
 
                       let displayName = product.name;
@@ -474,7 +547,7 @@ const Cart = () => {
                         displayName = `${product.name} (${pricing.variantLabel})`;
                       }
 
-                      const itemKey = `${product._id}-${variantIndex}`;
+                      const itemKey = `${product._id}-${variantIndex}-${sumLineDeal ? 'deal' : 'std'}`;
 
                       return (
                         <div key={itemKey} className="flex justify-between items-start gap-2 text-sm">

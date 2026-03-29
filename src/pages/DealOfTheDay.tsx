@@ -8,9 +8,19 @@ import api from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SEO } from '@/components/seo/SEO';
 import { Flame, ArrowLeft } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+
+type DealSortBy = 'expiry' | 'price-low' | 'price-high' | 'name';
 
 const DealOfTheDay = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -20,6 +30,7 @@ const DealOfTheDay = () => {
   const [pages, setPages] = useState(1);
 
   const pageNumberParam = Number(searchParams.get('pageNumber')) || 1;
+  const sortByParam = (searchParams.get('sortBy') as DealSortBy) || 'expiry';
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -29,6 +40,9 @@ const DealOfTheDay = () => {
         const params = new URLSearchParams();
         params.append('pageNumber', String(pageNumberParam));
         params.append('pageSize', '12');
+        if (sortByParam && sortByParam !== 'expiry') {
+          params.append('sortBy', sortByParam === 'price-low' ? 'price-low' : sortByParam === 'price-high' ? 'price-high' : 'name');
+        }
 
         const { data } = await api.get(`/products/deal-of-the-day?${params.toString()}`);
         setProducts(data.products || []);
@@ -41,10 +55,13 @@ const DealOfTheDay = () => {
       }
     };
     fetchProducts();
-  }, [pageNumberParam]);
+  }, [pageNumberParam, sortByParam]);
 
   const handlePageChange = (newPage: number) => {
-    navigate(`/deal-of-the-day?pageNumber=${newPage}`);
+    const params = new URLSearchParams();
+    params.set('pageNumber', String(newPage));
+    if (sortByParam && sortByParam !== 'expiry') params.set('sortBy', sortByParam);
+    navigate(`/deal-of-the-day?${params.toString()}`);
   };
 
   return (
@@ -75,22 +92,51 @@ const DealOfTheDay = () => {
             </h1>
           </div>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl">
-            Limited time offers! Products expiring in 2 days or less. Grab these exclusive deals 
-            before they're gone. Fresh products at unbeatable prices.
+            Products expiring soon with exclusive discounts! Each batch can have its own trigger (e.g. 2 or 3 days before expiry) 
+            and offer percentage. When a batch enters its deal window, the product appears here with the best discount available. 
+            Grab these deals before they&apos;re gone.
           </p>
         </div>
       </section>
 
       <section className="section-padding bg-background pt-8">
         <div className="container-custom">
-          {/* Results Count */}
-          {loading ? (
-            <Skeleton className="w-48 h-5 mb-6" />
-          ) : (
-            <p className="text-muted-foreground mb-6">
-              Showing {products.length} {products.length === 1 ? 'deal' : 'deals'}
-            </p>
-          )}
+          {/* Sort + Results Count */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            {loading ? (
+              <Skeleton className="w-48 h-5" />
+            ) : (
+              <p className="text-muted-foreground">
+                Showing {products.length} {products.length === 1 ? 'deal' : 'deals'}
+              </p>
+            )}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="deal-sort" className="text-sm text-muted-foreground whitespace-nowrap">
+                Sort by
+              </Label>
+              <Select
+                value={sortByParam}
+                onValueChange={(value) => {
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.set('sortBy', value);
+                    next.delete('pageNumber');
+                    return next;
+                  });
+                }}
+              >
+                <SelectTrigger id="deal-sort" className="w-[180px] h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expiry">Expires soonest</SelectItem>
+                  <SelectItem value="price-low">Price: Low to high</SelectItem>
+                  <SelectItem value="price-high">Price: High to low</SelectItem>
+                  <SelectItem value="name">Name A–Z</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
           {loading ? (
            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
@@ -107,15 +153,18 @@ const DealOfTheDay = () => {
             </div>
           ) : products.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-              {products.map((product, index) => (
-                <div
-                  key={product._id}
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <ProductCard product={product} />
-                </div>
-              ))}
+              {products.map((product, index) => {
+                const variantsToShow = product.dealVariants || product.variants;
+                return (
+                  <div
+                    key={product._id}
+                    className="animate-slide-up"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <ProductCard product={{ ...product, variants: variantsToShow }} isDealView />
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-16">

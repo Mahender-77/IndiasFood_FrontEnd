@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Order, User } from '@/types';
+import { Order, Product, User } from '@/types';
 import api from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Eye, AlertCircle, Settings, Save, Plus, Trash2, Package, MapPin, Filter, X, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Eye, AlertCircle, Settings, Save, Plus, Trash2, Package, MapPin, Filter, X, CheckCircle2, Gift } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Switch } from '@/components/ui/switch';
@@ -57,6 +57,21 @@ export const AdminOrderListPage = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [cancelDeliveryMode, setCancelDeliveryMode] = useState<'delivery' | 'pickup'>('delivery');
+
+  const [applyGiveAwayDialogOpen, setApplyGiveAwayDialogOpen] = useState(false);
+  const [applyGiveAwayLoading, setApplyGiveAwayLoading] = useState(false);
+  const [applyGiveAwaySaving, setApplyGiveAwaySaving] = useState(false);
+  const [applyGiveAwayOrder, setApplyGiveAwayOrder] = useState<Order | null>(null);
+  const [eligibleDealProducts, setEligibleDealProducts] = useState<Product[]>([]);
+  const [eligibleGiveAwayInfo, setEligibleGiveAwayInfo] = useState<{ giveAwayId: string; title: string } | null>(null);
+  const [applyGiveAwaySelection, setApplyGiveAwaySelection] = useState<Record<string, number>>({});
+  const [applyGiveAwayVariant, setApplyGiveAwayVariant] = useState<Record<string, number>>({});
+  const [giveAwayEligibilityMap, setGiveAwayEligibilityMap] = useState<
+    Record<
+      string,
+      { eligible: boolean; reason?: string; giveAwayId?: string; giveAwayTitle?: string }
+    >
+  >({});
 
   const handleAdminViewInvoice = async (orderId: string, printMode: boolean = false) => {
     try {
@@ -110,7 +125,21 @@ export const AdminOrderListPage = () => {
       );
       
       setDeliveryPersons(deliveryPersonsResponse.data);
- 
+
+      try {
+        const ids = (ordersResponse.data as Order[]).map((o) => o._id);
+        if (ids.length) {
+          const batchRes = await api.post('/admin/orders/giveaway-eligibility-batch', {
+            orderIds: ids
+          });
+          setGiveAwayEligibilityMap(batchRes.data || {});
+        } else {
+          setGiveAwayEligibilityMap({});
+        }
+      } catch {
+        setGiveAwayEligibilityMap({});
+      }
+
       if (settingsResponse.data) {
         setDeliverySettings({
           pricePerKm: settingsResponse.data.pricePerKm,
@@ -120,6 +149,7 @@ export const AdminOrderListPage = () => {
           storeLocations: settingsResponse.data.storeLocations || []
         });
       }
+
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch data');
       toast({
@@ -392,7 +422,101 @@ export const AdminOrderListPage = () => {
     if (order.isPaid) return <Badge className="bg-emerald-600 hover:bg-emerald-700 font-medium">Confirmed</Badge>;
     return <Badge variant="secondary" className="font-medium">Placed</Badge>;
   };
-  console.log("orders", orders);
+  const openApplyGiveAway = async (order: Order) => {
+    setApplyGiveAwayOrder(order);
+    setApplyGiveAwayDialogOpen(true);
+    setApplyGiveAwayLoading(true);
+    setEligibleDealProducts([]);
+    setEligibleGiveAwayInfo(null);
+    setApplyGiveAwaySelection({});
+    setApplyGiveAwayVariant({});
+    try {
+      const resp = await api.get(`/admin/orders/${order._id}/giveaway-eligibility`);
+      if (!resp.data?.eligible) {
+        toast({
+          title: 'Not eligible',
+          description: resp.data?.reason || 'This order is not eligible for giveaway.',
+          variant: 'destructive'
+        });
+        setApplyGiveAwayDialogOpen(false);
+        return;
+      }
+      setEligibleGiveAwayInfo({ giveAwayId: resp.data.giveAwayId, title: resp.data.giveAwayTitle });
+      const dealList: Product[] = resp.data.dealProducts || [];
+      setEligibleDealProducts(dealList);
+      const vInit: Record<string, number> = {};
+      dealList.forEach((p) => {
+        vInit[p._id] = 0;
+      });
+      setApplyGiveAwayVariant(vInit);
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.response?.data?.message || 'Failed to check giveaway eligibility.',
+        variant: 'destructive'
+      });
+      setApplyGiveAwayDialogOpen(false);
+    } finally {
+      setApplyGiveAwayLoading(false);
+    }
+  };
+
+  const handleApplyGiveAway = async () => {
+    if (!applyGiveAwayOrder || !eligibleGiveAwayInfo) return;
+    const items = Object.entries(applyGiveAwaySelection)
+      .filter(([, qty]) => Number(qty) > 0)
+      .map(([productId, qty]) => ({
+        productId,
+        qty: Number(qty),
+        selectedVariantIndex: applyGiveAwayVariant[productId] ?? 0
+      }));
+    if (!items.length) {
+      toast({
+        title: 'Select quantity',
+        description: 'Please set quantity for at least one product.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    setApplyGiveAwaySaving(true);
+    try {
+      const resp = await api.post(`/admin/orders/${applyGiveAwayOrder._id}/apply-giveaway`, {
+        giveAwayId: eligibleGiveAwayInfo.giveAwayId,
+        items
+      });
+      const updatedOrder = resp.data?.order;
+      if (updatedOrder?._id) {
+        setOrders((prev) => prev.map((o) => (o._id === updatedOrder._id ? updatedOrder : o)));
+        setGiveAwayEligibilityMap((prev) => ({
+          ...prev,
+          [updatedOrder._id]: { eligible: false, reason: 'GiveAway already applied' }
+        }));
+      }
+      toast({
+        title: 'GiveAway applied',
+        description: 'GiveAway products were added to invoice and inventory updated.'
+      });
+
+      // Notify product analytics pages to refresh immediately.
+      const productIds = Array.from(new Set(items.map((i) => String(i.productId))));
+      window.dispatchEvent(
+        new CustomEvent('inventory:giveaway-updated', {
+          detail: { productIds, at: Date.now() }
+        })
+      );
+
+      setApplyGiveAwayDialogOpen(false);
+    } catch (err: any) {
+      toast({
+        title: 'Failed',
+        description: err.response?.data?.message || 'Failed to apply giveaway.',
+        variant: 'destructive'
+      });
+    } finally {
+      setApplyGiveAwaySaving(false);
+    }
+  };
+
   const clearFilters = () => {
     setLocationFilter('all');
     setDeliveryModeFilter('all');
@@ -533,15 +657,17 @@ export const AdminOrderListPage = () => {
 
               {/* Right: Settings Button */}
               <div className="flex-shrink-0">
-                <Button
-                  variant="outline"
-                  size="default"
-                  onClick={() => setShowSettings(!showSettings)}
-                  className="gap-2 shadow-sm hover:shadow-md transition-shadow border-gray-300 w-full lg:w-auto"
-                >
-                  <Settings className="h-4 w-4" />
-                  Delivery Settings
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    size="default"
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="gap-2 shadow-sm hover:shadow-md transition-shadow border-gray-300 w-full lg:w-auto"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Delivery Settings
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -1060,8 +1186,51 @@ export const AdminOrderListPage = () => {
                   ) : (
                     paginatedOrders.map((order) => (
                       <TableRow key={order._id} className="hover:bg-gray-50 transition-colors">
-                        <TableCell className="font-mono text-xs font-medium">
-                        #{order?._id?.toString().slice(-8) || 'N/A'}
+                        <TableCell className="font-mono text-xs font-medium align-top">
+                          <div className="flex flex-col gap-2 min-w-[130px]">
+                            <span className="text-gray-900">
+                              #{order?._id?.toString().slice(-8) || 'N/A'}
+                            </span>
+                            {order.status !== 'cancelled' && !order.isDelivered && (
+                              <>
+                                {(order.giveAwayItems?.length ?? 0) > 0 ? (
+                                  <Badge className="w-fit bg-amber-600 hover:bg-amber-700 text-[10px] gap-1 px-2 py-0.5">
+                                    <Gift className="h-3 w-3" />
+                                    GiveAway on order
+                                  </Badge>
+                                ) : giveAwayEligibilityMap[order._id]?.eligible ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-[11px] gap-1.5 border-amber-400 bg-amber-50 text-amber-950 hover:bg-amber-100 px-2 w-full justify-start"
+                                    onClick={() => openApplyGiveAway(order)}
+                                  >
+                                    <Gift className="h-3.5 w-3 shrink-0" />
+                                    GiveAway eligible
+                                  </Button>
+                                ) : giveAwayEligibilityMap[order._id] &&
+                                  !giveAwayEligibilityMap[order._id]?.eligible ? (
+                                  <span
+                                    className="text-[10px] text-gray-500 leading-tight max-w-[140px]"
+                                    title={giveAwayEligibilityMap[order._id]?.reason || 'Not eligible'}
+                                  >
+                                    GiveAway: not eligible
+                                  </span>
+                                ) : null}
+                              </>
+                            )}
+                            {(order.isDelivered || order.status === 'cancelled') &&
+                              (order.giveAwayItems?.length ?? 0) > 0 && (
+                                <Badge
+                                  variant="secondary"
+                                  className="w-fit text-[10px] gap-1 px-2 py-0.5"
+                                >
+                                  <Gift className="h-3 w-3" />
+                                  Included GiveAway
+                                </Badge>
+                              )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
@@ -1139,6 +1308,11 @@ export const AdminOrderListPage = () => {
                                       )}
                                       <span className="text-gray-500">₹{item.price}</span>
                                     </div>
+                                    {item.batchAllocations?.length ? (
+                                      <p className="text-[10px] text-gray-500 mt-1" title="Fulfilled from (FIFO)">
+                                        From: {item.batchAllocations.map(a => `${a.batchNumber} (×${a.quantity})`).join(', ')}
+                                      </p>
+                                    ) : null}
                                   </div>
                                   <span className="font-semibold text-gray-900 text-sm whitespace-nowrap">
                                     ₹{(item.price * item.qty).toFixed(2)}
@@ -1146,6 +1320,28 @@ export const AdminOrderListPage = () => {
                                 </div>
                               ))}
                             </div>
+
+                            {(order.giveAwayItems?.length ?? 0) > 0 && (
+                              <div className="mt-2 pt-2 border-t border-dashed border-amber-200 bg-amber-50/50 rounded-md p-2 space-y-1">
+                                <p className="text-[10px] font-semibold text-amber-900 uppercase tracking-wide flex items-center gap-1">
+                                  <Gift className="h-3 w-3" />
+                                  Free GiveAway (invoice)
+                                </p>
+                                {order.giveAwayItems?.map((item, gi) => (
+                                  <div
+                                    key={`gw-${gi}`}
+                                    className="flex justify-between items-start text-xs gap-2"
+                                  >
+                                    <span className="text-gray-800 truncate" title={item.name}>
+                                      {item.name}
+                                    </span>
+                                    <span className="text-amber-800 font-medium whitespace-nowrap">
+                                      ×{item.qty} · ₹0
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
 
                             <div className="border-t-2 border-gray-200 pt-2 mt-2 space-y-1.5">
                               <div className="flex justify-between text-xs text-gray-600">
@@ -1344,7 +1540,29 @@ export const AdminOrderListPage = () => {
           <Eye className="h-3.5 w-3.5 mr-1.5" />
           View Invoice
         </Button>
+      </>
+    )}
 
+    {order.status === 'cancelled' && (
+      <Badge variant="outline" className="text-xs text-red-600 bg-red-50 border-red-200">
+        Cancelled
+      </Badge>
+    )}
+
+    {order.isDelivered && (
+      <>
+        <Badge className="text-xs bg-green-600 hover:bg-green-700 w-fit">
+          ✓ Completed
+        </Badge>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleAdminViewInvoice(order._id)}
+          className="h-9 text-xs border-gray-300 hover:bg-gray-50"
+        >
+          <Eye className="h-3.5 w-3.5 mr-1.5" />
+          View Invoice
+        </Button>
         <Button
           variant="outline"
           size="sm"
@@ -1373,18 +1591,6 @@ export const AdminOrderListPage = () => {
         </Button>
       </>
     )}
-
-    {order.status === 'cancelled' && (
-      <Badge variant="outline" className="text-xs text-red-600 bg-red-50 border-red-200">
-        Cancelled
-      </Badge>
-    )}
-
-    {order.isDelivered && (
-      <Badge className="text-xs bg-green-600 hover:bg-green-700">
-        ✓ Completed
-      </Badge>
-    )}
   </div>
 </TableCell>
 
@@ -1394,6 +1600,207 @@ export const AdminOrderListPage = () => {
                   
                 </TableBody>
               </Table>
+
+              <Dialog open={applyGiveAwayDialogOpen} onOpenChange={setApplyGiveAwayDialogOpen}>
+                <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add Deal of the Day (GiveAway)</DialogTitle>
+                  </DialogHeader>
+                  {applyGiveAwayLoading ? (
+                    <div className="py-6 flex items-center gap-2 text-sm text-gray-600">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Checking eligibility and loading deal products...
+                    </div>
+                  ) : (
+                    <div className="space-y-4 py-2">
+                      {eligibleGiveAwayInfo && (
+                        <Badge variant="secondary" className="text-xs">
+                          Rule: {eligibleGiveAwayInfo.title}
+                        </Badge>
+                      )}
+
+                      <Card className="border border-gray-200">
+                        <CardHeader className="py-3">
+                          <CardTitle className="text-base">Deal of the Day products</CardTitle>
+                          <CardDescription className="text-xs">
+                            Choose unit (if applicable) and quantity to deduct from store inventory (FIFO). Items are added to the order at ₹0.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3 max-h-72 overflow-auto pr-2">
+                          {eligibleDealProducts.length === 0 ? (
+                            <div className="text-sm text-gray-600">No deal products in stock for this window.</div>
+                          ) : (
+                            eligibleDealProducts.map((p) => {
+                              const dealAny = p as any;
+                              const availableQtyByVariantIndex: number[] | undefined = Array.isArray(dealAny.availableQtyByVariantIndex)
+                                ? (dealAny.availableQtyByVariantIndex as number[])
+                                : undefined;
+
+                              const selectedVariantIdx = applyGiveAwayVariant[p._id] ?? 0;
+                              const maxQty =
+                                availableQtyByVariantIndex && selectedVariantIdx >= 0
+                                  ? (availableQtyByVariantIndex[selectedVariantIdx] ?? 0)
+                                  : 0;
+
+                              const curQty = Number(applyGiveAwaySelection[p._id] ?? 0);
+
+                              return (
+                              <div key={p._id} className="border rounded-md p-3 space-y-2 bg-gray-50/80">
+                                <p className="text-sm font-medium text-gray-900">{p.name}</p>
+                                <div className="text-[10px] text-gray-500 flex items-center justify-between gap-3">
+                                  <span>Available (Deal window):</span>
+                                  <span className="font-semibold text-gray-700">{maxQty}</span>
+                                </div>
+                                {p.variants && p.variants.length > 0 && (
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                    <Label className="text-xs text-gray-600 shrink-0">Unit</Label>
+                                    <Select
+                                      value={String(applyGiveAwayVariant[p._id] ?? 0)}
+                                      onValueChange={(v) =>
+                                        {
+                                          const nextVariantIdx = Number(v);
+                                          setApplyGiveAwayVariant((prev) => ({
+                                            ...prev,
+                                            [p._id]: nextVariantIdx
+                                          }));
+                                          const nextMax =
+                                            availableQtyByVariantIndex?.[nextVariantIdx] ?? 0;
+                                          setApplyGiveAwaySelection((prev) => ({
+                                            ...prev,
+                                            [p._id]: Math.min(Number(prev[p._id] ?? 0), nextMax)
+                                          }));
+                                        }
+                                      }
+                                    >
+                                      <SelectTrigger className="h-8 text-xs max-w-[220px]">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {p.variants.map((v, idx) => (
+                                          <SelectItem key={idx} value={String(idx)}>
+                                            {v.value}
+                                            {(v as { isActive?: boolean }).isActive === false ? ' (inactive)' : ''}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-between gap-2 pt-1">
+                                  <Label className="text-xs text-gray-600">Qty to give</Label>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 w-8 px-0"
+                                      onClick={() =>
+                                        setApplyGiveAwaySelection((prev) => {
+                                          const cur = Number(prev[p._id] ?? 0);
+                                          return { ...prev, [p._id]: Math.max(0, cur - 1) };
+                                        })
+                                      }
+                                    >
+                                      −
+                                    </Button>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="1"
+                                      className="w-20 h-8 text-center"
+                                      max={maxQty}
+                                      value={applyGiveAwaySelection[p._id] ?? 0}
+                                      onChange={(e) => {
+                                        const val = Math.min(maxQty, Math.max(0, Math.floor(Number(e.target.value) || 0)));
+                                        setApplyGiveAwaySelection((prev) => ({
+                                          ...prev,
+                                          [p._id]: val
+                                        }));
+                                      }}
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 w-8 px-0"
+                                      disabled={curQty >= maxQty}
+                                      onClick={() =>
+                                        setApplyGiveAwaySelection((prev) => {
+                                          const cur = Number(prev[p._id] ?? 0);
+                                          const next = Math.min(maxQty, cur + 1);
+                                          return { ...prev, [p._id]: next };
+                                        })
+                                      }
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2 pt-1">
+                                  <span className="text-[10px] text-gray-500">Quick add:</span>
+                                  {[1, 2, 5].map((n) => (
+                                    <Button
+                                      key={n}
+                                      type="button"
+                                      variant="secondary"
+                                      size="sm"
+                                      className="h-7 text-[11px] px-2"
+                                      disabled={curQty >= maxQty}
+                                      onClick={() =>
+                                        setApplyGiveAwaySelection((prev) => {
+                                          const cur = Number(prev[p._id] ?? 0);
+                                          const next = Math.min(maxQty, cur + n);
+                                          return { ...prev, [p._id]: next };
+                                        })
+                                      }
+                                    >
+                                      +{n}
+                                    </Button>
+                                  ))}
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-[11px] px-2 text-gray-600"
+                                    onClick={() =>
+                                      setApplyGiveAwaySelection((prev) => ({
+                                        ...prev,
+                                        [p._id]: 0
+                                      }))
+                                    }
+                                  >
+                                    Reset
+                                  </Button>
+                                </div>
+                              </div>
+                              );
+                            })
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      <Button
+                        onClick={handleApplyGiveAway}
+                        disabled={applyGiveAwaySaving || !eligibleGiveAwayInfo}
+                        className="w-full gap-2"
+                      >
+                        {applyGiveAwaySaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Applying...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Apply to order and update inventory
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
 
               <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
   <DialogContent className="sm:max-w-md">

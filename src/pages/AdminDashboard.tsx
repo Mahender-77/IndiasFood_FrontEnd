@@ -271,6 +271,22 @@ const AdminDashboard = () => {
               </Card>
             </Link>
 
+            <Link to="/admin/business-analytics">
+              <Card className="hover:shadow-lg transition-shadow duration-300">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-medium">
+                    Business Analytics
+                  </CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    Complete business insights: sales, giveaways, deals, charges & profit
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+
             {/* Export Section */}
             <Card className="col-span-full mt-6 sm:mt-8">
               <CardHeader>

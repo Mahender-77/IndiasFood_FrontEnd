@@ -14,8 +14,9 @@ import {
 import { useCart } from '@/contexts/CartContext';
 import { Product } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import api from '@/lib/api';
+import { getCartLineUnitPrice } from '@/lib/cartPricing';
 import LeafletMap from '@/components/maps/LeafletMap';
 
 /* ---------------- TYPES ---------------- */
@@ -94,6 +95,38 @@ const Checkout = () => {
     address.addressLine1?.trim() !== '' &&
     address.city?.trim() !== '' &&
     address.locationName?.trim() !== '';
+
+  /** Stores that have all cart products in stock (for pickup). Only these are shown when "I will pick it up" is selected. */
+  const pickupAvailableStores = useMemo(() => {
+    if (!storeLocations.length || !state.items.length) return [];
+    const now = Date.now();
+    return storeLocations.filter((store) => {
+      const storeNameLower = (store.name || '').trim().toLowerCase();
+      if (!storeNameLower) return false;
+      return state.items.every((item) => {
+        const product = item.product as Product;
+        const inv = product.inventory?.find(
+          (i) => (i.location || '').trim().toLowerCase() === storeNameLower
+        );
+        if (!inv) return false;
+        const variantIndex = item.selectedVariantIndex ?? 0;
+        let qtyAvailable = 0;
+        if (inv.batches?.length) {
+          qtyAvailable = inv.batches
+            .filter(
+              (b: any) =>
+                b.variantIndex === variantIndex &&
+                new Date(b.expiryDate).getTime() >= now
+            )
+            .reduce((s: number, b: any) => s + (b.quantity || 0), 0);
+        } else if (inv.stock?.length) {
+          const st = inv.stock.find((s: any) => s.variantIndex === variantIndex);
+          qtyAvailable = st ? (st.quantity || 0) : 0;
+        }
+        return qtyAvailable >= item.qty;
+      });
+    });
+  }, [storeLocations, state.items]);
 
   /* ---------------- FREE DELIVERY CALCULATION ---------------- */
 
@@ -175,6 +208,16 @@ const finalTotal = cartTotal + gstAmount + deliveryTotal;
     fetchDeliverySettings();
     fetchSavedAddresses();
   }, []);
+
+  // When pickup stores list updates, clear selected store if it's no longer available
+  useEffect(() => {
+    if (deliveryMode === 'pickup' && selectedPickupStore && pickupAvailableStores.length > 0) {
+      const stillAvailable = pickupAvailableStores.some(
+        (s) => (s.name || '').trim().toLowerCase() === (selectedPickupStore.name || '').trim().toLowerCase()
+      );
+      if (!stillAvailable) setSelectedPickupStore(null);
+    }
+  }, [deliveryMode, selectedPickupStore, pickupAvailableStores]);
 
   /* ---------------- MAP SELECTION HANDLER ---------------- */
 
@@ -439,38 +482,47 @@ const finalTotal = cartTotal + gstAmount + deliveryTotal;
         orderItems: state.items.map(item => ({
           product: item.product._id,
           qty: item.qty,
-          selectedVariantIndex: item.selectedVariantIndex ?? null
+          /** Locked unit price from cart snapshot; fallback only for legacy rows. */
+          price:
+            typeof item.price === 'number' && Number.isFinite(item.price)
+              ? item.price
+              : getCartLineUnitPrice(item),
+          // Pass through variant index; backend will:
+          // - auto-select 0 when only one variant
+          // - require a valid index when multiple variants
+          selectedVariantIndex: item.selectedVariantIndex
         })),
-      
         shippingAddress,
-      
         paymentMethod:
           paymentMethod === 'COD'
             ? 'Cash On Delivery'
             : 'Online Payment',
-      
+        // Frontend sends delivery fee; backend securely recomputes GST and total
         shippingPrice: deliveryMode === 'delivery' ? deliveryTotal : 0,
-        taxPrice: gstAmount, // or actual tax if you want
-      
+        taxPrice: gstAmount,
         deliveryMode
       });
-      
-  
+
       clearCart();
-  
+
       toast({
         title: 'Order placed successfully!',
         description: 'Redirecting to orders...'
       });
-  
+
       setTimeout(() => {
         navigate('/orders');
       }, 1000);
-  
-    } catch (error) {
+
+    } catch (err: any) {
+      const apiMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        'Please try again';
+
       toast({
         title: 'Failed to place order',
-        description: 'Please try again',
+        description: apiMessage,
         variant: 'destructive'
       });
     }
@@ -940,24 +992,30 @@ const finalTotal = cartTotal + gstAmount + deliveryTotal;
 
             {deliveryMode === 'pickup' && (
               <div className="space-y-3">
-                {/* SELECT CITY - Mobile */}
+                {/* SELECT STORE - Mobile: only stores that have all cart products */}
                 <div className="bg-cream p-3 rounded-lg shadow-sm">
                   <h2 className="font-semibold text-sm mb-2">Select Store</h2>
-                  <Select onValueChange={(value) => {
-                    const selected = storeLocations.find(store => store.name === value);
-                    setSelectedPickupStore(selected || null);
-                  }}>
-                    <SelectTrigger className="w-full h-8 text-xs">
-                      <SelectValue placeholder="Select..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {storeLocations.map((store) => (
-                        <SelectItem key={store.name} value={store.name} className="text-xs">
-                          {store.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {pickupAvailableStores.length === 0 ? (
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                      No store has all your cart items in stock. Try delivery or remove some items.
+                    </p>
+                  ) : (
+                    <Select onValueChange={(value) => {
+                      const selected = pickupAvailableStores.find(store => store.name === value);
+                      setSelectedPickupStore(selected || null);
+                    }}>
+                      <SelectTrigger className="w-full h-8 text-xs">
+                        <SelectValue placeholder="Select store with stock..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pickupAvailableStores.map((store) => (
+                          <SelectItem key={store.name} value={store.name} className="text-xs">
+                            {store.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 {/* PAYMENT METHOD - Pickup Mobile */}
@@ -1497,30 +1555,38 @@ const finalTotal = cartTotal + gstAmount + deliveryTotal;
 
               {deliveryMode === 'pickup' && (
                 <div className="space-y-4">
-                  {/* SELECT CITY */}
+                  {/* SELECT STORE: only stores that have all cart products in stock */}
                   <div className="bg-cream p-4 sm:p-6 rounded-xl shadow-sm">
                     <h2 className="font-semibold text-base sm:text-lg mb-3">Select Store</h2>
-                    <Select onValueChange={(value) => {
-                      const selected = storeLocations.find(store => store.name === value);
-                      setSelectedPickupStore(selected || null);
-                    }}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {storeLocations.map((store) => (
-                          <SelectItem key={store.name} value={store.name}>
-                            {store.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {pickupAvailableStores.length === 0 ? (
+                      <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <p className="font-medium">No store has all your cart items in stock.</p>
+                        <p className="mt-1 text-xs">Try delivery or remove some items to see available pickup stores.</p>
+                      </div>
+                    ) : (
+                      <Select onValueChange={(value) => {
+                        const selected = pickupAvailableStores.find(store => store.name === value);
+                        setSelectedPickupStore(selected || null);
+                      }}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select store with stock..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pickupAvailableStores.map((store) => (
+                            <SelectItem key={store.name} value={store.name}>
+                              {store.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
 
-                  {/* SELECT STORE FOR PICKUP */}
-                  <div className="bg-yellow-100 border border-yellow-200 rounded-xl p-4 sm:p-5 text-yellow-800">
-                    <p className="text-sm font-medium">Please select store for pickup.</p>
-                  </div>
+                  {pickupAvailableStores.length > 0 && (
+                    <div className="bg-yellow-100 border border-yellow-200 rounded-xl p-4 sm:p-5 text-yellow-800">
+                      <p className="text-sm font-medium">Stores listed have all your items in stock. Please select a store for pickup.</p>
+                    </div>
+                  )}
 
                   {/* PAYMENT METHOD SELECTION (for pickup) - Desktop */}
                   <div className="bg-cream p-4 sm:p-6 rounded-xl shadow-sm mt-4">

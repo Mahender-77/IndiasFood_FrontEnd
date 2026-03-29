@@ -118,7 +118,7 @@ export function FeaturedProducts() {
               className="animate-slide-up"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <ProductCard product={product} />
+              <ProductCard product={product} isDealView={false} />
             </div>
           ))}
         </div>

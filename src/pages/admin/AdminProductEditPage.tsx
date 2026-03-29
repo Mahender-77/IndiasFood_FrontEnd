@@ -34,7 +34,6 @@ export const AdminProductEditPage = () => {
     description: '',
     price: '',
     weight: '',
-    shelfLife: undefined as number | undefined,
     category: '',
     countInStock: '',
     videoUrl: '',
@@ -78,7 +77,6 @@ export const AdminProductEditPage = () => {
           description: data.product.description,
           price: data.product.price.toString(),
           weight: data.product.weight || '',
-          shelfLife: data.product.shelfLife !== undefined && data.product.shelfLife !== null ? data.product.shelfLife : undefined,
           category: (data.product.category as Category)._id, // Ensure category is ID
           countInStock: data.product.countInStock.toString(),
           videoUrl: data.product.videoUrl || '',
@@ -137,9 +135,10 @@ export const AdminProductEditPage = () => {
         price: Number(formData.price),
         countInStock: Number(formData.countInStock),
         images: existingImages, // Send updated existing images back
-        // Conditionally include weight, shelfLife, and videoUrl
+        // Conditionally include weight, startDate, expiryDate, and videoUrl
         ...(formData.weight && { weight: formData.weight }),
-        ...(formData.shelfLife !== undefined && formData.shelfLife !== null && { shelfLife: Number(formData.shelfLife) }),
+        ...(formData.startDate && { startDate: new Date(formData.startDate).toISOString() }),
+        ...(formData.expiryDate && { expiryDate: new Date(formData.expiryDate).toISOString() }),
         // Conditionally include videoUrl if it's not empty
         ...(formData.videoUrl && { videoUrl: formData.videoUrl }),
       });
@@ -256,18 +255,6 @@ export const AdminProductEditPage = () => {
             <div className="space-y-2">
               <Label htmlFor="weight">Weight (e.g., 250g)</Label>
               <Input id="weight" value={formData.weight} onChange={handleChange} disabled={isLoading || categoriesLoading || loadingProduct}/>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="shelfLife">Shelf Life (Days)</Label>
-              <Input 
-                id="shelfLife" 
-                type="number"
-                min="0"
-                value={formData.shelfLife || ''} 
-                onChange={(e) => setFormData({ ...formData, shelfLife: e.target.value ? Number(e.target.value) : undefined })} 
-                disabled={isLoading || categoriesLoading || loadingProduct}
-                placeholder="e.g., 7"
-              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>

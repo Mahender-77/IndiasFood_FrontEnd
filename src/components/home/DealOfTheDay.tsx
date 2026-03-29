@@ -103,15 +103,18 @@ export function DealOfTheDay() {
 
         {/* Products Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
-          {deals.map((product, index) => (
-            <div
-              key={product._id}
-              className="animate-slide-up"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <ProductCard product={product} />
-            </div>
-          ))}
+          {deals.map((product, index) => {
+            const variantsToShow = product.dealVariants || product.variants;
+            return (
+              <div
+                key={product._id}
+                className="animate-slide-up"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <ProductCard product={{ ...product, variants: variantsToShow }} isDealView />
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
