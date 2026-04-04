@@ -85,6 +85,7 @@ export function BatchInventoryManager({
     quantity: 0,
     manufacturingDate: new Date().toISOString().slice(0, 10),
     expiryDate: getDefaultExpiry(),
+    newArrivalUntil: '' as string,
     batchWholePrice: undefined as number | undefined,
     dealTriggerDays: undefined as number | undefined,
     dealDiscountPercent: undefined as number | undefined
@@ -96,6 +97,7 @@ export function BatchInventoryManager({
       quantity: 0,
       manufacturingDate: new Date().toISOString().slice(0, 10),
       expiryDate: getDefaultExpiry(),
+      newArrivalUntil: '',
       batchWholePrice: undefined,
       dealTriggerDays: undefined,
       dealDiscountPercent: undefined
@@ -127,29 +129,37 @@ export function BatchInventoryManager({
       _tempId: tempId,
       batchWholePrice: draftBatch.batchWholePrice,
       dealTriggerDays: draftBatch.dealTriggerDays,
-      dealDiscountPercent: draftBatch.dealDiscountPercent
+      dealDiscountPercent: draftBatch.dealDiscountPercent,
+      ...(draftBatch.newArrivalUntil
+        ? { newArrivalUntil: draftBatch.newArrivalUntil }
+        : {})
     });
     setAddingBatchForStoreId(null);
   };
 
+  const formatDateShort = (d: string | Date) => {
+    if (!d) return '—';
+    const date = typeof d === 'string' ? new Date(d) : d;
+    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' });
+  };
+
   return (
-    <div className="w-full min-w-0 space-y-4 border-t pt-6">
-      {/* Header: full width */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="w-full min-w-0 space-y-3 border-t pt-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <Label className="text-lg font-semibold flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
-            Batch-wise Inventory Setup
+          <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
+            <Package className="h-4 w-4 text-primary shrink-0" />
+            Batch inventory
           </Label>
-          <p className="text-sm text-muted-foreground mt-1">
-            Add locations and batches with manufacturing/expiry dates for proper inventory control
+          <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+            Add locations, then batches (qty, dates, optional deal &amp; new-arrival window).
           </p>
         </div>
 
         {availableLocations.length > 0 && (
           <Select onValueChange={onAddLocation}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="+ Add Location" />
+            <SelectTrigger className="w-full sm:w-40 h-8 text-xs">
+              <SelectValue placeholder="+ Location" />
             </SelectTrigger>
             <SelectContent>
               {availableLocations.map(loc => (
@@ -163,19 +173,14 @@ export function BatchInventoryManager({
       </div>
 
       {inventoryData.length === 0 ? (
-        <div className="bg-muted/30 border-2 border-dashed rounded-lg p-8 text-center">
-          <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-          <p className="text-muted-foreground font-medium">
-            {availableLocations.length === 0 ? 'Select a store first to add locations' : 'No locations added yet'}
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {availableLocations.length === 0
-              ? 'Choose a store in the section above, then add locations and batches'
-              : 'Add at least one location and then add batches with quantity, dates, pricing, and optional Deal of the Day'}
+        <div className="bg-muted/40 border border-dashed rounded-lg p-4 text-center">
+          <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-1.5 opacity-80" />
+          <p className="text-xs font-medium text-muted-foreground">
+            {availableLocations.length === 0 ? 'Select a store above, then add a location.' : 'Add a location to start batches.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {inventoryData.map(entry => {
             const totalQty = entry.batches.reduce((sum, b) => sum + b.quantity, 0);
             const hasVariants = variants && variants.length > 0;
@@ -190,280 +195,266 @@ export function BatchInventoryManager({
             return (
               <div
                 key={entry.storeId}
-                className="w-full min-w-0 border rounded-lg p-4 bg-gray-50"
+                className="w-full min-w-0 rounded-lg border border-gray-200/90 bg-gray-50/80 p-2.5 sm:p-3 shadow-sm"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex justify-center w-10 h-10 rounded-full bg-primary/10">
-                      <MapPin className="h-5 w-5 text-primary" />
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                      <MapPin className="h-3.5 w-3.5 text-primary" />
                     </div>
-                    <div>
-                      <h4 className="font-semibold">{entry.displayName}</h4>
-                      <p className="text-xs text-muted-foreground">Location</p>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-semibold leading-tight truncate">{entry.displayName}</h4>
+                      <p className="text-[10px] text-muted-foreground">Store</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     {hasVariants && variantSummary.length > 0 ? (
                       variantSummary.map(({ variant, index, batchCount, qty }) => (
-                        <Badge key={index} variant={batchCount > 0 ? 'default' : 'outline'} className="text-xs">
-                          {variant.value}: {batchCount} batch{batchCount !== 1 ? 'es' : ''} ({qty} units)
+                        <Badge key={index} variant={batchCount > 0 ? 'default' : 'outline'} className="text-[10px] px-1.5 py-0 h-5 font-normal">
+                          {variant.value}: {qty}u
                         </Badge>
                       ))
                     ) : (
-                      <Badge variant="secondary">Total: {totalQty} units</Badge>
+                      <Badge variant="secondary" className="text-[10px] h-5">
+                        {totalQty} units
+                      </Badge>
                     )}
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => onRemoveLocation(entry.storeId)}
-                      className="text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                      className="text-destructive hover:bg-destructive/10 h-7 w-7 p-0"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
 
-                <div className="space-y-3 w-full min-w-0">
-                  {/* Add batch controls – clear single row */}
-                  <div className="flex flex-wrap items-center gap-3 p-3 bg-slate-100 rounded-lg border border-slate-200">
-                    <span className="text-sm font-medium text-slate-700">Add new batch</span>
+                <div className="space-y-2 w-full min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200/80 bg-white px-2 py-1.5">
                     {hasVariants && onVariantChange ? (
                       <>
-                        <span className="text-xs text-slate-500">for variant:</span>
                         <Select
                           value={String(selectedVariantIndex)}
                           onValueChange={v => onVariantChange(Number(v))}
                         >
-                          <SelectTrigger className="w-[180px] h-9 text-sm bg-white">
-                            <SelectValue placeholder="Select variant" />
+                          <SelectTrigger className="h-8 w-[min(100%,9rem)] text-xs bg-white">
+                            <SelectValue placeholder="Variant" />
                           </SelectTrigger>
                           <SelectContent>
                             {variants.map((v, i) => (
-                              <SelectItem key={i} value={String(i)}>
-                                {v.value} — Original ₹{v.originalPrice}
-                                {v.offerPrice != null && v.offerPrice > 0 ? `, Sell ₹${v.offerPrice}` : ''}
+                              <SelectItem key={i} value={String(i)} className="text-xs">
+                                {v.value} · ₹{v.originalPrice}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="default"
                           size="sm"
-                          className="shrink-0 text-blue-600 hover:text-blue-700 border-blue-200 bg-white"
+                          className="h-8 text-xs px-2.5"
                           onClick={() => openAddBatchForm(entry.storeId)}
                         >
-                          <Plus className="h-4 w-4 mr-1" /> Add batch
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Batch
                         </Button>
                       </>
                     ) : (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="default"
                         size="sm"
-                        className="shrink-0 text-blue-600 hover:text-blue-700 border-blue-200 bg-white"
+                        className="h-8 text-xs"
                         onClick={() => openAddBatchForm(entry.storeId)}
                       >
-                        <Plus className="h-4 w-4 mr-1" /> Add batch
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Add batch
                       </Button>
                     )}
                   </div>
 
-                  {/* Add-batch form – same style as Edit Product modal */}
                   {addingBatchForStoreId === entry.storeId && (
-                    <div className="mt-4 pt-4 border-t space-y-3 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm font-medium text-blue-900">
-                        New batch for{' '}
+                    <div className="space-y-2 rounded-md border border-blue-200/60 bg-blue-50/50 p-2.5">
+                      <p className="text-[11px] font-medium text-blue-950">
+                        New batch
                         {hasVariants && variants?.[effectiveVariantIndex]
-                          ? variants[effectiveVariantIndex].value
-                          : 'this product'}
-                        {' '}(unit price taken from product/variant)
+                          ? ` · ${variants[effectiveVariantIndex].value}`
+                          : ''}
                       </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                        <div>
-                          <Label className="text-xs">Qty *</Label>
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+                        <div className="col-span-1">
+                          <Label className="text-[10px] text-muted-foreground">Qty *</Label>
                           <Input
                             type="number"
                             min="0"
+                            className="h-8 text-xs"
                             value={draftBatch.quantity}
                             onChange={e => setDraftBatch(d => ({ ...d, quantity: Math.max(0, Number(e.target.value) || 0) }))}
                           />
                         </div>
+                        <div className="col-span-1">
+                          <Label className="text-[10px] text-muted-foreground">Whole ₹ (opt.)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder="—"
+                            className="h-8 text-xs"
+                            value={draftBatch.batchWholePrice ?? ''}
+                            onChange={e => setDraftBatch(d => ({ ...d, batchWholePrice: e.target.value ? Number(e.target.value) : undefined }))}
+                          />
+                        </div>
                         <div>
-                          <Label className="text-xs">Mfg Date</Label>
+                          <Label className="text-[10px] text-muted-foreground">Mfg</Label>
                           <Input
                             type="date"
+                            className="h-8 text-xs"
                             value={draftBatch.manufacturingDate}
                             onChange={e => setDraftBatch(d => ({ ...d, manufacturingDate: e.target.value }))}
                           />
                         </div>
                         <div>
-                          <Label className="text-xs">Expiry Date</Label>
+                          <Label className="text-[10px] text-muted-foreground">Expiry</Label>
                           <Input
                             type="date"
+                            className="h-8 text-xs"
                             value={draftBatch.expiryDate}
                             onChange={e => setDraftBatch(d => ({ ...d, expiryDate: e.target.value }))}
                           />
                         </div>
-                        <div>
-                          <Label className="text-xs">Batch whole price (₹)</Label>
+                        <div className="col-span-2">
+                          <Label className="text-[10px] text-muted-foreground">New arrival until (opt.)</Label>
                           <Input
-                            type="number"
-                            min="0"
-                            placeholder="Optional"
-                            value={draftBatch.batchWholePrice ?? ''}
-                            onChange={e => setDraftBatch(d => ({ ...d, batchWholePrice: e.target.value ? Number(e.target.value) : undefined }))}
+                            type="date"
+                            className="h-8 text-xs"
+                            value={draftBatch.newArrivalUntil}
+                            onChange={e => setDraftBatch(d => ({ ...d, newArrivalUntil: e.target.value }))}
+                            title="Listed under New Arrivals through this date"
                           />
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-blue-200">
-                        <Label className="text-xs font-semibold text-amber-800 col-span-full">Deal of the Day (optional)</Label>
+                      <div className="grid grid-cols-2 gap-2 border-t border-blue-200/40 pt-2">
                         <div>
-                          <Label className="text-xs">Deal trigger days</Label>
+                          <Label className="text-[10px] text-amber-900/80">Deal days (opt.)</Label>
                           <Input
                             type="number"
                             min="0"
-                            placeholder="e.g. 2"
+                            placeholder="—"
+                            className="h-8 text-xs"
                             value={draftBatch.dealTriggerDays ?? ''}
                             onChange={e => setDraftBatch(d => ({ ...d, dealTriggerDays: e.target.value ? Number(e.target.value) : undefined }))}
                           />
                         </div>
                         <div>
-                          <Label className="text-xs">Discount %</Label>
+                          <Label className="text-[10px] text-amber-900/80">Deal % (opt.)</Label>
                           <Input
                             type="number"
                             min="0"
                             max="100"
-                            placeholder="e.g. 20"
+                            placeholder="—"
+                            className="h-8 text-xs"
                             value={draftBatch.dealDiscountPercent ?? ''}
                             onChange={e => setDraftBatch(d => ({ ...d, dealDiscountPercent: e.target.value ? Number(e.target.value) : undefined }))}
                           />
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5 pt-0.5">
                         <Button
                           size="sm"
+                          className="h-8 text-xs"
                           onClick={() => submitAddBatch(entry.storeId)}
                           disabled={draftBatch.quantity <= 0}
                         >
-                          Add Batch
+                          Add
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => setAddingBatchForStoreId(null)}>
+                        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setAddingBatchForStoreId(null)}>
                           Cancel
                         </Button>
                       </div>
                     </div>
                   )}
 
-                  {/* Batch table – same style as Edit Product Batch-wise breakdown */}
                   {entry.batches.length === 0 && addingBatchForStoreId !== entry.storeId ? (
-                    <p className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded">
-                      No batches. Click &quot;Add batch&quot; to add inventory.
+                    <p className="text-[11px] text-muted-foreground py-2 text-center rounded border border-dashed border-muted-foreground/25">
+                      No batches yet — use <span className="font-medium">Add batch</span> above.
                     </p>
                   ) : entry.batches.length > 0 ? (
-                    <div className="mt-4 pt-4 border-t">
-                      <Label className="text-sm font-semibold text-gray-800 mb-3 block">
-                        📋 Batch-wise Inventory Breakdown
-                      </Label>
-                      <div className="w-full overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                        <table className="w-full min-w-[800px] text-sm table-fixed">
-                          <thead>
-                            <tr className="bg-gray-100 border-b border-gray-200">
-                              <th className="text-left py-2.5 px-3 font-semibold text-gray-700 w-[100px]">Batch #</th>
-                              {hasVariants && (
-                                <th className="text-left py-2.5 px-3 font-semibold text-gray-700 w-[100px]">Variant</th>
-                              )}
-                              <th className="text-right py-2.5 px-3 font-semibold text-gray-700 w-[60px]">Qty</th>
-                              <th className="text-right py-2.5 px-3 font-semibold text-gray-700 whitespace-nowrap" title="Cost per unit (purchase)">
-                                Purchase ₹
-                              </th>
-                              <th className="text-right py-2.5 px-3 font-semibold text-gray-700 whitespace-nowrap" title="Original/MRP per unit">
-                                Original ₹
-                              </th>
-                              <th className="text-right py-2.5 px-3 font-semibold text-gray-700 whitespace-nowrap" title="Actual selling price per unit">
-                                Selling ₹
-                              </th>
-                              <th className="text-left py-2.5 px-3 font-semibold text-gray-700 w-[90px]">Mfg Date</th>
-                              <th className="text-left py-2.5 px-3 font-semibold text-gray-700 w-[90px]">Expiry</th>
-                              <th className="text-left py-2.5 px-3 font-semibold text-gray-700 w-[100px]">Status</th>
-                              <th className="text-left py-2.5 px-3 font-semibold text-gray-700 w-[44px]"></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {entry.batches.map((batch, idx) => {
-                              const exp = typeof batch.expiryDate === 'string' ? new Date(batch.expiryDate) : batch.expiryDate;
-                              const now = new Date();
-                              const daysLeft = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                              const status =
-                                daysLeft < 0
-                                  ? { label: 'Expired', cls: 'bg-red-100 text-red-800' }
-                                  : daysLeft <= 3
-                                    ? { label: 'Expiring Soon', cls: 'bg-amber-100 text-amber-800' }
-                                    : { label: 'OK', cls: 'bg-green-100 text-green-800' };
-                              const variantLabel = hasVariants && variants?.[batch.variantIndex ?? 0]
-                                ? variants[batch.variantIndex ?? 0].value
-                                : 'Default';
-                              // Without variants: Original ₹ = product-level original (MRP) per unit; never show purchase/cost there
-                              const variantOriginal = hasVariants && variants?.[batch.variantIndex ?? 0]
-                                ? variants[batch.variantIndex ?? 0].originalPrice
-                                : (defaultOriginalPrice !== undefined ? defaultOriginalPrice : ((batch.purchasePrice ?? 0) > 0 ? batch.purchasePrice : defaultPurchasePrice));
-                              const displaySelling = (batch.sellingPrice ?? 0) > 0 ? batch.sellingPrice : defaultSellingPrice;
-                              const displayPurchase = (batch.batchWholePrice != null && batch.batchWholePrice >= 0)
-                                ? batch.batchWholePrice
-                                : (batch.purchasePrice ?? 0) > 0 ? batch.purchasePrice : defaultPurchasePrice;
-                              const formatDate = (d: string | Date) => {
-                                if (!d) return '-';
-                                const date = typeof d === 'string' ? new Date(d) : d;
-                                return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-                              };
-                              return (
-                                <tr
-                                  key={batch._tempId || batch.batchNumber + idx}
-                                  className={`border-b border-gray-100 last:border-0 ${idx % 2 === 1 ? 'bg-gray-50/50' : ''}`}
-                                >
-                                  <td className="py-2.5 px-3 font-medium text-gray-900">{batch.batchNumber}</td>
+                    <div className="mt-1 border-t border-gray-200/80 pt-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-1.5">
+                        Batches
+                      </p>
+                      <div className="space-y-1.5">
+                        {entry.batches.map((batch, idx) => {
+                          const exp = typeof batch.expiryDate === 'string' ? new Date(batch.expiryDate) : batch.expiryDate;
+                          const now = new Date();
+                          const daysLeft = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          const status =
+                            daysLeft < 0
+                              ? { label: 'Expired', cls: 'bg-red-100 text-red-800' }
+                              : daysLeft <= 3
+                                ? { label: 'Soon', cls: 'bg-amber-100 text-amber-800' }
+                                : { label: 'OK', cls: 'bg-emerald-100 text-emerald-800' };
+                          const variantLabel = hasVariants && variants?.[batch.variantIndex ?? 0]
+                            ? variants[batch.variantIndex ?? 0].value
+                            : 'Default';
+                          const variantOriginal = hasVariants && variants?.[batch.variantIndex ?? 0]
+                            ? variants[batch.variantIndex ?? 0].originalPrice
+                            : (defaultOriginalPrice !== undefined ? defaultOriginalPrice : ((batch.purchasePrice ?? 0) > 0 ? batch.purchasePrice : defaultPurchasePrice));
+                          const displaySelling = (batch.sellingPrice ?? 0) > 0 ? batch.sellingPrice : defaultSellingPrice;
+                          const displayPurchase = (batch.batchWholePrice != null && batch.batchWholePrice >= 0)
+                            ? batch.batchWholePrice
+                            : (batch.purchasePrice ?? 0) > 0 ? batch.purchasePrice : defaultPurchasePrice;
+                          return (
+                            <div
+                              key={batch._tempId || batch.batchNumber + idx}
+                              className="rounded-md border border-gray-200/90 bg-white px-2.5 py-2 shadow-sm"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                  <span className="text-xs font-semibold text-gray-900">{batch.batchNumber}</span>
                                   {hasVariants && (
-                                    <td className="py-2.5 px-3 text-gray-700">{variantLabel}</td>
-                                  )}
-                                  <td className="py-2.5 px-3 text-right font-semibold">{batch.quantity ?? 0}</td>
-                                  <td className="py-2.5 px-3 text-right text-gray-700" title="Cost / batch whole price per unit">
-                                    ₹{(displayPurchase ?? 0).toFixed(2)}
-                                  </td>
-                                  <td className="py-2.5 px-3 text-right text-gray-600" title="Original/MRP per unit">
-                                    ₹{(variantOriginal ?? batch.purchasePrice ?? 0).toFixed(2)}
-                                  </td>
-                                  <td className="py-2.5 px-3 text-right font-medium text-green-700" title="Actual selling price per unit">
-                                    ₹{(displaySelling ?? 0).toFixed(2)}
-                                  </td>
-                                  <td className="py-2.5 px-3 text-gray-700">{formatDate(batch.manufacturingDate)}</td>
-                                  <td className="py-2.5 px-3 text-gray-700">{formatDate(batch.expiryDate)}</td>
-                                  <td className="py-2.5 px-3">
-                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.cls}`}>
-                                      {status.label}
-                                      {daysLeft >= 0 && daysLeft <= 30 && ` (${daysLeft}d)`}
+                                    <span className="rounded bg-muted px-1.5 py-0 text-[10px] font-medium text-muted-foreground">
+                                      {variantLabel}
                                     </span>
-                                  </td>
-                                  <td className="py-2.5 px-3">
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                                      onClick={() => onRemoveBatch(entry.storeId, batch._tempId || batch.batchNumber)}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                                  )}
+                                  <span className={`text-[10px] font-medium tabular-nums ${status.cls} rounded px-1.5 py-0`}>
+                                    {status.label}
+                                    {daysLeft >= 0 && daysLeft <= 30 && ` · ${daysLeft}d`}
+                                  </span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
+                                  onClick={() => onRemoveBatch(entry.storeId, batch._tempId || batch.batchNumber)}
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] tabular-nums text-gray-700">
+                                <span>
+                                  <span className="text-muted-foreground">Qty </span>
+                                  <span className="font-semibold">{batch.quantity ?? 0}</span>
+                                </span>
+                                <span title="Purchase / cost">Pur ₹{(displayPurchase ?? 0).toFixed(0)}</span>
+                                <span title="MRP">Orig ₹{(variantOriginal ?? batch.purchasePrice ?? 0).toFixed(0)}</span>
+                                <span className="font-medium text-emerald-700" title="Selling">
+                                  Sell ₹{(displaySelling ?? 0).toFixed(0)}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                                Mfg {formatDateShort(batch.manufacturingDate)} · Exp {formatDateShort(batch.expiryDate)}
+                                {batch.newArrivalUntil ? (
+                                  <> · New {formatDateShort(batch.newArrivalUntil)}</>
+                                ) : null}
+                              </p>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="mt-2 flex justify-between items-center text-sm">
-                        <span className="text-gray-600">{entry.batches.length} batch{entry.batches.length !== 1 ? 'es' : ''}</span>
-                        <span className="font-bold text-gray-900">Total: {totalQty} units</span>
+                      <div className="mt-1.5 flex justify-between border-t border-gray-100 pt-1.5 text-[11px] text-muted-foreground">
+                        <span>{entry.batches.length} batch{entry.batches.length !== 1 ? 'es' : ''}</span>
+                        <span className="font-semibold text-foreground">Σ {totalQty} units</span>
                       </div>
                     </div>
                   ) : null}
@@ -472,26 +463,23 @@ export function BatchInventoryManager({
             );
           })}
 
-          <div className="p-4 bg-muted/30 rounded-lg">
-            <h5 className="font-semibold text-sm mb-2">Inventory Summary</h5>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+          <div className="rounded-md border border-border/60 bg-muted/20 px-2.5 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-1.5">Summary</p>
+            <div className="grid grid-cols-3 gap-2 text-center">
               <div>
-                <p className="text-muted-foreground">Locations</p>
-                <p className="font-bold">{inventoryData.length}</p>
+                <p className="text-[10px] text-muted-foreground">Locations</p>
+                <p className="text-sm font-semibold tabular-nums">{inventoryData.length}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Total Batches</p>
-                <p className="font-bold">
+                <p className="text-[10px] text-muted-foreground">Batches</p>
+                <p className="text-sm font-semibold tabular-nums">
                   {inventoryData.reduce((s, inv) => s + inv.batches.length, 0)}
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground">Total Units</p>
-                <p className="font-bold">
-                  {inventoryData.reduce(
-                    (s, inv) => s + inv.batches.reduce((b, a) => b + a.quantity, 0),
-                    0
-                  )}
+                <p className="text-[10px] text-muted-foreground">Units</p>
+                <p className="text-sm font-semibold tabular-nums">
+                  {inventoryData.reduce((s, inv) => s + inv.batches.reduce((b, a) => b + a.quantity, 0), 0)}
                 </p>
               </div>
             </div>

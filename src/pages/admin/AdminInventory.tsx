@@ -98,7 +98,7 @@ const AdminInventory = () => {
     variantStocks?: VariantStockEntry[][];
   }>>({
     name: '', description: '', originLocation: '', originalPrice: undefined, offerPrice: undefined,
-    videoUrl: '', variants: [], inventory: [], isGITagged: false, isNewArrival: false, isMostSaled: false,
+    videoUrl: '', variants: [], inventory: [], isGITagged: false, isMostSaled: false,
     images: [], imageFiles: [], isActive: true, inventoryData: [], batchInventoryData: [], variantStocks: [],
     dealTriggerDays: undefined, dealDiscountPercent: undefined
   });
@@ -124,7 +124,8 @@ const AdminInventory = () => {
     purchasePrice: 0, sellingPrice: 0,
     batchWholePrice: undefined as number | undefined,
     dealTriggerDays: undefined as number | undefined,
-    dealDiscountPercent: undefined as number | undefined
+    dealDiscountPercent: undefined as number | undefined,
+    newArrivalUntil: '' as string
   });
 
   const [addingBatches, setAddingBatches] = useState(false);
@@ -313,7 +314,7 @@ const AdminInventory = () => {
         originLocation: newProduct.originLocation?.trim() || undefined, category: selectedCategory,
         subcategory: selectedSubcategory && selectedSubcategory !== 'none' ? selectedSubcategory : undefined,
         videoUrl: newProduct.videoUrl?.trim() || '', images: [],
-        isGITagged: newProduct.isGITagged || false, isNewArrival: newProduct.isNewArrival || false,
+        isGITagged: newProduct.isGITagged || false,
         isMostSaled: newProduct.isMostSaled || false, isActive: true
       };
       const response = await api.post('/admin/inventory/create-product', productData);
@@ -357,7 +358,10 @@ const AdminInventory = () => {
           purchasePrice, sellingPrice, variantIndex: b.variantIndex ?? 0, quantity: b.quantity,
           batchWholePrice: b.batchWholePrice != null && b.batchWholePrice >= 0 ? Number(b.batchWholePrice) : undefined,
           dealTriggerDays: b.dealTriggerDays != null ? Number(b.dealTriggerDays) : undefined,
-          dealDiscountPercent: b.dealDiscountPercent != null ? Number(b.dealDiscountPercent) : undefined
+          dealDiscountPercent: b.dealDiscountPercent != null ? Number(b.dealDiscountPercent) : undefined,
+          ...(b.newArrivalUntil
+            ? { newArrivalUntil: typeof b.newArrivalUntil === 'string' ? b.newArrivalUntil.slice(0, 10) : new Date(b.newArrivalUntil).toISOString().slice(0, 10) }
+            : {})
         });
       });
     });
@@ -384,7 +388,7 @@ const AdminInventory = () => {
   };
 
   const resetNewProductForm = () => {
-    setNewProduct({ name: '', description: '', originalPrice: undefined, originLocation: '', offerPrice: undefined, videoUrl: '', variants: [], inventory: [], isGITagged: false, isNewArrival: false, isMostSaled: false, images: [], imageFiles: [], isActive: true, inventoryData: [], batchInventoryData: [], variantStocks: [], dealTriggerDays: undefined, dealDiscountPercent: undefined });
+    setNewProduct({ name: '', description: '', originalPrice: undefined, originLocation: '', offerPrice: undefined, videoUrl: '', variants: [], inventory: [], isGITagged: false, isMostSaled: false, images: [], imageFiles: [], isActive: true, inventoryData: [], batchInventoryData: [], variantStocks: [], dealTriggerDays: undefined, dealDiscountPercent: undefined });
     setSelectedCategory(''); setSelectedSubcategory(''); setSelectedStoreId('');
   };
 
@@ -416,7 +420,7 @@ const AdminInventory = () => {
       const updateData: Record<string, unknown> = {
         name: editingProduct.name.trim(), description: editingProduct.description?.trim() || '', videoUrl: editingProduct.videoUrl?.trim() || '',
         variants: editingProduct.variants || [], inventory: editingProduct.inventory || [], subcategory: editingProduct.subcategory || undefined,
-        isGITagged: editingProduct.isGITagged || false, isNewArrival: editingProduct.isNewArrival || false, isActive: editingProduct.isActive ?? true,
+        isGITagged: editingProduct.isGITagged || false, isActive: editingProduct.isActive ?? true,
         images: editingProduct.images || [],
         dealTriggerDays: editingProduct.dealTriggerDays != null ? Number(editingProduct.dealTriggerDays) : undefined,
         dealDiscountPercent: editingProduct.dealDiscountPercent != null ? Number(editingProduct.dealDiscountPercent) : undefined
@@ -442,7 +446,7 @@ const AdminInventory = () => {
     const updateData: Record<string, unknown> = {
       name: editingProduct.name.trim(), description: editingProduct.description?.trim() || '', videoUrl: editingProduct.videoUrl?.trim() || '',
       variants: editingProduct.variants || [], inventory: editingProduct.inventory || [], subcategory: editingProduct.subcategory || undefined,
-      isGITagged: editingProduct.isGITagged || false, isNewArrival: editingProduct.isNewArrival || false, isActive: editingProduct.isActive ?? true,
+      isGITagged: editingProduct.isGITagged || false, isActive: editingProduct.isActive ?? true,
       images: editingProduct.images || [],
       dealTriggerDays: editingProduct.dealTriggerDays != null ? Number(editingProduct.dealTriggerDays) : undefined,
       dealDiscountPercent: editingProduct.dealDiscountPercent != null ? Number(editingProduct.dealDiscountPercent) : undefined
@@ -451,7 +455,7 @@ const AdminInventory = () => {
     await api.put(`/admin/inventory/products/${editingProduct._id}`, updateData);
   };
 
-  const handleAddBatch = async (productId: string, location: string, variantIndex: number, batch: { quantity: number; manufacturingDate: string; expiryDate: string; purchasePrice: number; sellingPrice: number; batchWholePrice?: number; dealTriggerDays?: number; dealDiscountPercent?: number; }) => {
+  const handleAddBatch = async (productId: string, location: string, variantIndex: number, batch: { quantity: number; manufacturingDate: string; expiryDate: string; purchasePrice: number; sellingPrice: number; batchWholePrice?: number; dealTriggerDays?: number; dealDiscountPercent?: number; newArrivalUntil?: string; }) => {
     const stockKey = `add-batch-${productId}-${location}-${variantIndex}`;
     if (updatingStocks.has(stockKey)) return;
     setUpdatingStocks(prev => new Set(prev).add(stockKey));
@@ -464,7 +468,8 @@ const AdminInventory = () => {
         purchasePrice: batch.purchasePrice, sellingPrice: batch.sellingPrice, batchNumber: `BATCH-${Date.now()}`,
         ...(batch.batchWholePrice != null && batch.batchWholePrice >= 0 && { batchWholePrice: batch.batchWholePrice }),
         ...(batch.dealTriggerDays != null && batch.dealTriggerDays >= 0 && { dealTriggerDays: batch.dealTriggerDays }),
-        ...(batch.dealDiscountPercent != null && batch.dealDiscountPercent >= 0 && { dealDiscountPercent: batch.dealDiscountPercent })
+        ...(batch.dealDiscountPercent != null && batch.dealDiscountPercent >= 0 && { dealDiscountPercent: batch.dealDiscountPercent }),
+        ...(batch.newArrivalUntil ? { newArrivalUntil: batch.newArrivalUntil } : {})
       }, { headers: { Authorization: `Bearer ${token}` } });
       if (response.status !== 200) throw new Error('Failed to save batch');
       toast.success('New batch added');
@@ -714,7 +719,7 @@ const AdminInventory = () => {
                   </Button>
                 </DialogTrigger>
                 {/* ── Create Product Dialog (unchanged logic) ── */}
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
                   <DialogHeader>
                     <DialogTitle>Add New Product</DialogTitle>
                     <DialogDescription>
@@ -737,7 +742,6 @@ const AdminInventory = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><Label>Product Origin (Optional)</Label><Input value={newProduct.originLocation || ''} onChange={(e) => setNewProduct({ ...newProduct, originLocation: e.target.value })} placeholder="e.g., Hyderabad, Kakinada" /></div><div><Label>Video URL</Label><Input value={newProduct.videoUrl} onChange={(e) => setNewProduct({ ...newProduct, videoUrl: e.target.value })} placeholder="https://..." /></div></div>
                     <div className="flex flex-wrap gap-6">
                       <div className="flex items-center space-x-2"><Switch checked={newProduct.isGITagged || false} onCheckedChange={(checked) => setNewProduct({ ...newProduct, isGITagged: checked })} /><Label>GI Tagged</Label></div>
-                      <div className="flex items-center space-x-2"><Switch checked={newProduct.isNewArrival || false} onCheckedChange={(checked) => setNewProduct({ ...newProduct, isNewArrival: checked })} /><Label>New Arrival</Label></div>
                       <div className="flex items-center space-x-2"><Switch checked={newProduct.isMostSaled || false} onCheckedChange={(checked) => setNewProduct({ ...newProduct, isMostSaled: checked })} /><Label>Most Sold</Label></div>
                     </div>
                     <div>
@@ -1169,7 +1173,6 @@ const AdminInventory = () => {
                 <div className="flex flex-wrap gap-6">
                   <div className="flex items-center space-x-2"><Switch checked={editingProduct.isActive || false} onCheckedChange={(checked) => setEditingProduct({ ...editingProduct, isActive: checked })} /><Label>Active</Label></div>
                   <div className="flex items-center space-x-2"><Switch checked={editingProduct.isGITagged || false} onCheckedChange={(checked) => setEditingProduct({ ...editingProduct, isGITagged: checked })} /><Label>GI Tagged</Label></div>
-                  <div className="flex items-center space-x-2"><Switch checked={editingProduct.isNewArrival || false} onCheckedChange={(checked) => setEditingProduct({ ...editingProduct, isNewArrival: checked })} /><Label>New Arrival</Label></div>
                 </div>
                 <div>
                   <Label>Product Images</Label>
@@ -1201,16 +1204,67 @@ const AdminInventory = () => {
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {editingProduct.variants && editingProduct.variants.length > 0 ? editingProduct.variants.map((variant, variantIndex) => {
                                   const variantStock = locationInventory.batches?.length ? locationInventory.batches.filter(b => b.variantIndex === variantIndex).reduce((s, b) => s + (b.quantity || 0), 0) : (locationInventory.stock?.find(s => s.variantIndex === variantIndex)?.quantity || 0);
-                                  return (<div key={variantIndex} className="bg-white border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2"><div><Label className="text-sm font-medium text-gray-700 block">{variant.value}</Label><p className={`text-sm mt-0.5 ${variantStock === 0 ? 'text-red-600' : 'text-gray-600'}`}>Current: {variantStock} units</p></div><Button type="button" variant="outline" size="sm" className="shrink-0 text-blue-600 hover:text-blue-700 border-blue-200" onClick={() => { setAddBatchForm({ location: locationInventory.location, variantIndex }); setAddBatchData({ quantity: 0, manufacturingDate: new Date().toISOString().slice(0, 10), expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), purchasePrice: variant.originalPrice ?? 0, sellingPrice: variant.offerPrice ?? variant.originalPrice ?? 0, batchWholePrice: undefined, dealTriggerDays: undefined, dealDiscountPercent: undefined }); }}><Plus className="h-3 w-3 mr-1" /> Add batch</Button></div>);
-                                }) : (<div className="bg-white border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 col-span-full sm:col-span-1"><div><Label className="text-sm font-medium text-gray-700 block">Stock</Label><p className="text-sm mt-0.5 text-gray-600">Current: {locationInventory.batches?.length ? locationInventory.batches.filter(b => b.variantIndex === 0).reduce((s, b) => s + (b.quantity || 0), 0) : (locationInventory.stock?.[0]?.quantity || 0)} units</p></div><Button type="button" variant="outline" size="sm" className="shrink-0 text-blue-600 hover:text-blue-700 border-blue-200" onClick={() => { setAddBatchForm({ location: locationInventory.location, variantIndex: 0 }); setAddBatchData({ quantity: 0, manufacturingDate: new Date().toISOString().slice(0, 10), expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), purchasePrice: editingProduct?.originalPrice ?? 0, sellingPrice: editingProduct?.offerPrice ?? editingProduct?.originalPrice ?? 0, batchWholePrice: undefined, dealTriggerDays: undefined, dealDiscountPercent: undefined }); }}><Plus className="h-3 w-3 mr-1" /> Add batch</Button></div>)}
+                                  return (<div key={variantIndex} className="bg-white border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2"><div><Label className="text-sm font-medium text-gray-700 block">{variant.value}</Label><p className={`text-sm mt-0.5 ${variantStock === 0 ? 'text-red-600' : 'text-gray-600'}`}>Current: {variantStock} units</p></div><Button type="button" variant="outline" size="sm" className="shrink-0 text-blue-600 hover:text-blue-700 border-blue-200" onClick={() => { setAddBatchForm({ location: locationInventory.location, variantIndex }); setAddBatchData({ quantity: 0, manufacturingDate: new Date().toISOString().slice(0, 10), expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), purchasePrice: variant.originalPrice ?? 0, sellingPrice: variant.offerPrice ?? variant.originalPrice ?? 0, batchWholePrice: undefined, dealTriggerDays: undefined, dealDiscountPercent: undefined, newArrivalUntil: '' }); }}><Plus className="h-3 w-3 mr-1" /> Add batch</Button></div>);
+                                }) : (<div className="bg-white border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 col-span-full sm:col-span-1"><div><Label className="text-sm font-medium text-gray-700 block">Stock</Label><p className="text-sm mt-0.5 text-gray-600">Current: {locationInventory.batches?.length ? locationInventory.batches.filter(b => b.variantIndex === 0).reduce((s, b) => s + (b.quantity || 0), 0) : (locationInventory.stock?.[0]?.quantity || 0)} units</p></div><Button type="button" variant="outline" size="sm" className="shrink-0 text-blue-600 hover:text-blue-700 border-blue-200" onClick={() => { setAddBatchForm({ location: locationInventory.location, variantIndex: 0 }); setAddBatchData({ quantity: 0, manufacturingDate: new Date().toISOString().slice(0, 10), expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), purchasePrice: editingProduct?.originalPrice ?? 0, sellingPrice: editingProduct?.offerPrice ?? editingProduct?.originalPrice ?? 0, batchWholePrice: undefined, dealTriggerDays: undefined, dealDiscountPercent: undefined, newArrivalUntil: '' }); }}><Plus className="h-3 w-3 mr-1" /> Add batch</Button></div>)}
                               </div>
                               {batches.length > 0 && (
                                 <div className="mt-4 pt-4 border-t">
                                   <Label className="text-sm font-semibold text-gray-800 mb-3 block">📋 Batch-wise Breakdown</Label>
                                   <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
                                     <table className="w-full text-sm">
-                                      <thead><tr className="bg-gray-100 border-b"><th className="text-left py-2.5 px-3 font-semibold text-gray-700">Batch #</th>{editingProduct.variants && editingProduct.variants.length > 0 && (<th className="text-left py-2.5 px-3 font-semibold text-gray-700">Variant</th>)}<th className="text-right py-2.5 px-3 font-semibold text-gray-700">Qty</th><th className="text-left py-2.5 px-3 font-semibold text-gray-700">Mfg Date</th><th className="text-left py-2.5 px-3 font-semibold text-gray-700">Expiry</th><th className="text-left py-2.5 px-3 font-semibold text-gray-700">Status</th></tr></thead>
-                                      <tbody>{batches.map((batch, idx) => { const exp = typeof batch.expiryDate === 'string' ? new Date(batch.expiryDate) : batch.expiryDate; const now = new Date(); const daysLeft = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)); const status = daysLeft < 0 ? { label: 'Expired', cls: 'bg-red-100 text-red-800' } : daysLeft <= 3 ? { label: 'Expiring Soon', cls: 'bg-amber-100 text-amber-800' } : { label: 'OK', cls: 'bg-green-100 text-green-800' }; const variantLabel = editingProduct.variants && editingProduct.variants[batch.variantIndex] ? editingProduct.variants[batch.variantIndex].value : 'Default'; return (<tr key={idx} className={`border-b border-gray-100 last:border-0 ${idx % 2 === 1 ? 'bg-gray-50/50' : ''}`}><td className="py-2.5 px-3 font-medium text-gray-900">{batch.batchNumber}</td>{editingProduct.variants && editingProduct.variants.length > 0 && (<td className="py-2.5 px-3 text-gray-700">{variantLabel}</td>)}<td className="py-2.5 px-3 text-right font-semibold">{batch.quantity ?? 0}</td><td className="py-2.5 px-3 text-gray-700">{formatDate(batch.manufacturingDate)}</td><td className="py-2.5 px-3 text-gray-700">{formatDate(batch.expiryDate)}</td><td className="py-2.5 px-3"><span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.cls}`}>{status.label}{daysLeft >= 0 && daysLeft <= 30 && ` (${daysLeft}d)`}</span></td></tr>); })}</tbody>
+                                      <thead>
+                                        <tr className="bg-gray-100 border-b">
+                                          <th className="text-left py-2.5 px-3 font-semibold text-gray-700">Batch #</th>
+                                          {editingProduct.variants && editingProduct.variants.length > 0 && (
+                                            <th className="text-left py-2.5 px-3 font-semibold text-gray-700">Variant</th>
+                                          )}
+                                          <th className="text-right py-2.5 px-3 font-semibold text-gray-700">Qty</th>
+                                          <th className="text-left py-2.5 px-3 font-semibold text-gray-700">Mfg Date</th>
+                                          <th className="text-left py-2.5 px-3 font-semibold text-gray-700">Expiry</th>
+                                          <th className="text-left py-2.5 px-3 font-semibold text-gray-700 whitespace-nowrap">New until</th>
+                                          <th className="text-left py-2.5 px-3 font-semibold text-gray-700">Status</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {batches.map((batch, idx) => {
+                                          const exp = typeof batch.expiryDate === 'string' ? new Date(batch.expiryDate) : batch.expiryDate;
+                                          const now = new Date();
+                                          const daysLeft = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                                          const status =
+                                            daysLeft < 0
+                                              ? { label: 'Expired', cls: 'bg-red-100 text-red-800' }
+                                              : daysLeft <= 3
+                                                ? { label: 'Expiring Soon', cls: 'bg-amber-100 text-amber-800' }
+                                                : { label: 'OK', cls: 'bg-green-100 text-green-800' };
+                                          const variantLabel =
+                                            editingProduct.variants && editingProduct.variants[batch.variantIndex]
+                                              ? editingProduct.variants[batch.variantIndex].value
+                                              : 'Default';
+                                          const newUntil = batch.newArrivalUntil
+                                            ? formatDate(batch.newArrivalUntil)
+                                            : '—';
+                                          return (
+                                            <tr key={idx} className={`border-b border-gray-100 last:border-0 ${idx % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
+                                              <td className="py-2.5 px-3 font-medium text-gray-900">{batch.batchNumber}</td>
+                                              {editingProduct.variants && editingProduct.variants.length > 0 && (
+                                                <td className="py-2.5 px-3 text-gray-700">{variantLabel}</td>
+                                              )}
+                                              <td className="py-2.5 px-3 text-right font-semibold">{batch.quantity ?? 0}</td>
+                                              <td className="py-2.5 px-3 text-gray-700">{formatDate(batch.manufacturingDate)}</td>
+                                              <td className="py-2.5 px-3 text-gray-700">{formatDate(batch.expiryDate)}</td>
+                                              <td className="py-2.5 px-3 text-gray-700 text-xs whitespace-nowrap" title="New Arrivals listing ends this date">
+                                                {newUntil}
+                                              </td>
+                                              <td className="py-2.5 px-3">
+                                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.cls}`}>
+                                                  {status.label}
+                                                  {daysLeft >= 0 && daysLeft <= 30 && ` (${daysLeft}d)`}
+                                                </span>
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
                                     </table>
                                   </div>
                                 </div>
@@ -1222,6 +1276,7 @@ const AdminInventory = () => {
                                     <div><Label className="text-xs">Qty *</Label><Input type="number" min="0" value={addBatchData.quantity} onChange={e => setAddBatchData(d => ({ ...d, quantity: Math.max(0, Number(e.target.value) || 0) }))} /></div>
                                     <div><Label className="text-xs">Mfg Date</Label><Input type="date" value={addBatchData.manufacturingDate} onChange={e => setAddBatchData(d => ({ ...d, manufacturingDate: e.target.value }))} /></div>
                                     <div><Label className="text-xs">Expiry Date</Label><Input type="date" value={addBatchData.expiryDate} onChange={e => setAddBatchData(d => ({ ...d, expiryDate: e.target.value }))} /></div>
+                                    <div><Label className="text-xs">New arrival until</Label><Input type="date" value={addBatchData.newArrivalUntil} onChange={e => setAddBatchData(d => ({ ...d, newArrivalUntil: e.target.value }))} title="Show on New Arrivals through this date" /></div>
                                     <div><Label className="text-xs">Batch whole price (₹)</Label><Input type="number" min="0" placeholder="Optional" value={addBatchData.batchWholePrice ?? ''} onChange={e => setAddBatchData(d => ({ ...d, batchWholePrice: e.target.value ? Number(e.target.value) : undefined }))} /></div>
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-blue-200">
@@ -1230,7 +1285,7 @@ const AdminInventory = () => {
                                     <div><Label className="text-xs">Discount %</Label><Input type="number" min="0" max="100" placeholder="e.g. 20" value={addBatchData.dealDiscountPercent ?? ''} onChange={e => setAddBatchData(d => ({ ...d, dealDiscountPercent: e.target.value ? Number(e.target.value) : undefined }))} /></div>
                                   </div>
                                   <div className="flex gap-2">
-                                    <Button size="sm" onClick={() => { if (!editingProduct) return; const vi = addBatchForm?.variantIndex ?? 0; const variant = editingProduct.variants?.[vi]; handleAddBatch(editingProduct._id, locationInventory.location, vi, { ...addBatchData, purchasePrice: addBatchData.purchasePrice || (variant?.originalPrice ?? editingProduct.originalPrice ?? 0), sellingPrice: addBatchData.sellingPrice || (variant?.offerPrice ?? variant?.originalPrice ?? editingProduct?.offerPrice ?? editingProduct?.originalPrice ?? 0), batchWholePrice: addBatchData.batchWholePrice, dealTriggerDays: addBatchData.dealTriggerDays, dealDiscountPercent: addBatchData.dealDiscountPercent }); setAddBatchForm(null); }} disabled={addBatchData.quantity <= 0}>Add Batch</Button>
+                                    <Button size="sm" onClick={() => { if (!editingProduct) return; const vi = addBatchForm?.variantIndex ?? 0; const variant = editingProduct.variants?.[vi]; handleAddBatch(editingProduct._id, locationInventory.location, vi, { ...addBatchData, purchasePrice: addBatchData.purchasePrice || (variant?.originalPrice ?? editingProduct.originalPrice ?? 0), sellingPrice: addBatchData.sellingPrice || (variant?.offerPrice ?? variant?.originalPrice ?? editingProduct?.offerPrice ?? editingProduct?.originalPrice ?? 0), batchWholePrice: addBatchData.batchWholePrice, dealTriggerDays: addBatchData.dealTriggerDays, dealDiscountPercent: addBatchData.dealDiscountPercent, ...(addBatchData.newArrivalUntil ? { newArrivalUntil: addBatchData.newArrivalUntil } : {}) }); setAddBatchForm(null); }} disabled={addBatchData.quantity <= 0}>Add Batch</Button>
                                     <Button size="sm" variant="outline" onClick={() => setAddBatchForm(null)}>Cancel</Button>
                                   </div>
                                 </div>

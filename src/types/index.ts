@@ -50,6 +50,8 @@ export interface ProductBatch {
   batchWholePrice?: number;
   dealTriggerDays?: number;
   dealDiscountPercent?: number;
+  /** Last day (inclusive) this batch counts as a “new arrival” on the storefront */
+  newArrivalUntil?: string | Date;
 }
 
 export interface ProductInventory {

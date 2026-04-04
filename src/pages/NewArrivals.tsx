@@ -114,8 +114,8 @@ const NewArrivals = () => {
             </h1>
           </div>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl">
-            Be the first to discover our latest additions! Fresh sweets and snacks 
-            added to our collection, made with the same authentic recipes you love.
+            Be the first to discover our latest additions! Items listed here are in their batch
+            &ldquo;new arrival&rdquo; window (set per batch in admin) while stock lasts.
           </p>
         </div>
       </section>
