@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, type CSSProperties } from 'react';
 import api from '@/lib/api';
 import { Category } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +12,18 @@ const categoriesCache = {
   timestamp: null as number | null,
   CACHE_DURATION: 5 * 60 * 1000, // 5 minutes in milliseconds
 };
+
+/** Distinct gradient per category index (matches static card style; unlimited unique hues). */
+function getCategoryGradientStyle(index: number): CSSProperties {
+  const hue1 = (index * 137) % 360;
+  const hue2 = (hue1 + 38) % 360;
+  const hue3 = (hue1 + 72) % 360;
+  return {
+    background: `linear-gradient(135deg, hsl(${hue1}, 65%, 52%) 0%, hsl(${hue2}, 58%, 44%) 45%, hsl(${hue3}, 55%, 48%) 100%)`,
+  };
+}
+
+const CATEGORY_EMOJIS = ['🍬', '🍛', '🥮', '🍮', '🧁', '🍰', '🍪', '🍩', '🍯', '🫘', '🌰', '🥠'];
 
 export function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -167,12 +179,14 @@ export function Categories() {
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div className="relative bg-card rounded-2xl shadow-card card-hover overflow-hidden w-[45vw] sm:w-[280px] md:w-[320px] lg:w-[360px]">
-                    <div className="aspect-[4/3] overflow-hidden">
-                      <img
-                        src={category.imageUrl || '/images/placeholder.png'}
-                        alt={`${category.name} - Indian sweets category`}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
+                    <div
+                      className="aspect-[4/3] overflow-hidden flex items-center justify-center transition-transform duration-500 group-hover:scale-[1.02]"
+                      style={getCategoryGradientStyle(index)}
+                      aria-hidden
+                    >
+                      <span className="text-4xl sm:text-6xl select-none drop-shadow-md">
+                        {CATEGORY_EMOJIS[index % CATEGORY_EMOJIS.length]}
+                      </span>
                     </div>
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-3 sm:p-4 lg:p-6">
